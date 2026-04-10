@@ -50,6 +50,9 @@ func (s *Shell) Run() error {
 	case <-s.opts.ctx.Done():
 		return s.opts.ctx.Err()
 	default:
+		s.ctx.mdl.SetTitle(s.opts.title)
+		s.ctx.mdl.SetVersion(s.opts.version)
+
 		s.initWindow()
 
 		if err := s.opts.OnStart(s.ctx); err != nil {
@@ -99,7 +102,12 @@ func (s *Shell) Draw(screen *ebiten.Image) {
 }
 
 func (s *Shell) initWindow() {
-	ebiten.SetWindowTitle(s.opts.title)
+	title := s.ctx.mdl.Title()
+	if version := s.ctx.mdl.Version(); version != "" {
+		title += " v" + version
+	}
+
+	ebiten.SetWindowTitle(title)
 	ebiten.SetWindowSize(s.opts.width, s.opts.height)
 	ebiten.SetFullscreen(s.opts.fullscreen)
 }
