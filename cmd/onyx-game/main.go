@@ -21,6 +21,12 @@ func gameUpdate(ctx game.Context) error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyF11) {
 		ebiten.SetFullscreen(!ebiten.IsFullscreen())
 	}
+
+	delta := ctx.Time().Delta32()
+	fixed := ctx.Time().FixedDelta32()
+	steps := ctx.Time().FixedSteps()
+
+	ctx.Logger().Debug("delta: %f, fixed delta: %f, steps: %d", delta, fixed, steps)
 	return nil
 }
 
@@ -40,6 +46,7 @@ func main() {
 		game.WithOnUpdate(gameUpdate),
 		game.WithOnDraw(gameDraw),
 		game.WithClearColor(color.RGBA{100, 149, 237, 255}),
+		game.WithScreenFilter(ebiten.FilterPixelated),
 	)
 
 	if err := s.Run(); err != nil && !errors.Is(err, context.Canceled) {

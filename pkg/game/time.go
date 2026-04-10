@@ -1,5 +1,13 @@
 package game
 
+import (
+	"time"
+)
+
+const (
+	maxAccumulator = time.Second / 4
+)
+
 type Time interface {
 	Delta32() float32
 	Delta64() float64
@@ -11,33 +19,48 @@ type Time interface {
 }
 
 type timeImpl struct {
-	delta32      float32
-	delta64      float64
-	fixedDelta32 float32
-	fixedDelta64 float64
-	fixedSteps   int
+	delta       time.Duration
+	fixedDelta  time.Duration
+	accumulator time.Duration
+	last        time.Time
+	steps       int
 }
 
 func (t *timeImpl) tick() {
+	if t.last.IsZero() {
+		t.last = time.Now()
+		return
+	}
 
+	now := time.Now()
+	t.delta = now.Sub(t.last)
+	t.last = now
+
+	t.accumulator += t.delta
+	if t.accumulator > maxAccumulator {
+		t.accumulator = maxAccumulator
+	}
+
+	t.steps = int(t.accumulator / t.fixedDelta)
+	t.accumulator -= time.Duration(t.steps) * t.fixedDelta
 }
 
 func (t *timeImpl) Delta32() float32 {
-	return t.delta32
+	return float32(t.delta.Seconds())
 }
 
 func (t *timeImpl) Delta64() float64 {
-	return t.delta64
+	return t.delta.Seconds()
 }
 
 func (t *timeImpl) FixedDelta32() float32 {
-	return t.fixedDelta32
+	return float32(t.fixedDelta.Seconds())
 }
 
 func (t *timeImpl) FixedDelta64() float64 {
-	return t.fixedDelta64
+	return t.fixedDelta.Seconds()
 }
 
 func (t *timeImpl) FixedSteps() int {
-	return t.fixedSteps
+	return t.steps
 }

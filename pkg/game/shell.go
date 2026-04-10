@@ -3,6 +3,7 @@ package game
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -33,7 +34,9 @@ func NewShell(opts ...Option) *Shell {
 					Filter: o.screenFilter,
 				},
 			},
-			tm: &timeImpl{},
+			tm: &timeImpl{
+				fixedDelta: time.Duration(time.Second / time.Duration(o.fps)),
+			},
 		},
 	}
 }
@@ -88,6 +91,7 @@ func (s *Shell) Draw(screen *ebiten.Image) {
 
 		if err := s.opts.OnDraw(s.ctx); err != nil {
 			fmt.Printf("error during draw: %v\n", err)
+			return
 		}
 
 		screen.DrawImage(s.ctx.srn.img, nil)
@@ -107,14 +111,11 @@ func (s *Shell) updateGame() error {
 		}
 		return fmt.Errorf("error during update: %w", err)
 	}
-
-	steps := s.ctx.Time().FixedSteps()
-	for i := 0; i < steps; i++ {
+	for i := 0; i < s.ctx.tm.steps; i++ {
 		if err := s.opts.OnFixedUpdate(s.ctx); err != nil {
 			return fmt.Errorf("error during fixed update: %w", err)
 		}
 	}
-
 	if err := s.opts.OnLateUpdate(s.ctx); err != nil {
 		return fmt.Errorf("error during late update: %w", err)
 	}
