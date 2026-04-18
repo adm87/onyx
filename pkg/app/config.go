@@ -3,19 +3,23 @@ package app
 import (
 	"image/color"
 	"io"
+
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 type Config struct {
 	name       string
 	version    string
-	width      int
-	height     int
 	fullscreen bool
 
 	logOutput io.Writer
 	logLevel  LogLevel
 
+	screenWidth      int
+	screenHeight     int
 	screenClearColor color.RGBA
+	screenFilter     ebiten.Filter
+	screenResizeMode ScreenResizeMode
 }
 
 type Option func(*Config)
@@ -34,8 +38,8 @@ func WithVersion(version string) Option {
 
 func WithScreenSize(width, height int) Option {
 	return func(cfg *Config) {
-		cfg.width = width
-		cfg.height = height
+		cfg.screenWidth = width
+		cfg.screenHeight = height
 	}
 }
 
@@ -63,16 +67,30 @@ func WithScreenClearColor(c color.RGBA) Option {
 	}
 }
 
+func WithScreenFilter(filter ebiten.Filter) Option {
+	return func(cfg *Config) {
+		cfg.screenFilter = filter
+	}
+}
+
+func WithScreenResizeMode(mode ScreenResizeMode) Option {
+	return func(cfg *Config) {
+		cfg.screenResizeMode = mode
+	}
+}
+
 func NewConfig(opts ...Option) *Config {
 	cfg := &Config{
 		name:             "Untitled",
 		version:          "",
-		width:            800,
-		height:           600,
+		screenWidth:      800,
+		screenHeight:     600,
 		fullscreen:       false,
 		logOutput:        io.Discard,
 		logLevel:         LogLevelInfo,
 		screenClearColor: color.RGBA{0, 0, 0, 255},
+		screenFilter:     ebiten.FilterNearest,
+		screenResizeMode: ScreenResizeByWidth,
 	}
 	for _, opt := range opts {
 		opt(cfg)

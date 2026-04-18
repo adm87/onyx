@@ -24,7 +24,12 @@ func (c *Context) WithContext(ctx context.Context) *Context {
 		ctx: ctx,
 		cfg: c.cfg,
 		lgr: c.lgr,
+		srn: c.srn,
 	}
+}
+
+func (c *Context) Context() context.Context {
+	return c.ctx
 }
 
 func (c *Context) Done() <-chan struct{} {

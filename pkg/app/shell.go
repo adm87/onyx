@@ -18,8 +18,16 @@ func Run(ctx context.Context, app Application, cfg *Config) error {
 
 		shl := &shell{
 			ctx: NewContext(ctx, cfg,
-				NewLogger(cfg.logOutput, cfg.logLevel),
-				NewScreen(cfg.width, cfg.height),
+				NewLogger(
+					cfg.logOutput,
+					cfg.logLevel,
+				),
+				NewScreen(
+					cfg.screenWidth,
+					cfg.screenHeight,
+					cfg.screenFilter,
+					cfg.screenResizeMode,
+				),
 			),
 			app: app,
 		}
@@ -58,7 +66,7 @@ func initWindow(cfg *Config) {
 	}
 	ebiten.SetWindowTitle(title)
 	ebiten.SetFullscreen(cfg.fullscreen)
-	ebiten.SetWindowSize(cfg.width, cfg.height)
+	ebiten.SetWindowSize(cfg.screenWidth, cfg.screenHeight)
 }
 
 type shell struct {
@@ -98,7 +106,7 @@ func (s *shell) Draw(screen *ebiten.Image) {
 			return
 		}
 
-		screen.DrawImage(s.ctx.Screen().buffer, nil)
+		screen.DrawImage(s.ctx.Screen().buffer, s.ctx.Screen().opt)
 	}
 }
 
