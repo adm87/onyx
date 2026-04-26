@@ -1,4 +1,4 @@
-package app
+package engine
 
 import "github.com/hajimehoshi/ebiten/v2"
 
@@ -10,38 +10,55 @@ const (
 	ScreenResizeStretch
 )
 
+type SafeArea struct {
+	minX, minY float64
+	maxX, maxY float64
+}
+
+func (s SafeArea) Min() (float64, float64) {
+	return s.minX, s.minY
+}
+
+func (s SafeArea) Max() (float64, float64) {
+	return s.maxX, s.maxY
+}
+
 type Screen struct {
-	buffer     *ebiten.Image
-	opt        *ebiten.DrawImageOptions
-	resizeMode ScreenResizeMode
+	img      *ebiten.Image
+	opts     *ebiten.DrawImageOptions
+	safeArea *SafeArea
 
 	logicalW, logicalH int
 	lastW, lastH       int
 	isDirty            bool
+	scale              float64
 
-	scale   float64
-	safeMin [2]float64
-	safeMax [2]float64
+	resizeMode ScreenResizeMode
 }
 
 func NewScreen(width, height int, filter ebiten.Filter, resizeMode ScreenResizeMode) *Screen {
 	return &Screen{
-		buffer: ebiten.NewImage(width, height),
-		opt: &ebiten.DrawImageOptions{
+		img: ebiten.NewImage(width, height),
+		opts: &ebiten.DrawImageOptions{
 			Filter: filter,
 		},
 		resizeMode: resizeMode,
+		safeArea:   &SafeArea{},
 	}
 }
 
 func (s *Screen) Buffer() *ebiten.Image {
-	return s.buffer
+	return s.img
+}
+
+func (s *Screen) Options() *ebiten.DrawImageOptions {
+	return s.opts
 }
 
 func (s *Screen) ResizeBuffer(width, height int) {
-	if s.buffer.Bounds().Dx() != width || s.buffer.Bounds().Dy() != height {
-		s.buffer.Deallocate()
-		s.buffer = ebiten.NewImage(width, height)
+	if s.img.Bounds().Dx() != width || s.img.Bounds().Dy() != height {
+		s.img.Deallocate()
+		s.img = ebiten.NewImage(width, height)
 		s.recalculateLayout(s.lastW, s.lastH)
 	}
 }
@@ -50,15 +67,11 @@ func (s *Screen) Scale() float64 {
 	return s.scale
 }
 
-func (s *Screen) SafeMin() (float64, float64) {
-	return s.safeMin[0], s.safeMin[1]
+func (s *Screen) SafeArea() *SafeArea {
+	return s.safeArea
 }
 
-func (s *Screen) SafeMax() (float64, float64) {
-	return s.safeMax[0], s.safeMax[1]
-}
-
-func (s *Screen) layout(outsideWidth, outsideHeight int) (int, int) {
+func (s *Screen) Layout(outsideWidth, outsideHeight int) (int, int) {
 	if outsideWidth == s.logicalW && outsideHeight == s.logicalH && !s.isDirty {
 		return s.logicalW, s.logicalH
 	}
@@ -69,7 +82,7 @@ func (s *Screen) layout(outsideWidth, outsideHeight int) (int, int) {
 
 func (s *Screen) recalculateLayout(outsideWidth, outsideHeight int) {
 	outsideRatio := float64(outsideWidth) / float64(outsideHeight)
-	bufferRatio := float64(s.buffer.Bounds().Dx()) / float64(s.buffer.Bounds().Dy())
+	bufferRatio := float64(s.img.Bounds().Dx()) / float64(s.img.Bounds().Dy())
 
 	if s.resizeMode == ScreenResizeByWidth {
 		s.resizeByWidth(outsideWidth, outsideHeight)
@@ -89,21 +102,23 @@ func (s *Screen) recalculateLayout(outsideWidth, outsideHeight int) {
 }
 
 func (s *Screen) resizeByWidth(outsideWidth, outsideHeight int) {
-	b := s.buffer.Bounds()
+	b := s.img.Bounds()
 
 	s.logicalW = b.Dx()
 	s.logicalH = b.Dy()
 
 	s.scale = float64(outsideWidth) / float64(b.Dx())
 
-	s.opt.GeoM.Reset()
+	s.opts.GeoM.Reset()
 
-	s.safeMin = [2]float64{0, 0}
-	s.safeMax = [2]float64{float64(b.Dx()), float64(b.Dy())}
+	s.safeArea.minX = 0
+	s.safeArea.minY = 0
+	s.safeArea.maxX = float64(b.Dx())
+	s.safeArea.maxY = float64(b.Dy())
 }
 
 func (s *Screen) resizeByHeight(outsideWidth, outsideHeight int) {
-	b := s.buffer.Bounds()
+	b := s.img.Bounds()
 	bufW, bufH := float64(b.Dx()), float64(b.Dy())
 
 	s.scale = float64(outsideHeight) / bufH
@@ -113,23 +128,27 @@ func (s *Screen) resizeByHeight(outsideWidth, outsideHeight int) {
 
 	offX := (float64(s.logicalW) - bufW) / 2
 
-	s.opt.GeoM.Reset()
-	s.opt.GeoM.Translate(offX, 0)
+	s.opts.GeoM.Reset()
+	s.opts.GeoM.Translate(offX, 0)
 
-	s.safeMin = [2]float64{-offX, 0}
-	s.safeMax = [2]float64{offX + bufW, bufH}
+	s.safeArea.minX = -offX
+	s.safeArea.minY = 0
+	s.safeArea.maxX = offX + bufW
+	s.safeArea.maxY = bufH
 }
 
 func (s *Screen) resizeStretch(outsideWidth, outsideHeight int) {
-	b := s.buffer.Bounds()
+	b := s.img.Bounds()
 	bufW, bufH := float64(b.Dx()), float64(b.Dy())
 
 	s.logicalW, s.logicalH = outsideWidth, outsideHeight
 	s.scale = float64(outsideWidth) / bufW
 
-	s.opt.GeoM.Reset()
-	s.opt.GeoM.Scale(float64(outsideWidth)/bufW, float64(outsideHeight)/bufH)
+	s.opts.GeoM.Reset()
+	s.opts.GeoM.Scale(float64(outsideWidth)/bufW, float64(outsideHeight)/bufH)
 
-	s.safeMin = [2]float64{0, 0}
-	s.safeMax = [2]float64{float64(bufW), float64(bufH)}
+	s.safeArea.minX = 0
+	s.safeArea.minY = 0
+	s.safeArea.maxX = float64(bufW)
+	s.safeArea.maxY = float64(bufH)
 }
