@@ -1,0 +1,15 @@
+// Project-local debug tasks
+//
+// For more documentation on how to configure debug tasks,
+// see: https://zed.dev/docs/debugger
+[
+  {
+    "adapter": "Delve",
+    "label": "Launch Game",
+    "request": "launch",
+    "mode": "debug",
+    "program": "/Users/adm87/Projects/Go/onyx/cmd/game",
+    "buildFlags": [],
+    "env": {},
+  },
+]
