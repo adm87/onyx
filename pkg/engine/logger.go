@@ -3,7 +3,6 @@ package engine
 import (
 	"fmt"
 	"io"
-	"time"
 )
 
 type Logger interface {
@@ -47,9 +46,7 @@ func (l *logger) log(level string, msg string, args ...any) {
 	if len(args) > 0 {
 		formattedMsg = fmt.Sprintf(msg, args...)
 	}
-
-	now := time.Now().Format("2006-01-02 15:04:05")
-	logLine := fmt.Sprintf("%s [%s] %s\n", now, level, formattedMsg)
+	logLine := fmt.Sprintf("[%s] %s\n", level, formattedMsg)
 
 	l.out.Write([]byte(logLine))
 }
