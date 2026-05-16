@@ -10,14 +10,16 @@ type Time interface {
 }
 
 type time struct {
-	deltaTime gotime.Duration
-	fixedTime gotime.Duration
+	deltaTime  gotime.Duration
+	fixedTime  gotime.Duration
+	fixedSteps int
 }
 
 func NewTime() Time {
 	return &time{
-		deltaTime: 0,
-		fixedTime: 0,
+		deltaTime:  0,
+		fixedTime:  0,
+		fixedSteps: 0,
 	}
 }
 
@@ -30,10 +32,7 @@ func (t *time) FixedDeltaTime() float64 {
 }
 
 func (t *time) FixedSteps() int {
-	if t.fixedTime <= 0 {
-		return 0
-	}
-	return int(t.deltaTime / t.fixedTime)
+	return t.fixedSteps
 }
 
 func (t *time) Tick() {
