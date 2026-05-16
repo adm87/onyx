@@ -36,7 +36,5 @@ func (t *time) FixedSteps() int {
 }
 
 func (t *time) Tick() {
-	now := gotime.Now()
-	t.deltaTime = now.Sub(gotime.Unix(0, 0))
-	t.fixedTime = gotime.Duration(16_666_667) // 60 FPS
+
 }

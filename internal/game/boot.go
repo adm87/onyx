@@ -1,7 +1,6 @@
 package game
 
 import (
-	"image/color"
 	"os"
 
 	"github.com/adm87/onyx/internal/game/cli"
@@ -18,7 +17,6 @@ const (
 
 func Boot(version string) error {
 	onyx := engine.NewGame(width, height)
-	onyx.Screen().SetBackgroundColor(color.RGBA{R: 100, G: 149, B: 237})
 
 	images.Register(onyx.Assets(), onyx.Logger())
 	scenes.Register(onyx)
@@ -33,6 +31,8 @@ func Boot(version string) error {
 	ebiten.SetWindowSize(width, height)
 	ebiten.SetFullscreen(args.Fullscreen)
 
+	onyx.Screen().SetResizeMode(engine.ScreenResizeByHeight)
 	onyx.Scenes().Start(scenes.SplashScreenSceneID)
+
 	return onyx.Start()
 }

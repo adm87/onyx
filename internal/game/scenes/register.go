@@ -19,6 +19,7 @@ func Register(game engine.Game) {
 		splashscreen.New(
 			game.Assets(),
 			game.Screen(),
+			game.Time(),
 			game.Logger(),
 		),
 		engine.SceneTransitions{
@@ -28,7 +29,9 @@ func Register(game engine.Game) {
 
 	// Gameplay
 	gameScenes.Register(GameplaySceneID,
-		gameplay.New(),
+		gameplay.New(
+			game.Logger(),
+		),
 		engine.SceneTransitions{},
 	)
 }
