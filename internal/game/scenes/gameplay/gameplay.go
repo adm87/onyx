@@ -15,13 +15,9 @@ func New(screen engine.Screen, logger engine.Logger) *engine.SceneDefinition {
 		OnEnter: func(w donburi.World) error {
 			return enterScene(w, logger)
 		},
-		OnUpdate: []func(world donburi.World, deltaTime float64) (engine.SceneExitCode, error){
-			updateInput,
-		},
-		OnDraw: []func(donburi.World, *ebiten.Image) error{
-			func(_ donburi.World, img *ebiten.Image) error {
-				return renderScene(img, screen.SafeArea())
-			},
+		OnUpdate: updateInput,
+		OnDraw: func(_ donburi.World, img *ebiten.Image) error {
+			return renderScene(img, screen.SafeArea())
 		},
 	}
 }

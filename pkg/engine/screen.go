@@ -60,14 +60,18 @@ type screen struct {
 }
 
 func NewScreen(width, height int, logger Logger) Screen {
-	return &screen{
+	screen := &screen{
 		logger:    logger,
 		img:       ebiten.NewImage(width, height),
 		opts:      &ebiten.DrawImageOptions{},
 		originalW: width,
 		originalH: height,
+		lastW:     width,
+		lastH:     height,
 		safeArea:  &SafeArea{},
+		isDirty:   true,
 	}
+	return screen
 }
 
 func (s *screen) SetResizeMode(mode ScreenResizeMode) {
@@ -112,14 +116,14 @@ func (s *screen) Max() (float64, float64) {
 }
 
 func (s *screen) Layout(outsideWidth, outsideHeight int) (int, int) {
-	if (outsideWidth != s.lastW || outsideHeight != s.lastH) && !s.isDirty {
+	if s.isDirty || s.lastW != outsideWidth || s.lastH != outsideHeight {
 		s.recalculateLayout(outsideWidth, outsideHeight)
 	}
 	return s.logicalW, s.logicalH
 }
 
 func (s *screen) recalculateLayout(outsideWidth, outsideHeight int) {
-	s.logger.Debug("Recalculating screen layout for outside dimensions %dx%d", outsideWidth, outsideHeight)
+	s.logger.Debug("recalculating layout for %dx%d", outsideWidth, outsideHeight)
 
 	switch s.resizeMode {
 	case ScreenResizeByWidth:
@@ -131,7 +135,7 @@ func (s *screen) recalculateLayout(outsideWidth, outsideHeight int) {
 		outsideRatio := float64(outsideWidth) / float64(outsideHeight)
 		bufferRatio := float64(s.img.Bounds().Dx()) / float64(s.img.Bounds().Dy())
 
-		if outsideRatio > bufferRatio {
+		if outsideRatio >= bufferRatio {
 			s.resizeByWidth(outsideWidth)
 		} else {
 			s.resizeByHeight(outsideWidth, outsideHeight)

@@ -30,13 +30,12 @@ func (code SceneExitCode) IsNone() bool {
 type SceneTransitions map[SceneExitCode]SceneID
 
 type SceneDefinition struct {
-	OnEnter func(donburi.World) error
-	OnExit  func(donburi.World) error
-
-	OnUpdate      []func(donburi.World, float64) (SceneExitCode, error)
-	OnFixedUpdate []func(donburi.World, float64) error
-	OnLateUpdate  []func(donburi.World, float64) error
-	OnDraw        []func(donburi.World, *ebiten.Image) error
+	OnEnter       func(donburi.World) error
+	OnExit        func(donburi.World) error
+	OnUpdate      func(donburi.World, float64) (SceneExitCode, error)
+	OnFixedUpdate func(donburi.World, float64) error
+	OnLateUpdate  func(donburi.World, float64) error
+	OnDraw        func(donburi.World, *ebiten.Image) error
 }
 
 type sceneStateData struct {
@@ -131,33 +130,43 @@ func (s *scenes) Update(deltaTime, fixedDeltaTime float64, fixedSteps int) error
 		return nil
 	}
 
-	exitCode, err := runUpdates(def.OnUpdate, s.world, deltaTime)
-	if err != nil {
-		return err
-	}
+	if update := def.OnUpdate; update != nil {
+		exitCode, err := update(s.world, deltaTime)
+		if err != nil {
+			return err
+		}
 
-	if !exitCode.IsNone() {
-		transitions, ok := s.transitions[state.currentScene]
-		if !ok {
-			s.logger.Warn("no transitions registered for scene %d", state.currentScene)
+		if !exitCode.IsNone() {
+			transitions, ok := s.transitions[state.currentScene]
+			if !ok {
+				s.logger.Warn("no transitions registered for scene %d", state.currentScene)
+				return nil
+			}
+			next, ok := transitions[exitCode]
+			if !ok {
+				s.logger.Warn("no transition for exit code %d in scene %d", exitCode, state.currentScene)
+				return nil
+			}
+			state.nextScene = next
 			return nil
 		}
-		next, ok := transitions[exitCode]
-		if !ok {
-			s.logger.Warn("no transition for exit code %d in scene %d", exitCode, state.currentScene)
-			return nil
-		}
-		state.nextScene = next
-		return nil
 	}
 
-	for range fixedSteps {
-		if err := runFixed(def.OnFixedUpdate, s.world, fixedDeltaTime); err != nil {
+	if fixedUpdate := def.OnFixedUpdate; fixedUpdate != nil {
+		for range fixedSteps {
+			if err := fixedUpdate(s.world, fixedDeltaTime); err != nil {
+				return err
+			}
+		}
+	}
+
+	if lateUpdate := def.OnLateUpdate; lateUpdate != nil {
+		if err := lateUpdate(s.world, deltaTime); err != nil {
 			return err
 		}
 	}
 
-	return runLate(def.OnLateUpdate, s.world, deltaTime)
+	return nil
 }
 
 func (s *scenes) Draw(screen *ebiten.Image) {
@@ -169,8 +178,10 @@ func (s *scenes) Draw(screen *ebiten.Image) {
 	if !ok {
 		return
 	}
-	if err := runDraw(def.OnDraw, s.world, screen); err != nil {
-		s.logger.Error("draw error: %v", err)
+	if draw := def.OnDraw; draw != nil {
+		if err := draw(s.world, screen); err != nil {
+			s.logger.Error("draw error: %v", err)
+		}
 	}
 }
 
@@ -199,31 +210,4 @@ func runUpdates(fns []func(donburi.World, float64) (SceneExitCode, error), world
 		}
 	}
 	return SceneExitCodeNone, nil
-}
-
-func runFixed(fns []func(donburi.World, float64) error, world donburi.World, dt float64) error {
-	for _, fn := range fns {
-		if err := fn(world, dt); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func runLate(fns []func(donburi.World, float64) error, world donburi.World, dt float64) error {
-	for _, fn := range fns {
-		if err := fn(world, dt); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func runDraw(fns []func(donburi.World, *ebiten.Image) error, world donburi.World, screen *ebiten.Image) error {
-	for _, fn := range fns {
-		if err := fn(world, screen); err != nil {
-			return err
-		}
-	}
-	return nil
 }
