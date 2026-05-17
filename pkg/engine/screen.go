@@ -1,8 +1,6 @@
 package engine
 
 import (
-	"image/color"
-
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -29,23 +27,27 @@ func (s SafeArea) Max() (float64, float64) {
 
 type Screen interface {
 	Buffer() *ebiten.Image
-	DrawOptions() *ebiten.DrawImageOptions
-	SafeArea() *SafeArea
-	Clear()
-	HandleLayout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int)
+	Options() *ebiten.DrawImageOptions
+
 	ResizeBuffer(width, height int)
 	RestoreBuffer()
-	SetBackgroundColor(color color.RGBA)
-	SetFilterMode(filter ebiten.Filter)
-	SetResizeMode(resizeMode ScreenResizeMode)
+
+	Scale() float64
+	SafeArea() *SafeArea
+
+	Min() (float64, float64)
+	Max() (float64, float64)
+
+	Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int)
+
+	SetResizeMode(ScreenResizeMode)
 }
 
 type screen struct {
 	logger Logger
-	color  color.RGBA
 
-	buffer   *ebiten.Image
-	options  *ebiten.DrawImageOptions
+	img      *ebiten.Image
+	opts     *ebiten.DrawImageOptions
 	safeArea *SafeArea
 
 	originalW, originalH int
@@ -58,45 +60,33 @@ type screen struct {
 }
 
 func NewScreen(width, height int, logger Logger) Screen {
-	if width < 1 || height < 1 {
-		panic("screen size must be greater than 0")
-	}
 	return &screen{
-		buffer:    ebiten.NewImage(width, height),
+		logger:    logger,
+		img:       ebiten.NewImage(width, height),
+		opts:      &ebiten.DrawImageOptions{},
 		originalW: width,
 		originalH: height,
 		safeArea:  &SafeArea{},
-		options:   &ebiten.DrawImageOptions{},
 	}
+}
+
+func (s *screen) SetResizeMode(mode ScreenResizeMode) {
+	s.resizeMode = mode
+	s.isDirty = true
 }
 
 func (s *screen) Buffer() *ebiten.Image {
-	return s.buffer
+	return s.img
 }
 
-func (s *screen) DrawOptions() *ebiten.DrawImageOptions {
-	return s.options
-}
-
-func (s *screen) SafeArea() *SafeArea {
-	return s.safeArea
-}
-
-func (s *screen) Clear() {
-	s.buffer.Fill(s.color)
-}
-
-func (s *screen) HandleLayout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	if outsideWidth != s.lastW || outsideHeight != s.lastH || s.isDirty {
-		s.recalculateLayout(outsideWidth, outsideHeight)
-	}
-	return s.logicalW, s.logicalH
+func (s *screen) Options() *ebiten.DrawImageOptions {
+	return s.opts
 }
 
 func (s *screen) ResizeBuffer(width, height int) {
-	if s.buffer.Bounds().Dx() != width || s.buffer.Bounds().Dy() != height {
-		s.buffer.Deallocate()
-		s.buffer = ebiten.NewImage(width, height)
+	if s.img.Bounds().Dx() != width || s.img.Bounds().Dy() != height {
+		s.img.Deallocate()
+		s.img = ebiten.NewImage(width, height)
 		s.recalculateLayout(s.lastW, s.lastH)
 	}
 }
@@ -105,32 +95,49 @@ func (s *screen) RestoreBuffer() {
 	s.ResizeBuffer(s.originalW, s.originalH)
 }
 
-func (s *screen) SetBackgroundColor(color color.RGBA) {
-	s.color = color
+func (s *screen) Scale() float64 {
+	return s.scale
 }
 
-func (s *screen) SetFilterMode(filter ebiten.Filter) {
-	s.options.Filter = filter
+func (s *screen) SafeArea() *SafeArea {
+	return s.safeArea
 }
 
-func (s *screen) SetResizeMode(resizeMode ScreenResizeMode) {
-	s.resizeMode = resizeMode
+func (s *screen) Min() (float64, float64) {
+	return 0, 0
+}
+
+func (s *screen) Max() (float64, float64) {
+	return float64(s.img.Bounds().Dx()), float64(s.img.Bounds().Dy())
+}
+
+func (s *screen) Layout(outsideWidth, outsideHeight int) (int, int) {
+	if (outsideWidth != s.lastW || outsideHeight != s.lastH) && !s.isDirty {
+		s.recalculateLayout(outsideWidth, outsideHeight)
+	}
+	return s.logicalW, s.logicalH
 }
 
 func (s *screen) recalculateLayout(outsideWidth, outsideHeight int) {
-	outsideRatio := float64(outsideWidth) / float64(outsideHeight)
-	bufferRatio := float64(s.buffer.Bounds().Dx()) / float64(s.buffer.Bounds().Dy())
+	s.logger.Debug("Recalculating screen layout for outside dimensions %dx%d", outsideWidth, outsideHeight)
 
 	switch s.resizeMode {
 	case ScreenResizeByWidth:
+		s.logger.Debug("Resizing screen by width")
 		s.resizeByWidth(outsideWidth)
 	case ScreenResizeByHeight:
+		s.logger.Debug("Resizing screen by height")
+
+		outsideRatio := float64(outsideWidth) / float64(outsideHeight)
+		bufferRatio := float64(s.img.Bounds().Dx()) / float64(s.img.Bounds().Dy())
+
 		if outsideRatio > bufferRatio {
-			s.resizeByHeight(outsideWidth, outsideHeight)
-		} else {
 			s.resizeByWidth(outsideWidth)
+		} else {
+			s.resizeByHeight(outsideWidth, outsideHeight)
 		}
 	case ScreenResizeStretch:
+		s.logger.Debug("Resizing screen by stretching")
 		s.resizeStretch(outsideWidth, outsideHeight)
 	}
 
@@ -140,13 +147,14 @@ func (s *screen) recalculateLayout(outsideWidth, outsideHeight int) {
 }
 
 func (s *screen) resizeByWidth(outsideWidth int) {
-	b := s.buffer.Bounds()
+	b := s.img.Bounds()
 
 	s.logicalW = b.Dx()
 	s.logicalH = b.Dy()
 
 	s.scale = float64(outsideWidth) / float64(b.Dx())
-	s.options.GeoM.Reset()
+
+	s.opts.GeoM.Reset()
 
 	s.safeArea.minX = 0
 	s.safeArea.minY = 0
@@ -155,7 +163,7 @@ func (s *screen) resizeByWidth(outsideWidth int) {
 }
 
 func (s *screen) resizeByHeight(outsideWidth, outsideHeight int) {
-	b := s.buffer.Bounds()
+	b := s.img.Bounds()
 	bufW, bufH := float64(b.Dx()), float64(b.Dy())
 
 	s.scale = float64(outsideHeight) / bufH
@@ -165,8 +173,8 @@ func (s *screen) resizeByHeight(outsideWidth, outsideHeight int) {
 
 	offX := (float64(s.logicalW) - bufW) / 2
 
-	s.options.GeoM.Reset()
-	s.options.GeoM.Translate(offX, 0)
+	s.opts.GeoM.Reset()
+	s.opts.GeoM.Translate(offX, 0)
 
 	s.safeArea.minX = -offX
 	s.safeArea.minY = 0
@@ -175,14 +183,14 @@ func (s *screen) resizeByHeight(outsideWidth, outsideHeight int) {
 }
 
 func (s *screen) resizeStretch(outsideWidth, outsideHeight int) {
-	b := s.buffer.Bounds()
+	b := s.img.Bounds()
 	bufW, bufH := float64(b.Dx()), float64(b.Dy())
 
 	s.logicalW, s.logicalH = outsideWidth, outsideHeight
 	s.scale = float64(outsideWidth) / bufW
 
-	s.options.GeoM.Reset()
-	s.options.GeoM.Scale(float64(outsideWidth)/bufW, float64(outsideHeight)/bufH)
+	s.opts.GeoM.Reset()
+	s.opts.GeoM.Scale(float64(outsideWidth)/bufW, float64(outsideHeight)/bufH)
 
 	s.safeArea.minX = 0
 	s.safeArea.minY = 0

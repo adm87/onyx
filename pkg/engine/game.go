@@ -47,13 +47,15 @@ func (g *game) Update() error {
 }
 
 func (g *game) Draw(screen *ebiten.Image) {
-	g.screen.Clear()
-	g.scenes.Draw(g.screen.Buffer())
-	screen.DrawImage(g.screen.Buffer(), g.screen.DrawOptions())
+	buffer := g.screen.Buffer()
+	buffer.Clear()
+
+	g.scenes.Draw(buffer)
+	screen.DrawImage(buffer, g.screen.Options())
 }
 
 func (g *game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return g.screen.HandleLayout(outsideWidth, outsideHeight)
+	return g.screen.Layout(outsideWidth, outsideHeight)
 }
 
 func (g *game) Assets() Assets {

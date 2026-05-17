@@ -30,6 +30,7 @@ func Register(game engine.Game) {
 	// Gameplay
 	gameScenes.Register(GameplaySceneID,
 		gameplay.New(
+			game.Screen(),
 			game.Logger(),
 		),
 		engine.SceneTransitions{},
