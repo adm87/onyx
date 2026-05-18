@@ -7,7 +7,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
-	"github.com/yohamta/donburi"
 )
 
 const (
@@ -17,22 +16,26 @@ const (
 func New(screen engine.Screen, logger engine.Logger) *engine.SceneDefinition {
 	return &engine.SceneDefinition{
 		SceneID: SceneID,
-		OnEnter: func(w donburi.World) error {
-			return enterScene(w, logger)
+		OnEnter: func(scene engine.Scene) error {
+			return enterScene(scene, logger)
 		},
 		OnUpdate: updateInput,
-		OnDraw: func(_ donburi.World, img *ebiten.Image) error {
+		OnDraw: func(scene engine.Scene, img *ebiten.Image) error {
+			if err := scene.Render(img); err != nil {
+				return err
+			}
 			return renderScene(img, screen.SafeArea())
 		},
 	}
 }
 
-func enterScene(_ donburi.World, logger engine.Logger) error {
+func enterScene(scene engine.Scene, logger engine.Logger) error {
 	logger.Info("Entering Gameplay Scene")
+	_ = scene
 	return nil
 }
 
-func updateInput(world donburi.World, deltaTime float64) (engine.SceneExitCode, error) {
+func updateInput(scene engine.Scene, deltaTime float64) (engine.SceneExitCode, error) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		return engine.SceneExitCodeNone, ebiten.Termination
 	}

@@ -32,12 +32,12 @@ type SceneTransitions map[SceneExitCode]SceneID
 type SceneDefinition struct {
 	SceneID SceneID
 
-	OnEnter       func(donburi.World) error
-	OnExit        func(donburi.World) error
-	OnUpdate      func(donburi.World, float64) (SceneExitCode, error)
-	OnFixedUpdate func(donburi.World, float64) error
-	OnLateUpdate  func(donburi.World, float64) error
-	OnDraw        func(donburi.World, *ebiten.Image) error
+	OnEnter       func(Scene) error
+	OnExit        func(Scene) error
+	OnUpdate      func(Scene, float64) (SceneExitCode, error)
+	OnFixedUpdate func(Scene, float64) error
+	OnLateUpdate  func(Scene, float64) error
+	OnDraw        func(Scene, *ebiten.Image) error
 }
 
 type sceneStateData struct {
@@ -54,7 +54,7 @@ type Scenes interface {
 }
 
 type scenes struct {
-	world  donburi.World
+	scene  Scene
 	logger Logger
 
 	sceneState *donburi.ComponentType[sceneStateData]
@@ -65,13 +65,13 @@ type scenes struct {
 }
 
 func NewScenes(logger Logger) Scenes {
-	world := donburi.NewWorld()
+	scene := newScene()
 
 	sceneState := donburi.NewComponentType[sceneStateData]()
-	world.Create(sceneState)
+	scene.World().Create(sceneState)
 
 	return &scenes{
-		world:       world,
+		scene:       scene,
 		logger:      logger,
 		sceneState:  sceneState,
 		stateQuery:  donburi.NewQuery(filter.Contains(sceneState)),
@@ -105,7 +105,7 @@ func (s *scenes) RegisterTransitions(sceneID SceneID, transitions SceneTransitio
 }
 
 func (s *scenes) Start(id SceneID) error {
-	entry, ok := s.stateQuery.First(s.world)
+	entry, ok := s.stateQuery.First(s.scene.World())
 	if !ok {
 		return errors.New("scene state not found")
 	}
@@ -113,7 +113,7 @@ func (s *scenes) Start(id SceneID) error {
 	if !ok {
 		return fmt.Errorf("no definition found for scene %s", id)
 	}
-	if err := enterScene(def, s.world); err != nil {
+	if err := enterScene(def, s.scene); err != nil {
 		return err
 	}
 	s.sceneState.Get(entry).currentScene = id
@@ -121,7 +121,9 @@ func (s *scenes) Start(id SceneID) error {
 }
 
 func (s *scenes) Update(deltaTime, fixedDeltaTime float64, fixedSteps int) error {
-	entry, ok := s.stateQuery.First(s.world)
+	world := s.scene.World()
+
+	entry, ok := s.stateQuery.First(world)
 	if !ok {
 		return errors.New("scene state not found")
 	}
@@ -131,17 +133,19 @@ func (s *scenes) Update(deltaTime, fixedDeltaTime float64, fixedSteps int) error
 	if !state.nextScene.IsNone() {
 		current, hasCurrent := s.definitions[state.currentScene]
 		next, hasNext := s.definitions[state.nextScene]
+
 		if !hasNext {
 			return fmt.Errorf("no definition found for scene %s", state.nextScene)
 		}
 		if hasCurrent {
-			if err := exitScene(current, s.world); err != nil {
+			if err := exitScene(current, s.scene); err != nil {
 				return err
 			}
 		}
-		if err := enterScene(next, s.world); err != nil {
+		if err := enterScene(next, s.scene); err != nil {
 			return err
 		}
+
 		state.currentScene = state.nextScene
 		state.nextScene = SceneIDNone
 		return nil
@@ -153,7 +157,7 @@ func (s *scenes) Update(deltaTime, fixedDeltaTime float64, fixedSteps int) error
 	}
 
 	if update := def.OnUpdate; update != nil {
-		exitCode, err := update(s.world, deltaTime)
+		exitCode, err := update(s.scene, deltaTime)
 		if err != nil {
 			return err
 		}
@@ -176,14 +180,14 @@ func (s *scenes) Update(deltaTime, fixedDeltaTime float64, fixedSteps int) error
 
 	if fixedUpdate := def.OnFixedUpdate; fixedUpdate != nil {
 		for range fixedSteps {
-			if err := fixedUpdate(s.world, fixedDeltaTime); err != nil {
+			if err := fixedUpdate(s.scene, fixedDeltaTime); err != nil {
 				return err
 			}
 		}
 	}
 
 	if lateUpdate := def.OnLateUpdate; lateUpdate != nil {
-		if err := lateUpdate(s.world, deltaTime); err != nil {
+		if err := lateUpdate(s.scene, deltaTime); err != nil {
 			return err
 		}
 	}
@@ -192,7 +196,7 @@ func (s *scenes) Update(deltaTime, fixedDeltaTime float64, fixedSteps int) error
 }
 
 func (s *scenes) Draw(screen *ebiten.Image) {
-	entry, ok := s.stateQuery.First(s.world)
+	entry, ok := s.stateQuery.First(s.scene.World())
 	if !ok {
 		return
 	}
@@ -201,35 +205,22 @@ func (s *scenes) Draw(screen *ebiten.Image) {
 		return
 	}
 	if draw := def.OnDraw; draw != nil {
-		if err := draw(s.world, screen); err != nil {
-			s.logger.Error("draw error: %v", err)
+		if err := draw(s.scene, screen); err != nil {
+			s.logger.Error("error drawing scene %s: %v", def.SceneID, err)
 		}
 	}
 }
 
-func enterScene(def *SceneDefinition, world donburi.World) error {
+func enterScene(def *SceneDefinition, world Scene) error {
 	if def.OnEnter != nil {
 		return def.OnEnter(world)
 	}
 	return nil
 }
 
-func exitScene(def *SceneDefinition, world donburi.World) error {
+func exitScene(def *SceneDefinition, world Scene) error {
 	if def.OnExit != nil {
 		return def.OnExit(world)
 	}
 	return nil
-}
-
-func runUpdates(fns []func(donburi.World, float64) (SceneExitCode, error), world donburi.World, dt float64) (SceneExitCode, error) {
-	for _, fn := range fns {
-		code, err := fn(world, dt)
-		if err != nil {
-			return SceneExitCodeNone, err
-		}
-		if !code.IsNone() {
-			return code, nil
-		}
-	}
-	return SceneExitCodeNone, nil
 }

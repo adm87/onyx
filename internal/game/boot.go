@@ -40,7 +40,7 @@ func Boot(version string) error {
 	ebiten.SetFullscreen(args.Fullscreen)
 
 	onyx.Screen().SetResizeMode(engine.ScreenResizeByHeight)
-	onyx.Scenes().Start(splashscreen.SceneID)
+	onyx.Scenes().Start(gameplay.SceneID)
 
 	return onyx.Start()
 }

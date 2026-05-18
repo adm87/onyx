@@ -2,7 +2,7 @@ package splashscreen
 
 import (
 	"github.com/adm87/onyx/pkg/engine"
-	"github.com/yohamta/donburi"
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 const (
@@ -13,19 +13,22 @@ const (
 func New(assets engine.Assets, screen engine.Screen, time engine.Time, logger engine.Logger) *engine.SceneDefinition {
 	return &engine.SceneDefinition{
 		SceneID: SceneID,
-		OnEnter: func(w donburi.World) error {
+		OnEnter: func(_ engine.Scene) error {
 			return enterScene(logger)
 		},
-		OnExit: func(w donburi.World) error {
+		OnExit: func(_ engine.Scene) error {
 			return exitScene(logger)
+		},
+		OnDraw: func(s engine.Scene, i *ebiten.Image) error {
+			return s.Render(i)
 		},
 	}
 }
 
-func enterScene(logger engine.Logger) error {
+func enterScene(_ engine.Logger) error {
 	return nil
 }
 
-func exitScene(logger engine.Logger) error {
+func exitScene(_ engine.Logger) error {
 	return nil
 }
