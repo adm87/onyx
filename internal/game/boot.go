@@ -18,7 +18,10 @@ const (
 func Boot(version string) error {
 	onyx := engine.NewGame(width, height)
 
-	images.Register(onyx.Assets(), onyx.Logger())
+	if err := registerAssetAdapters(onyx); err != nil {
+		return err
+	}
+
 	scenes.Register(onyx)
 
 	args, err := cli.ParseArgs(os.Args[0], os.Args[1:])
@@ -35,4 +38,10 @@ func Boot(version string) error {
 	onyx.Scenes().Start(scenes.SplashScreenSceneID)
 
 	return onyx.Start()
+}
+
+func registerAssetAdapters(onyx engine.Game) error {
+	return onyx.Assets().RegisterAdapters(
+		images.NewImageAdapter(onyx.Logger()),
+	)
 }

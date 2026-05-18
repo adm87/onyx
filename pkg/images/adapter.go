@@ -22,7 +22,7 @@ func GetCache(assets engine.Assets) (Cache, bool) {
 		return nil, false
 	}
 
-	imageAdapter, ok := adptr.(*adapter)
+	imageAdapter, ok := adptr.(*ImageAdapter)
 	if !ok {
 		return nil, false
 	}
@@ -30,19 +30,19 @@ func GetCache(assets engine.Assets) (Cache, bool) {
 	return imageAdapter, true
 }
 
-type adapter struct {
+type ImageAdapter struct {
 	logger engine.Logger
 	images map[file.Path]*ebiten.Image
 }
 
-func newAdapter(logger engine.Logger) *adapter {
-	return &adapter{
+func NewImageAdapter(logger engine.Logger) *ImageAdapter {
+	return &ImageAdapter{
 		logger: logger,
 		images: make(map[file.Path]*ebiten.Image),
 	}
 }
 
-func (a *adapter) Import(path file.Path, data []byte) error {
+func (a *ImageAdapter) Import(path file.Path, data []byte) error {
 	if len(data) == 0 {
 		a.logger.Warn("Received empty data for image at path: %s", path)
 		return nil
@@ -62,18 +62,22 @@ func (a *adapter) Import(path file.Path, data []byte) error {
 	return nil
 }
 
-func (a *adapter) Delete(path file.Path) {
+func (a *ImageAdapter) Delete(path file.Path) {
 	if img, exists := a.images[path]; exists {
 		img.Deallocate()
 	}
 	delete(a.images, path)
 }
 
-func (a *adapter) SupportedTypes() []file.Ext {
+func (a *ImageAdapter) SupportedTypes() []file.Ext {
 	return []file.Ext{".png", ".jpg", ".jpeg"}
 }
 
-func (a *adapter) Get(path file.Path) (*ebiten.Image, bool) {
+func (a *ImageAdapter) ID() engine.AdapterID {
+	return adapterID
+}
+
+func (a *ImageAdapter) Get(path file.Path) (*ebiten.Image, bool) {
 	img, exists := a.images[path]
 	return img, exists
 }

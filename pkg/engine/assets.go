@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"io/fs"
 
 	"github.com/adm87/onyx/pkg/engine/file"
@@ -12,13 +13,14 @@ type AssetAdapter interface {
 	Import(path file.Path, data []byte) error
 	Delete(path file.Path)
 	SupportedTypes() []file.Ext
+	ID() AdapterID
 }
 
 type Assets interface {
 	Load(fileSystem fs.FS, paths ...file.Path) error
 	Unload(paths ...file.Path)
 
-	RegisterAdapter(id AdapterID, adapter AssetAdapter)
+	RegisterAdapters(adapters ...AssetAdapter) error
 	GetAdapter(id AdapterID) (AssetAdapter, bool)
 }
 
@@ -86,20 +88,23 @@ func (a *assets) Unload(paths ...file.Path) {
 	}
 }
 
-func (a *assets) RegisterAdapter(id AdapterID, adapter AssetAdapter) {
-	if _, exists := a.adaptersByID[id]; exists {
-		a.logger.Warn("Adapter with ID '%s' is already registered, skipping", id)
-		return
-	}
-	a.adaptersByID[id] = adapter
+func (a *assets) RegisterAdapters(adapters ...AssetAdapter) error {
+	for _, adapter := range adapters {
+		id := adapter.ID()
 
-	for _, ext := range adapter.SupportedTypes() {
-		if existingAdapter, exists := a.adaptersByExt[ext]; exists {
-			a.logger.Warn("File extension '%s' is already handled by adapter '%s', skipping registration for adapter '%s'", ext, existingAdapter, id)
-			continue
+		if _, exists := a.adaptersByID[id]; exists {
+			return fmt.Errorf("adapter with ID '%s' is already registered", adapter.ID())
 		}
-		a.adaptersByExt[ext] = adapter
+		a.adaptersByID[id] = adapter
+
+		for _, ext := range adapter.SupportedTypes() {
+			if existingAdapter, exists := a.adaptersByExt[ext]; exists {
+				return fmt.Errorf("file extension '%s' is already handled by adapter '%s'", ext, existingAdapter.ID())
+			}
+			a.adaptersByExt[ext] = adapter
+		}
 	}
+	return nil
 }
 
 func (a *assets) GetAdapter(id AdapterID) (AssetAdapter, bool) {
