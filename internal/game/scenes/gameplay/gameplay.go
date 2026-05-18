@@ -13,29 +13,32 @@ const (
 	SceneID engine.SceneID = "gameplay"
 )
 
-func New(screen engine.Screen, logger engine.Logger) *engine.SceneDefinition {
+func NewScene(onyx engine.Game) *engine.SceneDefinition {
 	return &engine.SceneDefinition{
 		SceneID: SceneID,
-		OnEnter: func(scene engine.Scene) error {
-			return enterScene(scene, logger)
+		OnEnter: func(_ engine.Scene) error {
+			return enterScene(onyx.Logger())
 		},
-		OnUpdate: updateInput,
-		OnDraw: func(scene engine.Scene, img *ebiten.Image) error {
-			if err := scene.Render(img); err != nil {
+		OnUpdate: func(_ engine.Scene, _ float64) (engine.SceneExitCode, error) {
+			return updateInput()
+		},
+		OnDraw: func(scene engine.Scene, screen *ebiten.Image) error {
+			if err := scene.Render(screen); err != nil {
 				return err
 			}
-			return renderScene(img, screen.SafeArea())
+
+			safeArea := onyx.Screen().SafeArea()
+			return renderScene(screen, safeArea)
 		},
 	}
 }
 
-func enterScene(scene engine.Scene, logger engine.Logger) error {
+func enterScene(logger engine.Logger) error {
 	logger.Info("Entering Gameplay Scene")
-	_ = scene
 	return nil
 }
 
-func updateInput(scene engine.Scene, deltaTime float64) (engine.SceneExitCode, error) {
+func updateInput() (engine.SceneExitCode, error) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		return engine.SceneExitCodeNone, ebiten.Termination
 	}

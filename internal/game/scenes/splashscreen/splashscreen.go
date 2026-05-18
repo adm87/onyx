@@ -1,6 +1,8 @@
 package splashscreen
 
 import (
+	"time"
+
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -10,25 +12,21 @@ const (
 	CompleteExitCode engine.SceneExitCode = iota + 1
 )
 
-func New(assets engine.Assets, screen engine.Screen, time engine.Time, logger engine.Logger) *engine.SceneDefinition {
+func NewScene(onyx engine.Game) *engine.SceneDefinition {
+	ticker := time.NewTicker(time.Second * 2)
 	return &engine.SceneDefinition{
 		SceneID: SceneID,
-		OnEnter: func(_ engine.Scene) error {
-			return enterScene(logger)
+		OnUpdate: func(_ engine.Scene, _ float64) (engine.SceneExitCode, error) {
+			select {
+			case <-ticker.C:
+				ticker.Stop()
+				return CompleteExitCode, nil
+			default:
+				return engine.SceneExitCodeNone, nil
+			}
 		},
-		OnExit: func(_ engine.Scene) error {
-			return exitScene(logger)
-		},
-		OnDraw: func(s engine.Scene, i *ebiten.Image) error {
-			return s.Render(i)
+		OnDraw: func(scene engine.Scene, screen *ebiten.Image) error {
+			return scene.Render(screen)
 		},
 	}
-}
-
-func enterScene(_ engine.Logger) error {
-	return nil
-}
-
-func exitScene(_ engine.Logger) error {
-	return nil
 }

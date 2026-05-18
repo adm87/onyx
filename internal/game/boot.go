@@ -40,7 +40,7 @@ func Boot(version string) error {
 	ebiten.SetFullscreen(args.Fullscreen)
 
 	onyx.Screen().SetResizeMode(engine.ScreenResizeByHeight)
-	onyx.Scenes().Start(gameplay.SceneID)
+	onyx.Scenes().Start(splashscreen.SceneID)
 
 	return onyx.Start()
 }
@@ -53,8 +53,8 @@ func registerAssetAdapters(onyx engine.Game) error {
 
 func registerGameScenes(onyx engine.Game) error {
 	return onyx.Scenes().RegisterScenes(
-		splashscreen.New(onyx.Assets(), onyx.Screen(), onyx.Time(), onyx.Logger()),
-		gameplay.New(onyx.Screen(), onyx.Logger()),
+		splashscreen.NewScene(onyx),
+		gameplay.NewScene(onyx),
 	)
 }
 
