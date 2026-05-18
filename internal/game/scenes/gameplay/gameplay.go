@@ -10,8 +10,13 @@ import (
 	"github.com/yohamta/donburi"
 )
 
+const (
+	SceneID engine.SceneID = "gameplay"
+)
+
 func New(screen engine.Screen, logger engine.Logger) *engine.SceneDefinition {
 	return &engine.SceneDefinition{
+		SceneID: SceneID,
 		OnEnter: func(w donburi.World) error {
 			return enterScene(w, logger)
 		},

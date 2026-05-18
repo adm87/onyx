@@ -6,19 +6,18 @@ import (
 )
 
 const (
+	SceneID          engine.SceneID       = "splashscreen"
 	CompleteExitCode engine.SceneExitCode = iota + 1
 )
 
 func New(assets engine.Assets, screen engine.Screen, time engine.Time, logger engine.Logger) *engine.SceneDefinition {
 	return &engine.SceneDefinition{
+		SceneID: SceneID,
 		OnEnter: func(w donburi.World) error {
 			return enterScene(logger)
 		},
 		OnExit: func(w donburi.World) error {
 			return exitScene(logger)
-		},
-		OnUpdate: func(w donburi.World, f float64) (engine.SceneExitCode, error) {
-			return CompleteExitCode, nil
 		},
 	}
 }

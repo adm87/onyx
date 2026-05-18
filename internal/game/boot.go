@@ -4,7 +4,8 @@ import (
 	"os"
 
 	"github.com/adm87/onyx/internal/game/cli"
-	"github.com/adm87/onyx/internal/game/scenes"
+	"github.com/adm87/onyx/internal/game/scenes/gameplay"
+	"github.com/adm87/onyx/internal/game/scenes/splashscreen"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/images"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -21,8 +22,12 @@ func Boot(version string) error {
 	if err := registerAssetAdapters(onyx); err != nil {
 		return err
 	}
-
-	scenes.Register(onyx)
+	if err := registerGameScenes(onyx); err != nil {
+		return err
+	}
+	if err := registerSceneTransitions(onyx); err != nil {
+		return err
+	}
 
 	args, err := cli.ParseArgs(os.Args[0], os.Args[1:])
 	if err != nil {
@@ -35,7 +40,7 @@ func Boot(version string) error {
 	ebiten.SetFullscreen(args.Fullscreen)
 
 	onyx.Screen().SetResizeMode(engine.ScreenResizeByHeight)
-	onyx.Scenes().Start(scenes.SplashScreenSceneID)
+	onyx.Scenes().Start(splashscreen.SceneID)
 
 	return onyx.Start()
 }
@@ -44,4 +49,23 @@ func registerAssetAdapters(onyx engine.Game) error {
 	return onyx.Assets().RegisterAdapters(
 		images.NewImageAdapter(onyx.Logger()),
 	)
+}
+
+func registerGameScenes(onyx engine.Game) error {
+	return onyx.Scenes().RegisterScenes(
+		splashscreen.New(onyx.Assets(), onyx.Screen(), onyx.Time(), onyx.Logger()),
+		gameplay.New(onyx.Screen(), onyx.Logger()),
+	)
+}
+
+func registerSceneTransitions(onyx engine.Game) error {
+	if err := onyx.Scenes().RegisterTransitions(
+		splashscreen.SceneID,
+		engine.SceneTransitions{
+			splashscreen.CompleteExitCode: gameplay.SceneID,
+		},
+	); err != nil {
+		return err
+	}
+	return nil
 }

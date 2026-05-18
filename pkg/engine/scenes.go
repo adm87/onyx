@@ -10,12 +10,12 @@ import (
 )
 
 type (
-	SceneID       uint8
+	SceneID       string
 	SceneExitCode uint8
 )
 
 const (
-	SceneIDNone       SceneID       = 0
+	SceneIDNone       SceneID       = ""
 	SceneExitCodeNone SceneExitCode = 0
 )
 
@@ -30,6 +30,8 @@ func (code SceneExitCode) IsNone() bool {
 type SceneTransitions map[SceneExitCode]SceneID
 
 type SceneDefinition struct {
+	SceneID SceneID
+
 	OnEnter       func(donburi.World) error
 	OnExit        func(donburi.World) error
 	OnUpdate      func(donburi.World, float64) (SceneExitCode, error)
@@ -44,7 +46,8 @@ type sceneStateData struct {
 }
 
 type Scenes interface {
-	Register(id SceneID, def *SceneDefinition, transitions SceneTransitions)
+	RegisterScenes(defs ...*SceneDefinition) error
+	RegisterTransitions(sceneID SceneID, transitions SceneTransitions) error
 	Start(id SceneID) error
 	Update(deltaTime, fixedDeltaTime float64, fixedSteps int) error
 	Draw(screen *ebiten.Image)
@@ -77,9 +80,28 @@ func NewScenes(logger Logger) Scenes {
 	}
 }
 
-func (s *scenes) Register(id SceneID, def *SceneDefinition, transitions SceneTransitions) {
-	s.definitions[id] = def
-	s.transitions[id] = transitions
+func (s *scenes) RegisterScenes(defs ...*SceneDefinition) error {
+	for _, def := range defs {
+		if def == nil {
+			return errors.New("scene definition cannot be nil")
+		}
+		if def.SceneID.IsNone() {
+			return errors.New("scene definition must have a valid SceneID")
+		}
+		if _, exists := s.definitions[def.SceneID]; exists {
+			return fmt.Errorf("scene definition with ID %s already exists", def.SceneID)
+		}
+		s.definitions[def.SceneID] = def
+	}
+	return nil
+}
+
+func (s *scenes) RegisterTransitions(sceneID SceneID, transitions SceneTransitions) error {
+	if _, exists := s.definitions[sceneID]; !exists {
+		return fmt.Errorf("cannot register transitions for undefined scene ID %s", sceneID)
+	}
+	s.transitions[sceneID] = transitions
+	return nil
 }
 
 func (s *scenes) Start(id SceneID) error {
@@ -89,7 +111,7 @@ func (s *scenes) Start(id SceneID) error {
 	}
 	def, ok := s.definitions[id]
 	if !ok {
-		return fmt.Errorf("no definition found for scene %d", id)
+		return fmt.Errorf("no definition found for scene %s", id)
 	}
 	if err := enterScene(def, s.world); err != nil {
 		return err
@@ -110,7 +132,7 @@ func (s *scenes) Update(deltaTime, fixedDeltaTime float64, fixedSteps int) error
 		current, hasCurrent := s.definitions[state.currentScene]
 		next, hasNext := s.definitions[state.nextScene]
 		if !hasNext {
-			return fmt.Errorf("no definition found for scene %d", state.nextScene)
+			return fmt.Errorf("no definition found for scene %s", state.nextScene)
 		}
 		if hasCurrent {
 			if err := exitScene(current, s.world); err != nil {
@@ -139,12 +161,12 @@ func (s *scenes) Update(deltaTime, fixedDeltaTime float64, fixedSteps int) error
 		if !exitCode.IsNone() {
 			transitions, ok := s.transitions[state.currentScene]
 			if !ok {
-				s.logger.Warn("no transitions registered for scene %d", state.currentScene)
+				s.logger.Warn("no transitions registered for scene %s", state.currentScene)
 				return nil
 			}
 			next, ok := transitions[exitCode]
 			if !ok {
-				s.logger.Warn("no transition for exit code %d in scene %d", exitCode, state.currentScene)
+				s.logger.Warn("no transition for exit code %d in scene %s", exitCode, state.currentScene)
 				return nil
 			}
 			state.nextScene = next
