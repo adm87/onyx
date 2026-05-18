@@ -109,14 +109,7 @@ func (s *scenes) Start(id SceneID) error {
 	if !ok {
 		return errors.New("scene state not found")
 	}
-	def, ok := s.definitions[id]
-	if !ok {
-		return fmt.Errorf("no definition found for scene %s", id)
-	}
-	if err := enterScene(def, s.scene); err != nil {
-		return err
-	}
-	s.sceneState.Get(entry).currentScene = id
+	s.sceneState.Get(entry).nextScene = id
 	return nil
 }
 
