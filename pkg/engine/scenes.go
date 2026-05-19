@@ -64,8 +64,8 @@ type scenes struct {
 	transitions map[SceneID]SceneTransitions
 }
 
-func NewScenes(logger Logger) Scenes {
-	scene := newScene()
+func NewScenes(sceneIndexer SceneIndexer, logger Logger) Scenes {
+	scene := newScene(sceneIndexer)
 
 	sceneState := donburi.NewComponentType[sceneStateData]()
 	scene.World().Create(sceneState)

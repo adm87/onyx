@@ -3,7 +3,9 @@ package engine
 import (
 	"os"
 
+	"github.com/adm87/onyx/pkg/indexing/spatialhash"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/yohamta/donburi"
 )
 
 type Game interface {
@@ -31,7 +33,10 @@ func NewGame(width, height int) Game {
 		logger: logger,
 		assets: NewAssets(logger),
 		input:  NewInput(logger),
-		scenes: NewScenes(logger),
+		scenes: NewScenes(
+			spatialhash.New[donburi.Entity](),
+			logger,
+		),
 		screen: NewScreen(width, height, logger),
 		time:   NewTime(),
 	}

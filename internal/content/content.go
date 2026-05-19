@@ -15,5 +15,6 @@ func StaticFS() fs.FS {
 }
 
 const (
+	Img10x10White        file.Path = "static/images/img_10x10_white.png"
 	Splash1920x1080Black file.Path = "static/images/splash_1920x1080_black.png"
 )
