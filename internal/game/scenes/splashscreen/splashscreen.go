@@ -10,16 +10,21 @@ import (
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
+	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/yohamta/donburi"
 	"github.com/yohamta/donburi/filter"
 )
 
 const CompleteExitCode engine.SceneExitCode = iota
 
-func New(time engine.Time, logger engine.Logger) engine.SceneState {
+func New(camera engine.Camera, time engine.Time, logger engine.Logger) engine.SceneState {
 	query := donburi.NewQuery(
-		filter.Contains(transform.Rotation),
+		filter.And(
+			filter.Contains(transform.Rotation),
+			filter.Not(filter.Contains(engine.CameraTag)),
+		),
 	)
 	return engine.SceneState{
 		OnEnter: func(ctx context.Context, world donburi.World) error {
@@ -73,6 +78,39 @@ func New(time engine.Time, logger engine.Logger) engine.SceneState {
 			return nil
 		},
 		OnUpdate: func(ctx context.Context, world donburi.World) (engine.SceneExitCode, error) {
+			position := camera.Position()
+
+			if ebiten.IsKeyPressed(ebiten.KeyW) {
+				position.Y -= 200 * time.DeltaTime()
+			}
+			if ebiten.IsKeyPressed(ebiten.KeyS) {
+				position.Y += 200 * time.DeltaTime()
+			}
+			if ebiten.IsKeyPressed(ebiten.KeyA) {
+				position.X -= 200 * time.DeltaTime()
+			}
+			if ebiten.IsKeyPressed(ebiten.KeyD) {
+				position.X += 200 * time.DeltaTime()
+			}
+			if inpututil.IsKeyJustPressed(ebiten.KeyF) {
+				ebiten.SetFullscreen(!ebiten.IsFullscreen())
+			}
+
+			if position.X < 0 {
+				position.X = 0
+			}
+			if position.Y < 0 {
+				position.Y = 0
+			}
+			if position.X > 1280 {
+				position.X = 1280
+			}
+			if position.Y > 720 {
+				position.Y = 720
+			}
+
+			camera.SetPosition(position)
+
 			query.Each(world, func(e *donburi.Entry) {
 				rot := transform.GetRotation(e)
 				rot += 100 * time.DeltaTime()

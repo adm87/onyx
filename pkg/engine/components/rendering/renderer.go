@@ -36,11 +36,8 @@ func SetVisible(entry *donburi.Entry, visible bool) {
 	if !entry.HasComponent(Renderer) {
 		entry.AddComponent(Renderer)
 	}
-	donburi.SetValue(entry, Renderer, RendererData{
-		Visible: visible,
-		Layer:   Renderer.Get(entry).Layer,
-		ZIndex:  Renderer.Get(entry).ZIndex,
-	})
+	renderer := Renderer.Get(entry)
+	renderer.Visible = visible
 }
 
 func GetLayer(entry *donburi.Entry) int {
@@ -54,11 +51,8 @@ func SetLayer(entry *donburi.Entry, layer int) {
 	if !entry.HasComponent(Renderer) {
 		entry.AddComponent(Renderer)
 	}
-	donburi.SetValue(entry, Renderer, RendererData{
-		Visible: Renderer.Get(entry).Visible,
-		Layer:   layer,
-		ZIndex:  Renderer.Get(entry).ZIndex,
-	})
+	renderer := Renderer.Get(entry)
+	renderer.Layer = layer
 }
 
 func GetZIndex(entry *donburi.Entry) int {
@@ -72,11 +66,8 @@ func SetZIndex(entry *donburi.Entry, zIndex int) {
 	if !entry.HasComponent(Renderer) {
 		entry.AddComponent(Renderer)
 	}
-	donburi.SetValue(entry, Renderer, RendererData{
-		Visible: Renderer.Get(entry).Visible,
-		Layer:   Renderer.Get(entry).Layer,
-		ZIndex:  zIndex,
-	})
+	renderer := Renderer.Get(entry)
+	renderer.ZIndex = zIndex
 }
 
 func GetImage(entry *donburi.Entry) *ebiten.Image {
@@ -90,9 +81,8 @@ func SetImage(entry *donburi.Entry, img *ebiten.Image) {
 	if !entry.HasComponent(Image) {
 		entry.AddComponent(Image)
 	}
-	donburi.SetValue(entry, Image, ImageData{
-		Ref: img,
-	})
+	image := Image.Get(entry)
+	image.Ref = img
 }
 
 func GetAnchor(entry *donburi.Entry) geom.Vec2 {

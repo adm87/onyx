@@ -1,6 +1,9 @@
 package engine
 
 import (
+	"cmp"
+	"slices"
+
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -9,7 +12,7 @@ import (
 )
 
 type renderTask struct {
-	render func(screen *ebiten.Image) error
+	render func(screen *ebiten.Image, viewMatrix ebiten.GeoM) error
 	layer  int
 	zIndex int
 }
@@ -31,18 +34,18 @@ func newRenderer(logger *logger) *renderer {
 	}
 }
 
-func (r *renderer) render(world donburi.World, screen *ebiten.Image) error {
+func (r *renderer) render(world donburi.World, screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
 	r.buildRenderQueue(world)
 
-	// slices.SortFunc(r.queue, func(a, b renderTask) int {
-	// 	if a.layer != b.layer {
-	// 		return cmp.Compare(a.layer, b.layer)
-	// 	}
-	// 	return cmp.Compare(a.zIndex, b.zIndex)
-	// })
+	slices.SortFunc(r.queue, func(a, b renderTask) int {
+		if a.layer != b.layer {
+			return cmp.Compare(a.layer, b.layer)
+		}
+		return cmp.Compare(a.zIndex, b.zIndex)
+	})
 
 	for _, task := range r.queue {
-		if err := task.render(screen); err != nil {
+		if err := task.render(screen, viewMatrix); err != nil {
 			return err
 		}
 	}
@@ -53,6 +56,7 @@ func (r *renderer) render(world donburi.World, screen *ebiten.Image) error {
 func (r *renderer) buildRenderQueue(world donburi.World) {
 	r.queue = r.queue[:0]
 
+	// Tempary until spatial partitioning is implemented
 	r.imageQuery.Each(world, func(e *donburi.Entry) {
 		img := rendering.GetImage(e)
 		if img == nil {
@@ -73,12 +77,13 @@ func (r *renderer) buildRenderQueue(world donburi.World) {
 		aY := anchor.Y * float64(img.Bounds().Dy())
 
 		r.queue = append(r.queue, renderTask{
-			render: func(screen *ebiten.Image) error {
-				opts := &ebiten.DrawImageOptions{}
+			render: func(screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
+				opts := ebiten.DrawImageOptions{}
 				opts.GeoM.Translate(-aX, -aY)
 				opts.GeoM.Concat(matrix)
+				opts.GeoM.Concat(viewMatrix)
 				opts.ColorScale.ScaleWithColor(color)
-				screen.DrawImage(img, opts)
+				screen.DrawImage(img, &opts)
 				return nil
 			},
 			layer:  layer,

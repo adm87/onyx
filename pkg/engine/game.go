@@ -13,6 +13,7 @@ type Game interface {
 	Start() error
 	WithContext(ctx context.Context) Game
 
+	Camera() Camera
 	Logger() Logger
 	Scenes() Scenes
 	Screen() Screen
@@ -22,6 +23,7 @@ type Game interface {
 type game struct {
 	ctx context.Context
 
+	camera   *camera
 	logger   *logger
 	renderer *renderer
 	scenes   *scenes
@@ -54,15 +56,24 @@ func NewGame(opts ...Option) Game {
 	)
 	time := newTime(cfg.FPS)
 	renderer := newRenderer(logger)
+	camera := newCamera(
+		scenes.world,
+		screen,
+	)
 
 	return &game{
 		ctx:      context.Background(),
+		camera:   camera,
 		logger:   logger,
 		renderer: renderer,
 		screen:   screen,
 		scenes:   scenes,
 		time:     time,
 	}
+}
+
+func (g *game) Camera() Camera {
+	return g.camera
 }
 
 func (g *game) Logger() Logger {
@@ -110,12 +121,16 @@ func (g *game) Draw(screen *ebiten.Image) {
 	default:
 		g.screen.buffer.Fill(g.screen.backgroundColor)
 
-		if err := g.renderer.render(g.scenes.world, g.screen.buffer); err != nil {
+		if err := g.renderer.render(g.scenes.world, g.screen.buffer, g.camera.view()); err != nil {
 			g.logger.Error("Failed to render scene: %v", err)
 			return
 		}
 
-		ebitenutil.DebugPrint(g.screen.buffer, "FPS: "+fmt.Sprintf("%.2f", ebiten.ActualFPS()))
+		ebitenutil.DebugPrintAt(
+			g.screen.buffer,
+			"FPS: "+fmt.Sprintf("%.2f", ebiten.ActualFPS()),
+			int(g.screen.safeArea.Min.X), int(g.screen.safeArea.Min.Y),
+		)
 
 		screen.DrawImage(g.screen.buffer, g.screen.options)
 	}
