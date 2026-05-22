@@ -12,10 +12,11 @@ type Config struct {
 	Width  int
 	Height int
 
-	ScreenScale ScreenScaleMode
-	Filter      ebiten.Filter
-
+	ScreenScale     ScreenScaleMode
+	Filter          ebiten.Filter
 	BackgroundColor color.RGBA
+
+	InitialScene SceneID
 }
 
 type Option func(*Config)
@@ -51,6 +52,12 @@ func WithBackgroundColor(color color.RGBA) Option {
 	}
 }
 
+func WithInitialScene(id SceneID) Option {
+	return func(c *Config) {
+		c.InitialScene = id
+	}
+}
+
 func defaultConfig() *Config {
 	return &Config{
 		Title:       "Untitled",
@@ -64,6 +71,7 @@ func defaultConfig() *Config {
 			B: 0,
 			A: 255,
 		},
+		InitialScene: SceneIDNone,
 	}
 }
 

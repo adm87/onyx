@@ -2,12 +2,9 @@ package engine
 
 import (
 	"context"
-	"image/color"
 	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 type Game interface {
@@ -15,6 +12,7 @@ type Game interface {
 	WithContext(ctx context.Context) Game
 
 	Logger() Logger
+	Scenes() Scenes
 	Screen() Screen
 }
 
@@ -22,37 +20,48 @@ type game struct {
 	ctx context.Context
 
 	logger *logger
+	scenes *scenes
 	screen *screen
 }
 
 func setupWindow(title string, width, height int) {
 	ebiten.SetWindowTitle(title)
 	ebiten.SetWindowSize(width, height)
-	ebiten.SetWindowResizable(true)
 }
 
 func NewGame(opts ...Option) Game {
 	cfg := applyOptions(opts...)
-	logger := newLogger(os.Stdout)
 
 	setupWindow(cfg.Title, cfg.Width, cfg.Height)
+
+	logger := newLogger(os.Stdout)
+	screen := newScreen(
+		cfg.Width,
+		cfg.Height,
+		cfg.ScreenScale,
+		cfg.Filter,
+		cfg.BackgroundColor,
+		logger,
+	)
+	scenes := newScenes(
+		cfg.InitialScene,
+		logger,
+	)
 
 	return &game{
 		ctx:    context.Background(),
 		logger: logger,
-		screen: newScreen(
-			cfg.Width,
-			cfg.Height,
-			cfg.ScreenScale,
-			cfg.Filter,
-			cfg.BackgroundColor,
-			logger,
-		),
+		screen: screen,
+		scenes: scenes,
 	}
 }
 
 func (s *game) Logger() Logger {
 	return s.logger
+}
+
+func (s *game) Scenes() Scenes {
+	return s.scenes
 }
 
 func (s *game) Screen() Screen {
@@ -76,10 +85,7 @@ func (s *game) Update() error {
 	case <-s.ctx.Done():
 		return s.ctx.Err()
 	default:
-		if inpututil.IsKeyJustPressed(ebiten.KeyF) {
-			ebiten.SetFullscreen(!ebiten.IsFullscreen())
-		}
-		return nil
+		return s.scenes.update(s.ctx)
 	}
 }
 
@@ -89,30 +95,6 @@ func (s *game) Draw(screen *ebiten.Image) {
 		return
 	default:
 		s.screen.buffer.Fill(s.screen.backgroundColor)
-
-		// Top Left
-		vector.FillRect(s.screen.buffer,
-			float32(s.screen.safeArea.Min.X+10),
-			float32(s.screen.safeArea.Min.Y+10),
-			100, 100, color.White, false)
-
-		// Top Right
-		vector.FillRect(s.screen.buffer,
-			float32(s.screen.safeArea.Max.X-110),
-			float32(s.screen.safeArea.Min.Y+10),
-			100, 100, color.White, false)
-
-		// Bottom Left
-		vector.FillRect(s.screen.buffer,
-			float32(s.screen.safeArea.Min.X+10),
-			float32(s.screen.safeArea.Max.Y-110),
-			100, 100, color.White, false)
-
-		// Bottom Right
-		vector.FillRect(s.screen.buffer,
-			float32(s.screen.safeArea.Max.X-110),
-			float32(s.screen.safeArea.Max.Y-110),
-			100, 100, color.White, false)
 
 		screen.DrawImage(s.screen.buffer, s.screen.options)
 	}
