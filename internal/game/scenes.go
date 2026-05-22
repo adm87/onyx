@@ -19,7 +19,7 @@ var (
 func addScenes(onyx engine.Game) {
 	scenes := onyx.Scenes()
 
-	scenes.RegisterScene(
+	scenes.AddScene(
 		GameSceneIDSplashScreen,
 		splashscreen.New(
 			onyx.Camera(),

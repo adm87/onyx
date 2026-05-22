@@ -2,11 +2,9 @@ package engine
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
 type Game interface {
@@ -125,12 +123,6 @@ func (g *game) Draw(screen *ebiten.Image) {
 			g.logger.Error("Failed to render scene: %v", err)
 			return
 		}
-
-		ebitenutil.DebugPrintAt(
-			g.screen.buffer,
-			"FPS: "+fmt.Sprintf("%.2f", ebiten.ActualFPS()),
-			int(g.screen.safeArea.Min.X), int(g.screen.safeArea.Min.Y),
-		)
 
 		screen.DrawImage(g.screen.buffer, g.screen.options)
 	}

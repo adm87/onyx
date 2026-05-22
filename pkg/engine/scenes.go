@@ -14,7 +14,7 @@ type (
 )
 
 type Scenes interface {
-	RegisterScene(id SceneID, state SceneState, transitions SceneTransitions)
+	AddScene(id SceneID, state SceneState, transitions SceneTransitions)
 }
 
 type SceneState struct {
@@ -51,7 +51,7 @@ func newScenes(initialScene SceneID, logger Logger) *scenes {
 	}
 }
 
-func (s *scenes) RegisterScene(id SceneID, state SceneState, transitions SceneTransitions) {
+func (s *scenes) AddScene(id SceneID, state SceneState, transitions SceneTransitions) {
 	if _, exists := s.scenes[id]; exists {
 		s.logger.Warn("Scene with ID '%s' is already registered. Overwriting.", id)
 	}
