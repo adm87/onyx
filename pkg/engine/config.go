@@ -11,6 +11,7 @@ type Config struct {
 
 	Width  int
 	Height int
+	FPS    int
 
 	ScreenScale     ScreenScaleMode
 	Filter          ebiten.Filter
@@ -46,6 +47,12 @@ func WithScreenSize(width, height int) Option {
 	}
 }
 
+func WithFPS(fps int) Option {
+	return func(c *Config) {
+		c.FPS = fps
+	}
+}
+
 func WithBackgroundColor(color color.RGBA) Option {
 	return func(c *Config) {
 		c.BackgroundColor = color
@@ -63,6 +70,7 @@ func defaultConfig() *Config {
 		Title:       "Untitled",
 		Width:       800,
 		Height:      600,
+		FPS:         60,
 		ScreenScale: ScreenScaleNone,
 		Filter:      ebiten.FilterLinear,
 		BackgroundColor: color.RGBA{

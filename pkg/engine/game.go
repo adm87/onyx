@@ -14,6 +14,7 @@ type Game interface {
 	Logger() Logger
 	Scenes() Scenes
 	Screen() Screen
+	Time() Time
 }
 
 type game struct {
@@ -22,6 +23,7 @@ type game struct {
 	logger *logger
 	scenes *scenes
 	screen *screen
+	time   *time
 }
 
 func setupWindow(title string, width, height int) {
@@ -47,59 +49,66 @@ func NewGame(opts ...Option) Game {
 		cfg.InitialScene,
 		logger,
 	)
+	time := newTime(cfg.FPS)
 
 	return &game{
 		ctx:    context.Background(),
 		logger: logger,
 		screen: screen,
 		scenes: scenes,
+		time:   time,
 	}
 }
 
-func (s *game) Logger() Logger {
-	return s.logger
+func (g *game) Logger() Logger {
+	return g.logger
 }
 
-func (s *game) Scenes() Scenes {
-	return s.scenes
+func (g *game) Scenes() Scenes {
+	return g.scenes
 }
 
-func (s *game) Screen() Screen {
-	return s.screen
+func (g *game) Screen() Screen {
+	return g.screen
 }
 
-func (s *game) WithContext(ctx context.Context) Game {
-	if s.ctx == nil {
-		return s
+func (g *game) Time() Time {
+	return g.time
+}
+
+func (g *game) WithContext(ctx context.Context) Game {
+	if g.ctx == nil {
+		return g
 	}
-	s.ctx = ctx
-	return s
+	g.ctx = ctx
+	return g
 }
 
-func (s *game) Start() error {
-	return ebiten.RunGame(s)
+func (g *game) Start() error {
+	return ebiten.RunGame(g)
 }
 
-func (s *game) Update() error {
+func (g *game) Update() error {
 	select {
-	case <-s.ctx.Done():
-		return s.ctx.Err()
+	case <-g.ctx.Done():
+		return g.ctx.Err()
 	default:
-		return s.scenes.update(s.ctx)
+		g.time.tick()
+		return g.scenes.update(g.ctx)
 	}
 }
 
-func (s *game) Draw(screen *ebiten.Image) {
+func (g *game) Draw(screen *ebiten.Image) {
 	select {
-	case <-s.ctx.Done():
+	case <-g.ctx.Done():
 		return
 	default:
-		s.screen.buffer.Fill(s.screen.backgroundColor)
+		g.screen.buffer.Fill(g.screen.backgroundColor)
 
-		screen.DrawImage(s.screen.buffer, s.screen.options)
+		screen.DrawImage(g.screen.buffer, g.screen.options)
 	}
 }
 
-func (s *game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return s.screen.Layout(outsideWidth, outsideHeight)
+func (g *game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+	return g.screen.Layout(outsideWidth, outsideHeight)
 }

@@ -9,7 +9,7 @@ import (
 
 const CompleteExitCode engine.SceneExitCode = iota
 
-func New(screen engine.Screen, logger engine.Logger) engine.SceneState {
+func New(time engine.Time, logger engine.Logger) engine.SceneState {
 	return engine.SceneState{
 		OnEnter: func(ctx context.Context, world donburi.World) error {
 			logger.Info("Entering Splash Screen Scene")
