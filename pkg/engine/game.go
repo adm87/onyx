@@ -2,9 +2,11 @@ package engine
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
 type Game interface {
@@ -20,10 +22,11 @@ type Game interface {
 type game struct {
 	ctx context.Context
 
-	logger *logger
-	scenes *scenes
-	screen *screen
-	time   *time
+	logger   *logger
+	renderer *renderer
+	scenes   *scenes
+	screen   *screen
+	time     *time
 }
 
 func setupWindow(title string, width, height int) {
@@ -50,13 +53,15 @@ func NewGame(opts ...Option) Game {
 		logger,
 	)
 	time := newTime(cfg.FPS)
+	renderer := newRenderer(logger)
 
 	return &game{
-		ctx:    context.Background(),
-		logger: logger,
-		screen: screen,
-		scenes: scenes,
-		time:   time,
+		ctx:      context.Background(),
+		logger:   logger,
+		renderer: renderer,
+		screen:   screen,
+		scenes:   scenes,
+		time:     time,
 	}
 }
 
@@ -104,6 +109,13 @@ func (g *game) Draw(screen *ebiten.Image) {
 		return
 	default:
 		g.screen.buffer.Fill(g.screen.backgroundColor)
+
+		if err := g.renderer.render(g.scenes.world, g.screen.buffer); err != nil {
+			g.logger.Error("Failed to render scene: %v", err)
+			return
+		}
+
+		ebitenutil.DebugPrint(g.screen.buffer, "FPS: "+fmt.Sprintf("%.2f", ebiten.ActualFPS()))
 
 		screen.DrawImage(g.screen.buffer, g.screen.options)
 	}
