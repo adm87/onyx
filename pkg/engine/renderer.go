@@ -1,9 +1,6 @@
 package engine
 
 import (
-	"cmp"
-	"slices"
-
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -37,12 +34,12 @@ func newRenderer(logger *logger) *renderer {
 func (r *renderer) render(world donburi.World, screen *ebiten.Image) error {
 	r.buildRenderQueue(world)
 
-	slices.SortFunc(r.queue, func(a, b renderTask) int {
-		if a.layer != b.layer {
-			return cmp.Compare(a.layer, b.layer)
-		}
-		return cmp.Compare(a.zIndex, b.zIndex)
-	})
+	// slices.SortFunc(r.queue, func(a, b renderTask) int {
+	// 	if a.layer != b.layer {
+	// 		return cmp.Compare(a.layer, b.layer)
+	// 	}
+	// 	return cmp.Compare(a.zIndex, b.zIndex)
+	// })
 
 	for _, task := range r.queue {
 		if err := task.render(screen); err != nil {

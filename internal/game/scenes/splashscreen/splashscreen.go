@@ -75,7 +75,7 @@ func New(time engine.Time, logger engine.Logger) engine.SceneState {
 		OnUpdate: func(ctx context.Context, world donburi.World) (engine.SceneExitCode, error) {
 			query.Each(world, func(e *donburi.Entry) {
 				rot := transform.GetRotation(e)
-				rot += 10
+				rot += 100 * time.DeltaTime()
 				if rot > 360 {
 					rot -= 360
 				}
