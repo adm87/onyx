@@ -11,23 +11,28 @@ import (
 	"github.com/yohamta/donburi/filter"
 )
 
-type renderTask struct {
-	render func(screen *ebiten.Image, viewMatrix ebiten.GeoM) error
-	layer  int
-	zIndex int
+type RenderTask struct {
+	Render func(screen *ebiten.Image, viewMatrix ebiten.GeoM) error
+	Layer  int
+	ZIndex int
+}
+
+type Renderer interface {
+	AddRenderingSystem(system func(world donburi.World) []RenderTask)
 }
 
 type renderer struct {
 	logger     *logger
 	imageQuery *donburi.Query
 
-	queue []renderTask
+	systems []func(world donburi.World) []RenderTask
+	queue   []RenderTask
 }
 
 func newRenderer(logger *logger) *renderer {
 	return &renderer{
 		logger: logger,
-		queue:  make([]renderTask, 0, 100),
+		queue:  make([]RenderTask, 0, 100),
 		imageQuery: donburi.NewQuery(
 			filter.Contains(transform.Matrix, rendering.Renderer, rendering.Image),
 		),
@@ -35,17 +40,21 @@ func newRenderer(logger *logger) *renderer {
 }
 
 func (r *renderer) render(world donburi.World, screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
-	r.buildRenderQueue(world)
+	r.queue = r.queue[:0]
 
-	slices.SortFunc(r.queue, func(a, b renderTask) int {
-		if a.layer != b.layer {
-			return cmp.Compare(a.layer, b.layer)
+	for _, system := range r.systems {
+		r.queue = append(r.queue, system(world)...)
+	}
+
+	slices.SortFunc(r.queue, func(a, b RenderTask) int {
+		if a.Layer != b.Layer {
+			return cmp.Compare(a.Layer, b.Layer)
 		}
-		return cmp.Compare(a.zIndex, b.zIndex)
+		return cmp.Compare(a.ZIndex, b.ZIndex)
 	})
 
 	for _, task := range r.queue {
-		if err := task.render(screen, viewMatrix); err != nil {
+		if err := task.Render(screen, viewMatrix); err != nil {
 			return err
 		}
 	}
@@ -53,42 +62,6 @@ func (r *renderer) render(world donburi.World, screen *ebiten.Image, viewMatrix 
 	return nil
 }
 
-func (r *renderer) buildRenderQueue(world donburi.World) {
-	r.queue = r.queue[:0]
-
-	// Tempary until spatial partitioning is implemented
-	r.imageQuery.Each(world, func(e *donburi.Entry) {
-		img := rendering.GetImage(e)
-		if img == nil {
-			return // Don't enqueue render tasks for entities without an image
-		}
-		vis := rendering.IsVisible(e)
-		if !vis {
-			return // Don't enqueue render tasks for invisible entities
-		}
-
-		layer := rendering.GetLayer(e)
-		zIndex := rendering.GetZIndex(e)
-		matrix := transform.GetMatrix(e)
-		anchor := rendering.GetAnchor(e)
-		color := rendering.GetColor(e)
-
-		aX := anchor.X * float64(img.Bounds().Dx())
-		aY := anchor.Y * float64(img.Bounds().Dy())
-
-		r.queue = append(r.queue, renderTask{
-			render: func(screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
-				opts := ebiten.DrawImageOptions{}
-				opts.GeoM.Translate(-aX, -aY)
-				opts.GeoM.Concat(matrix)
-				opts.GeoM.Concat(viewMatrix)
-				opts.ColorScale.ScaleWithColor(color)
-				opts.ColorScale.ScaleAlpha(float32(color.A) / 255)
-				screen.DrawImage(img, &opts)
-				return nil
-			},
-			layer:  layer,
-			zIndex: zIndex,
-		})
-	})
+func (r *renderer) AddRenderingSystem(system func(world donburi.World) []RenderTask) {
+	r.systems = append(r.systems, system)
 }

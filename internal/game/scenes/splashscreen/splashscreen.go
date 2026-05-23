@@ -7,8 +7,6 @@ import (
 	"github.com/adm87/onyx/internal/content"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
-	"github.com/adm87/onyx/pkg/engine/components/transform"
-	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/images"
 	"github.com/tanema/gween"
 	"github.com/tanema/gween/ease"
@@ -17,7 +15,16 @@ import (
 
 const CompleteExitCode engine.SceneExitCode = iota + 1
 
-func New(assets engine.Assets, camera engine.Camera, time engine.Time, screen engine.Screen, logger engine.Logger) engine.SceneState {
+func updateSplashscreen(world donburi.World, entity donburi.Entity, value float32) {
+	entry := world.Entry(entity)
+
+	color := rendering.GetColor(entry)
+	color.A = uint8(value * 255)
+
+	rendering.SetColor(entry, color)
+}
+
+func New(assets engine.Assets, time engine.Time, screen engine.Screen) engine.SceneState {
 	var entity donburi.Entity
 	sequence := gween.NewSequence(
 		gween.New(0, 0, 0.5, ease.Linear),
@@ -37,44 +44,32 @@ func New(assets engine.Assets, camera engine.Camera, time engine.Time, screen en
 				return fmt.Errorf("failed to get image asset '%s'", content.EmbeddedSplash1920x1080Black)
 			}
 
-			entity = world.Create(
-				transform.Matrix,
-				rendering.Renderer,
-				rendering.Image,
+			screen.ResizeBuffer(img.Bounds().Dx(), img.Bounds().Dy())
+
+			entity = images.NewEntity(world,
+				images.WithImage(img),
+				images.WithAnchor(0.5, 0.5),
+				images.WithAlpha(0),
 			)
-			entry := world.Entry(entity)
 
-			color := rendering.GetColor(entry)
-			color.A = 0
-
-			rendering.SetImage(entry, img)
-			rendering.SetAnchor(entry, geom.Vec2{X: 0.5, Y: 0.5})
-			rendering.SetColor(entry, color)
-
-			screen.ResizeBuffer(
-				img.Bounds().Dx(),
-				img.Bounds().Dy(),
-			)
 			return nil
 		},
 		OnExit: func(ctx context.Context, world donburi.World) error {
-			screen.RestoreBuffer()
-			assets.Unload(content.EmbeddedSplash1920x1080Black)
 			world.Remove(entity)
+
+			assets.Unload(content.EmbeddedSplash1920x1080Black)
+			screen.RestoreBuffer()
+
 			return nil
 		},
 		OnUpdate: func(ctx context.Context, world donburi.World) (engine.SceneExitCode, error) {
 			value, _, complete := sequence.Update(float32(time.DeltaTime()))
-			entry := world.Entry(entity)
-
-			color := rendering.GetColor(entry)
-			color.A = uint8(value * 255)
-
-			rendering.SetColor(entry, color)
+			updateSplashscreen(world, entity, value)
 
 			if complete {
 				return CompleteExitCode, nil
 			}
+
 			return engine.SceneExitNone, nil
 		},
 	}

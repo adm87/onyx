@@ -14,6 +14,7 @@ type Game interface {
 	Assets() Assets
 	Camera() Camera
 	Logger() Logger
+	Renderer() Renderer
 	Scenes() Scenes
 	Screen() Screen
 	Time() Time
@@ -90,6 +91,10 @@ func (g *game) Camera() Camera {
 
 func (g *game) Logger() Logger {
 	return g.logger
+}
+
+func (g *game) Renderer() Renderer {
+	return g.renderer
 }
 
 func (g *game) Scenes() Scenes {

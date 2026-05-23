@@ -18,6 +18,7 @@ func Boot() error {
 	).WithContext(ctx)
 
 	addAssetAdapters(onyx)
+	addRenderingSystems(onyx)
 	addScenes(onyx)
 
 	return onyx.Start()
