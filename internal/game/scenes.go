@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/adm87/onyx/internal/game/scenes/gameplay"
 	"github.com/adm87/onyx/internal/game/scenes/splashscreen"
 	"github.com/adm87/onyx/pkg/engine"
 )
@@ -27,5 +28,15 @@ func addScenes(onyx engine.Game) {
 			onyx.Screen(),
 		),
 		splashScreenTransitions,
+	)
+
+	scenes.AddScene(
+		GameSceneIDGameplay,
+		gameplay.New(
+			onyx.Assets(),
+			onyx.Camera(),
+			onyx.Time(),
+		),
+		engine.SceneTransitions{},
 	)
 }

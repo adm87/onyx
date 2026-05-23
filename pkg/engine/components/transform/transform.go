@@ -63,6 +63,18 @@ func SetRotation(entry *donburi.Entry, rot float64) {
 	MarkDirty(entry)
 }
 
+func Rotate(entry *donburi.Entry, delta float64) float64 {
+	current := GetRotation(entry)
+	newRot := current + delta
+	if newRot >= 360 {
+		newRot -= 360
+	} else if newRot < 0 {
+		newRot += 360
+	}
+	SetRotation(entry, newRot)
+	return newRot
+}
+
 func GetMatrix(entry *donburi.Entry) ebiten.GeoM {
 	if !entry.HasComponent(Matrix) {
 		return ebiten.GeoM{}

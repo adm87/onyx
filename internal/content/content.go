@@ -18,3 +18,10 @@ const (
 	EmbeddedImg10x10White        engine.FilePath = "embedded/images/img_10x10_white.png"
 	EmbeddedSplash1920x1080Black engine.FilePath = "embedded/images/splash_1920x1080_black.png"
 )
+
+func LoadDefaultContent(assets engine.Assets, logger engine.Logger) error {
+	logger.Debug("Loading default content...")
+	return assets.Load(embedded,
+		EmbeddedImg10x10White,
+	)
+}

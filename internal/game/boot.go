@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 
+	"github.com/adm87/onyx/internal/content"
 	"github.com/adm87/onyx/pkg/engine"
 )
 
@@ -20,6 +21,10 @@ func Boot() error {
 	addAssetAdapters(onyx)
 	addRenderingSystems(onyx)
 	addScenes(onyx)
+
+	if err := content.LoadDefaultContent(onyx.Assets(), onyx.Logger()); err != nil {
+		return err
+	}
 
 	return onyx.Start()
 }

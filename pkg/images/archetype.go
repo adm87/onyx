@@ -8,6 +8,7 @@ import (
 )
 
 var (
+	// Components defines the set of components that make up an image entity.
 	Components = []donburi.IComponentType{
 		transform.Position,
 		transform.Rotation,
@@ -21,6 +22,7 @@ var (
 )
 
 var (
+	// Query provides a filter for iterating over image entities.
 	Query = donburi.NewQuery(
 		filter.Contains(Components...),
 	)

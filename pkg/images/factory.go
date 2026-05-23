@@ -54,9 +54,9 @@ func NewEntity(world donburi.World, opts ...Option) donburi.Entity {
 	return entity
 }
 
-func WithPosition(pos geom.Vec2) Option {
+func WithPosition(x, y float64) Option {
 	return func(opts *Options) {
-		opts.Position = pos
+		opts.Position = geom.Vec2{X: x, Y: y}
 	}
 }
 
@@ -66,9 +66,9 @@ func WithRotation(rotation float64) Option {
 	}
 }
 
-func WithScale(scale geom.Vec2) Option {
+func WithScale(x, y float64) Option {
 	return func(opts *Options) {
-		opts.Scale = scale
+		opts.Scale = geom.Vec2{X: x, Y: y}
 	}
 }
 

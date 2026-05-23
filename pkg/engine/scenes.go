@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
 
@@ -21,6 +22,7 @@ type SceneState struct {
 	OnEnter  func(ctx context.Context, world donburi.World) error
 	OnExit   func(ctx context.Context, world donburi.World) error
 	OnUpdate func(ctx context.Context, world donburi.World) (SceneExitCode, error)
+	OnRender func(ctx context.Context, world donburi.World, screen *ebiten.Image, viewMatrix ebiten.GeoM) error
 }
 
 type scenes struct {
@@ -98,6 +100,10 @@ func (s *scenes) update(ctx context.Context) error {
 	return nil
 }
 
+func (s *scenes) render(ctx context.Context, screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
+	return s.renderCurrent(ctx, screen, viewMatrix)
+}
+
 func (s *scenes) transitionToNext(ctx context.Context) error {
 	if err := s.exitCurrent(ctx); err != nil {
 		return err
@@ -119,7 +125,7 @@ func (s *scenes) exitCurrent(ctx context.Context) error {
 
 	currentState, ok := s.scenes[s.currentScene]
 	if !ok {
-		return nil
+		return fmt.Errorf("scene with ID '%s' not found", s.currentScene)
 	}
 
 	if currentState.OnExit != nil {
@@ -136,7 +142,7 @@ func (s *scenes) enterNext(ctx context.Context) error {
 
 	nextState, ok := s.scenes[s.nextScene]
 	if !ok {
-		return nil
+		return fmt.Errorf("scene with ID '%s' not found", s.nextScene)
 	}
 
 	if nextState.OnEnter != nil {
@@ -153,7 +159,7 @@ func (s *scenes) updateCurrent(ctx context.Context) (SceneExitCode, error) {
 
 	currentState, ok := s.scenes[s.currentScene]
 	if !ok {
-		return SceneExitNone, nil
+		return SceneExitNone, fmt.Errorf("scene with ID '%s' not found", s.currentScene)
 	}
 
 	if currentState.OnUpdate != nil {
@@ -161,4 +167,21 @@ func (s *scenes) updateCurrent(ctx context.Context) (SceneExitCode, error) {
 	}
 
 	return SceneExitNone, nil
+}
+
+func (s *scenes) renderCurrent(ctx context.Context, screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
+	if s.currentScene == SceneIDNone {
+		return nil
+	}
+
+	currentState, ok := s.scenes[s.currentScene]
+	if !ok {
+		return fmt.Errorf("scene with ID '%s' not found", s.currentScene)
+	}
+
+	if currentState.OnRender != nil {
+		return currentState.OnRender(ctx, s.world, screen, viewMatrix)
+	}
+
+	return nil
 }

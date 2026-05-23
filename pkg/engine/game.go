@@ -142,6 +142,10 @@ func (g *game) Draw(screen *ebiten.Image) {
 			g.logger.Error("Failed to render scene: %v", err)
 			return
 		}
+		if err := g.scenes.render(g.ctx, g.screen.buffer, g.camera.view()); err != nil {
+			g.logger.Error("Failed to render scene: %v", err)
+			return
+		}
 
 		screen.DrawImage(g.screen.buffer, g.screen.options)
 	}
