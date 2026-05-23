@@ -19,7 +19,6 @@ const CompleteExitCode engine.SceneExitCode = iota + 1
 
 func New(assets engine.Assets, camera engine.Camera, time engine.Time, screen engine.Screen, logger engine.Logger) engine.SceneState {
 	var entity donburi.Entity
-
 	sequence := gween.NewSequence(
 		gween.New(0, 0, 0.5, ease.Linear),
 		gween.New(0, 1, 1, ease.Linear),
@@ -27,7 +26,6 @@ func New(assets engine.Assets, camera engine.Camera, time engine.Time, screen en
 		gween.New(1, 0, 1, ease.Linear),
 		gween.New(0, 0, 0.5, ease.Linear),
 	)
-
 	return engine.SceneState{
 		OnEnter: func(ctx context.Context, world donburi.World) error {
 			if err := assets.Load(content.EmbeddedFS(), content.EmbeddedSplash1920x1080Black); err != nil {

@@ -79,7 +79,7 @@ func (s *screen) ResizeBuffer(width, height int) {
 		return
 	}
 
-	s.logger.Info("Resizing screen buffer from %dx%d to %dx%d", bufWidth, bufHeight, width, height)
+	s.logger.Debug("Resizing screen buffer from %dx%d to %dx%d", bufWidth, bufHeight, width, height)
 
 	s.buffer.Deallocate()
 	s.buffer = ebiten.NewImage(width, height)
