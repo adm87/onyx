@@ -1,0 +1,101 @@
+package engine
+
+import "io/fs"
+
+type AssetAdapterID string
+
+type AssetAdapter interface {
+	ImportAsset(path FilePath, raw []byte) error
+	DeleteAsset(path FilePath) bool
+	SupportedExtensions() []FileExt
+}
+
+type Assets interface {
+	Load(fileSystem fs.FS, paths ...FilePath) error
+	Unload(paths ...FilePath)
+
+	AddAdapter(id AssetAdapterID, adapter AssetAdapter)
+	GetAdapter(id AssetAdapterID) (AssetAdapter, bool)
+}
+
+type assets struct {
+	logger *logger
+
+	adaptersByID  map[AssetAdapterID]AssetAdapter
+	adaptersByExt map[FileExt]AssetAdapter
+}
+
+func newAssets(logger *logger) *assets {
+	return &assets{
+		logger:        logger,
+		adaptersByID:  make(map[AssetAdapterID]AssetAdapter),
+		adaptersByExt: make(map[FileExt]AssetAdapter),
+	}
+}
+
+func (a *assets) Load(fileSystem fs.FS, paths ...FilePath) error {
+	for _, path := range paths {
+		ext := path.Ext()
+
+		adapter, exists := a.adaptersByExt[ext]
+		if !exists {
+			a.logger.Warn("No asset adapter found for file extension '%s', skipping asset '%s'", ext, path)
+			continue
+		}
+
+		raw, err := fs.ReadFile(fileSystem, path.String())
+		if err != nil {
+			a.logger.Error("Failed to read asset file '%s': %v", path, err)
+			continue
+		}
+
+		if err := adapter.ImportAsset(path, raw); err != nil {
+			a.logger.Error("Failed to import asset '%s': %v", path, err)
+			continue
+		}
+
+		a.logger.Debug("Successfully loaded asset '%s'", path)
+	}
+	return nil
+}
+
+func (a *assets) Unload(paths ...FilePath) {
+	for _, path := range paths {
+		ext := path.Ext()
+
+		adapter, exists := a.adaptersByExt[ext]
+		if !exists {
+			a.logger.Warn("No asset adapter found for file extension '%s', skipping unload of asset '%s'", ext, path)
+			continue
+		}
+
+		if adapter.DeleteAsset(path) {
+			a.logger.Debug("Successfully unloaded asset '%s'", path)
+		} else {
+			a.logger.Warn("Failed to unload asset '%s': asset not found in adapter", path)
+		}
+	}
+}
+
+func (a *assets) AddAdapter(id AssetAdapterID, adapter AssetAdapter) {
+	if _, exists := a.adaptersByID[id]; exists {
+		a.logger.Warn("Asset adapter with ID '%s' already exists, skipping", id)
+		return
+	}
+
+	a.adaptersByID[id] = adapter
+
+	for _, ext := range adapter.SupportedExtensions() {
+		if _, exists := a.adaptersByExt[ext]; exists {
+			a.logger.Warn("Asset adapter for extension '%s' already exists, skipping", ext)
+			continue
+		}
+
+		a.adaptersByExt[ext] = adapter
+	}
+}
+
+func (a *assets) GetAdapter(id AssetAdapterID) (AssetAdapter, bool) {
+	adapter, exists := a.adaptersByID[id]
+	return adapter, exists
+}

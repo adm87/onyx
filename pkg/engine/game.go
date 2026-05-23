@@ -11,6 +11,7 @@ type Game interface {
 	Start() error
 	WithContext(ctx context.Context) Game
 
+	Assets() Assets
 	Camera() Camera
 	Logger() Logger
 	Scenes() Scenes
@@ -21,6 +22,7 @@ type Game interface {
 type game struct {
 	ctx context.Context
 
+	assets   *assets
 	camera   *camera
 	logger   *logger
 	renderer *renderer
@@ -40,6 +42,9 @@ func NewGame(opts ...Option) Game {
 	setupWindow(cfg.Title, cfg.Width, cfg.Height)
 
 	logger := newLogger(os.Stdout)
+	assets := newAssets(
+		logger,
+	)
 	screen := newScreen(
 		cfg.Width,
 		cfg.Height,
@@ -52,8 +57,12 @@ func NewGame(opts ...Option) Game {
 		cfg.InitialScene,
 		logger,
 	)
-	time := newTime(cfg.FPS)
-	renderer := newRenderer(logger)
+	time := newTime(
+		cfg.FPS,
+	)
+	renderer := newRenderer(
+		logger,
+	)
 	camera := newCamera(
 		scenes.world,
 		screen,
@@ -61,6 +70,7 @@ func NewGame(opts ...Option) Game {
 
 	return &game{
 		ctx:      context.Background(),
+		assets:   assets,
 		camera:   camera,
 		logger:   logger,
 		renderer: renderer,
@@ -68,6 +78,10 @@ func NewGame(opts ...Option) Game {
 		scenes:   scenes,
 		time:     time,
 	}
+}
+
+func (g *game) Assets() Assets {
+	return g.assets
 }
 
 func (g *game) Camera() Camera {

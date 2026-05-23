@@ -83,6 +83,7 @@ func (r *renderer) buildRenderQueue(world donburi.World) {
 				opts.GeoM.Concat(matrix)
 				opts.GeoM.Concat(viewMatrix)
 				opts.ColorScale.ScaleWithColor(color)
+				opts.ColorScale.ScaleAlpha(float32(color.A) / 255)
 				screen.DrawImage(img, &opts)
 				return nil
 			},

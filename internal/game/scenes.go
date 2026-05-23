@@ -22,8 +22,10 @@ func addScenes(onyx engine.Game) {
 	scenes.AddScene(
 		GameSceneIDSplashScreen,
 		splashscreen.New(
+			onyx.Assets(),
 			onyx.Camera(),
 			onyx.Time(),
+			onyx.Screen(),
 			onyx.Logger(),
 		),
 		splashScreenTransitions,

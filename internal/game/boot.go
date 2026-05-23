@@ -2,7 +2,6 @@ package game
 
 import (
 	"context"
-	"image/color"
 
 	"github.com/adm87/onyx/pkg/engine"
 )
@@ -15,10 +14,10 @@ func Boot() error {
 		engine.WithTitle("Onyx"),
 		engine.WithScreenSize(1280, 720),
 		engine.WithScreenScale(engine.ScreenScaleFill),
-		engine.WithBackgroundColor(color.RGBA{R: 100, G: 149, B: 237, A: 255}),
 		engine.WithInitialScene(GameSceneIDSplashScreen),
 	).WithContext(ctx)
 
+	addAssetAdapters(onyx)
 	addScenes(onyx)
 
 	return onyx.Start()
