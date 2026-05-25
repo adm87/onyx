@@ -3,8 +3,6 @@ package gameplay
 import (
 	"context"
 	"fmt"
-	"image/color"
-	"math/rand"
 
 	"github.com/adm87/onyx/internal/content"
 	"github.com/adm87/onyx/pkg/engine"
@@ -31,26 +29,7 @@ func New(assets engine.Assets, camera engine.Camera, time engine.Time) engine.Sc
 			if !found {
 				return fmt.Errorf("failed to load image: %s", content.EmbeddedImg10x10White)
 			}
-			for range 10000 {
-				scale := 0.5 + rand.Float64()
-				images.NewEntity(world,
-					images.WithImage(img),
-					images.WithPosition(
-						1280*rand.Float64(),
-						720*rand.Float64(),
-					),
-					images.WithAnchor(0.5, 0.5),
-					images.WithScale(scale, scale),
-					images.WithColor(
-						color.RGBA{
-							R: uint8(rand.Intn(256)),
-							G: uint8(rand.Intn(256)),
-							B: uint8(rand.Intn(256)),
-							A: 255,
-						},
-					),
-				)
-			}
+			_ = img
 			return nil
 		},
 		OnUpdate: func(ctx context.Context, world donburi.World) (engine.SceneExitCode, error) {

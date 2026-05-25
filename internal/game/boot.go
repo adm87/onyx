@@ -15,7 +15,7 @@ func Boot() error {
 		engine.WithTitle("Onyx"),
 		engine.WithScreenSize(1280, 720),
 		engine.WithScreenScale(engine.ScreenScaleFill),
-		engine.WithInitialScene(GameSceneIDSplashScreen),
+		engine.WithInitialScene(SplashScreenSceneID),
 	).WithContext(ctx)
 
 	addAssetAdapters(onyx)

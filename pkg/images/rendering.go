@@ -12,8 +12,7 @@ func NewRenderingSystem() func(world donburi.World) []engine.RenderTask {
 	var tasks []engine.RenderTask
 	return func(world donburi.World) []engine.RenderTask {
 		tasks = tasks[:0]
-
-		Query.Each(world, func(e *donburi.Entry) {
+		query.Each(world, func(e *donburi.Entry) {
 			img := rendering.GetImage(e)
 			if img == nil {
 				return // Don't enqueue render tasks for entities without an image
@@ -47,7 +46,6 @@ func NewRenderingSystem() func(world donburi.World) []engine.RenderTask {
 				ZIndex: zIndex,
 			})
 		})
-
 		return tasks
 	}
 }

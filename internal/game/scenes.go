@@ -7,13 +7,13 @@ import (
 )
 
 const (
-	GameSceneIDSplashScreen engine.SceneID = "splash_screen"
-	GameSceneIDGameplay     engine.SceneID = "gameplay"
+	SplashScreenSceneID engine.SceneID = "splash_screen"
+	GameplaySceneID     engine.SceneID = "gameplay"
 )
 
 var (
 	splashScreenTransitions = engine.SceneTransitions{
-		splashscreen.CompleteExitCode: GameSceneIDGameplay,
+		splashscreen.CompleteExitCode: GameplaySceneID,
 	}
 )
 
@@ -21,7 +21,7 @@ func addScenes(onyx engine.Game) {
 	scenes := onyx.Scenes()
 
 	scenes.AddScene(
-		GameSceneIDSplashScreen,
+		SplashScreenSceneID,
 		splashscreen.New(
 			onyx.Assets(),
 			onyx.Time(),
@@ -31,7 +31,7 @@ func addScenes(onyx engine.Game) {
 	)
 
 	scenes.AddScene(
-		GameSceneIDGameplay,
+		GameplaySceneID,
 		gameplay.New(
 			onyx.Assets(),
 			onyx.Camera(),

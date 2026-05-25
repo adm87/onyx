@@ -3,6 +3,7 @@ package splashscreen
 import (
 	"context"
 	"fmt"
+	"image/color"
 
 	"github.com/adm87/onyx/internal/content"
 	"github.com/adm87/onyx/pkg/engine"
@@ -15,17 +16,14 @@ import (
 
 const CompleteExitCode engine.SceneExitCode = iota + 1
 
-func updateSplashscreen(world donburi.World, entity donburi.Entity, value float32) {
-	entry := world.Entry(entity)
-
+func updateSplashscreen(entry *donburi.Entry, value float32) {
 	color := rendering.GetColor(entry)
 	color.A = uint8(value * 255)
-
 	rendering.SetColor(entry, color)
 }
 
 func New(assets engine.Assets, time engine.Time, screen engine.Screen) engine.SceneState {
-	var entity donburi.Entity
+	var entry *donburi.Entry
 	sequence := gween.NewSequence(
 		gween.New(0, 0, 0.5, ease.Linear),
 		gween.New(0, 1, 1, ease.Linear),
@@ -46,16 +44,15 @@ func New(assets engine.Assets, time engine.Time, screen engine.Screen) engine.Sc
 
 			screen.ResizeBuffer(img.Bounds().Dx(), img.Bounds().Dy())
 
-			entity = images.NewEntity(world,
+			entry = images.NewImage(world,
 				images.WithImage(img),
 				images.WithAnchor(0.5, 0.5),
-				images.WithAlpha(0),
+				images.WithColor(color.RGBA{R: 255, G: 255, B: 255, A: 0}),
 			)
-
 			return nil
 		},
 		OnExit: func(ctx context.Context, world donburi.World) error {
-			world.Remove(entity)
+			world.Remove(entry.Entity())
 
 			assets.Unload(content.EmbeddedSplash1920x1080Black)
 			screen.RestoreBuffer()
@@ -64,7 +61,7 @@ func New(assets engine.Assets, time engine.Time, screen engine.Screen) engine.Sc
 		},
 		OnUpdate: func(ctx context.Context, world donburi.World) (engine.SceneExitCode, error) {
 			value, _, complete := sequence.Update(float32(time.DeltaTime()))
-			updateSplashscreen(world, entity, value)
+			updateSplashscreen(entry, value)
 
 			if complete {
 				return CompleteExitCode, nil
