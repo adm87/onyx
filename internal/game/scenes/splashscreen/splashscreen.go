@@ -16,21 +16,9 @@ import (
 
 const CompleteExitCode engine.SceneExitCode = iota + 1
 
-func updateSplashscreen(entry *donburi.Entry, value float32) {
-	color := rendering.GetColor(entry)
-	color.A = uint8(value * 255)
-	rendering.SetColor(entry, color)
-}
-
 func New(assets engine.Assets, time engine.Time, screen engine.Screen) engine.SceneState {
 	var entry *donburi.Entry
-	sequence := gween.NewSequence(
-		gween.New(0, 0, 0.5, ease.Linear),
-		gween.New(0, 1, 1, ease.Linear),
-		gween.New(1, 1, 2, ease.Linear),
-		gween.New(1, 0, 1, ease.Linear),
-		gween.New(0, 0, 0.5, ease.Linear),
-	)
+	var sequence *gween.Sequence
 	return engine.SceneState{
 		OnEnter: func(ctx context.Context, world donburi.World) error {
 			if err := assets.Load(content.EmbeddedFS(), content.EmbeddedSplash1920x1080Black); err != nil {
@@ -44,10 +32,18 @@ func New(assets engine.Assets, time engine.Time, screen engine.Screen) engine.Sc
 
 			screen.ResizeBuffer(img.Bounds().Dx(), img.Bounds().Dy())
 
-			entry = images.NewImage(world,
-				images.WithImage(img),
+			entry = images.CreateImage(world,
+				images.WithRef(img),
 				images.WithAnchor(0.5, 0.5),
 				images.WithColor(color.RGBA{R: 255, G: 255, B: 255, A: 0}),
+			)
+
+			sequence = gween.NewSequence(
+				gween.New(0, 0, 0.5, ease.Linear),
+				gween.New(0, 1, 1, ease.Linear),
+				gween.New(1, 1, 2, ease.Linear),
+				gween.New(1, 0, 1, ease.Linear),
+				gween.New(0, 0, 0.5, ease.Linear),
 			)
 			return nil
 		},
@@ -57,16 +53,21 @@ func New(assets engine.Assets, time engine.Time, screen engine.Screen) engine.Sc
 			assets.Unload(content.EmbeddedSplash1920x1080Black)
 			screen.RestoreBuffer()
 
+			entry = nil
+			sequence = nil
+
 			return nil
 		},
 		OnUpdate: func(ctx context.Context, world donburi.World) (engine.SceneExitCode, error) {
-			value, _, complete := sequence.Update(float32(time.DeltaTime()))
-			updateSplashscreen(entry, value)
+			opacity, _, complete := sequence.Update(float32(time.DeltaTime()))
+
+			color := rendering.GetColor(entry)
+			color.A = uint8(opacity * 255)
+			rendering.SetColor(entry, color)
 
 			if complete {
 				return CompleteExitCode, nil
 			}
-
 			return engine.SceneExitNone, nil
 		},
 	}

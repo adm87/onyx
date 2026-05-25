@@ -38,7 +38,7 @@ func defaultOptions() Options {
 	}
 }
 
-func NewImage(world donburi.World, opts ...Option) *donburi.Entry {
+func CreateImage(world donburi.World, opts ...Option) *donburi.Entry {
 	entity := world.Create(
 		rendering.Image,
 		rendering.Renderer,
@@ -71,7 +71,7 @@ func ForEach(world donburi.World, fn func(*donburi.Entry)) {
 	})
 }
 
-func WithImage(img *ebiten.Image) Option {
+func WithRef(img *ebiten.Image) Option {
 	return func(opts *Options) {
 		opts.ref = img
 	}
