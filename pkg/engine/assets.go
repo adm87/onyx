@@ -2,7 +2,7 @@ package engine
 
 import "io/fs"
 
-type AssetAdapterID string
+type AdapterID string
 
 type AssetAdapter interface {
 	ImportAsset(fileSystem fs.FS, path FilePath, raw []byte) error
@@ -14,21 +14,21 @@ type Assets interface {
 	Load(fileSystem fs.FS, paths ...FilePath) error
 	Unload(paths ...FilePath)
 
-	AddAdapter(id AssetAdapterID, adapter AssetAdapter)
-	GetAdapter(id AssetAdapterID) (AssetAdapter, bool)
+	AddAssetAdapter(id AdapterID, adapter AssetAdapter)
+	GetAdapter(id AdapterID) (AssetAdapter, bool)
 }
 
 type assets struct {
 	logger *logger
 
-	adaptersByID  map[AssetAdapterID]AssetAdapter
+	adaptersByID  map[AdapterID]AssetAdapter
 	adaptersByExt map[FileExt]AssetAdapter
 }
 
 func newAssets(logger *logger) *assets {
 	return &assets{
 		logger:        logger,
-		adaptersByID:  make(map[AssetAdapterID]AssetAdapter),
+		adaptersByID:  make(map[AdapterID]AssetAdapter),
 		adaptersByExt: make(map[FileExt]AssetAdapter),
 	}
 }
@@ -77,7 +77,7 @@ func (a *assets) Unload(paths ...FilePath) {
 	}
 }
 
-func (a *assets) AddAdapter(id AssetAdapterID, adapter AssetAdapter) {
+func (a *assets) AddAssetAdapter(id AdapterID, adapter AssetAdapter) {
 	if _, exists := a.adaptersByID[id]; exists {
 		a.logger.Warn("Asset adapter with ID '%s' already exists, skipping", id)
 		return
@@ -95,7 +95,7 @@ func (a *assets) AddAdapter(id AssetAdapterID, adapter AssetAdapter) {
 	}
 }
 
-func (a *assets) GetAdapter(id AssetAdapterID) (AssetAdapter, bool) {
+func (a *assets) GetAdapter(id AdapterID) (AssetAdapter, bool) {
 	adapter, exists := a.adaptersByID[id]
 	return adapter, exists
 }

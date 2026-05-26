@@ -6,9 +6,9 @@ import (
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
+	"github.com/adm87/onyx/pkg/images/components"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
-	"github.com/yohamta/donburi/filter"
 )
 
 type Options struct {
@@ -24,10 +24,6 @@ type Options struct {
 
 type Option func(*Options)
 
-var query = donburi.NewQuery(
-	filter.Contains(rendering.Image),
-)
-
 func defaultOptions() Options {
 	return Options{
 		position: geom.Vec2{X: 0, Y: 0},
@@ -42,7 +38,7 @@ func defaultOptions() Options {
 
 func CreateImage(world donburi.World, opts ...Option) *donburi.Entry {
 	entity := world.Create(
-		rendering.Image,
+		components.Image,
 		rendering.Renderer,
 		rendering.Anchor,
 		rendering.Color,
@@ -56,7 +52,8 @@ func CreateImage(world donburi.World, opts ...Option) *donburi.Entry {
 		opt(&options)
 	}
 
-	rendering.SetImage(entry, options.ref)
+	components.SetImage(entry, options.ref)
+
 	rendering.SetAnchor(entry, options.anchor)
 	rendering.SetLayer(entry, options.layer)
 	rendering.SetZIndex(entry, options.zIndex)
@@ -70,7 +67,7 @@ func CreateImage(world donburi.World, opts ...Option) *donburi.Entry {
 }
 
 func ForEach(world donburi.World, fn func(*donburi.Entry)) {
-	query.Each(world, func(entry *donburi.Entry) {
+	ImageQuery.Each(world, func(entry *donburi.Entry) {
 		fn(entry)
 	})
 }

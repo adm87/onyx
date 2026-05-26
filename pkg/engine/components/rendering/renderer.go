@@ -4,7 +4,6 @@ import (
 	"image/color"
 
 	"github.com/adm87/onyx/pkg/engine/geom"
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
 
@@ -14,13 +13,8 @@ type RendererData struct {
 	ZIndex  int
 }
 
-type ImageData struct {
-	Ref *ebiten.Image
-}
-
 var (
 	Renderer = donburi.NewComponentType[RendererData](RendererData{Visible: true})
-	Image    = donburi.NewComponentType[ImageData]()
 	Anchor   = donburi.NewComponentType[geom.Vec2]()
 	Color    = donburi.NewComponentType[color.RGBA](color.RGBA{R: 255, G: 255, B: 255, A: 255})
 )
@@ -68,21 +62,6 @@ func SetZIndex(entry *donburi.Entry, zIndex int) {
 	}
 	renderer := Renderer.Get(entry)
 	renderer.ZIndex = zIndex
-}
-
-func GetImage(entry *donburi.Entry) *ebiten.Image {
-	if !entry.HasComponent(Image) {
-		return nil
-	}
-	return Image.Get(entry).Ref
-}
-
-func SetImage(entry *donburi.Entry, img *ebiten.Image) {
-	if !entry.HasComponent(Image) {
-		entry.AddComponent(Image)
-	}
-	image := Image.Get(entry)
-	image.Ref = img
 }
 
 func GetAnchor(entry *donburi.Entry) geom.Vec2 {

@@ -4,12 +4,13 @@ import (
 	"cmp"
 	"slices"
 
-	"github.com/adm87/onyx/pkg/engine/components/rendering"
-	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
-	"github.com/yohamta/donburi/filter"
 )
+
+type RenderingAdapter interface {
+	GetRenderTasks(world donburi.World) []RenderTask
+}
 
 type RenderTask struct {
 	Render func(screen *ebiten.Image, viewMatrix ebiten.GeoM) error
@@ -18,32 +19,28 @@ type RenderTask struct {
 }
 
 type Renderer interface {
-	AddRenderingSystem(system func(world donburi.World) []RenderTask)
+	AddRenderingAdapter(adapterID AdapterID, adapter RenderingAdapter)
 }
 
 type renderer struct {
-	logger     *logger
-	imageQuery *donburi.Query
-
-	systems []func(world donburi.World) []RenderTask
-	queue   []RenderTask
+	logger   *logger
+	queue    []RenderTask
+	adapters map[AdapterID]RenderingAdapter
 }
 
 func newRenderer(logger *logger) *renderer {
 	return &renderer{
-		logger: logger,
-		queue:  make([]RenderTask, 0, 100),
-		imageQuery: donburi.NewQuery(
-			filter.Contains(transform.Matrix, rendering.Renderer, rendering.Image),
-		),
+		logger:   logger,
+		queue:    make([]RenderTask, 0, 100),
+		adapters: make(map[AdapterID]RenderingAdapter),
 	}
 }
 
 func (r *renderer) render(world donburi.World, screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
 	r.queue = r.queue[:0]
 
-	for _, system := range r.systems {
-		r.queue = append(r.queue, system(world)...)
+	for _, adapter := range r.adapters {
+		r.queue = append(r.queue, adapter.GetRenderTasks(world)...)
 	}
 
 	slices.SortFunc(r.queue, func(a, b RenderTask) int {
@@ -62,6 +59,11 @@ func (r *renderer) render(world donburi.World, screen *ebiten.Image, viewMatrix 
 	return nil
 }
 
-func (r *renderer) AddRenderingSystem(system func(world donburi.World) []RenderTask) {
-	r.systems = append(r.systems, system)
+func (r *renderer) AddRenderingAdapter(adapterID AdapterID, adapter RenderingAdapter) {
+	if _, exists := r.adapters[adapterID]; exists {
+		r.logger.Warn("Rendering adapter with ID '%s' already exists, skipping", adapterID)
+		return
+	}
+
+	r.adapters[adapterID] = adapter
 }

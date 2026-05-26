@@ -1,4 +1,4 @@
-package game
+package scenes
 
 import (
 	"github.com/adm87/onyx/internal/game/scenes/gameplay"
@@ -11,10 +11,10 @@ const (
 	GameplaySceneID     engine.SceneID = "gameplay"
 )
 
-func addScenes(onyx engine.Game) {
-	scenes := onyx.Scenes()
+func AddScenes(onyx engine.Game) {
+	s := onyx.Scenes()
 
-	scenes.AddScene(
+	s.AddScene(
 		SplashScreenSceneID,
 		splashscreen.New(
 			onyx.Assets(),
@@ -26,7 +26,7 @@ func addScenes(onyx engine.Game) {
 		},
 	)
 
-	scenes.AddScene(
+	s.AddScene(
 		GameplaySceneID,
 		gameplay.New(
 			onyx.Assets(),

@@ -10,10 +10,9 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
-const AdapterID engine.AssetAdapterID = "images"
-
 type ImageAdapter struct {
-	cache map[engine.FilePath]*ebiten.Image
+	logger engine.Logger
+	cache  map[engine.FilePath]*ebiten.Image
 }
 
 func GetImage(assets engine.Assets, path engine.FilePath) (*ebiten.Image, bool) {
@@ -26,9 +25,10 @@ func GetImage(assets engine.Assets, path engine.FilePath) (*ebiten.Image, bool) 
 	return img, exists
 }
 
-func NewAdapter() *ImageAdapter {
+func NewAdapter(logger engine.Logger) *ImageAdapter {
 	return &ImageAdapter{
-		cache: make(map[engine.FilePath]*ebiten.Image),
+		logger: logger,
+		cache:  make(map[engine.FilePath]*ebiten.Image),
 	}
 }
 
