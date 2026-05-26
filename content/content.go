@@ -3,6 +3,8 @@ package content
 import (
 	"embed"
 	"io/fs"
+	"os"
+	"path/filepath"
 
 	"github.com/adm87/onyx/pkg/engine"
 )
@@ -14,7 +16,16 @@ func EmbeddedFS() fs.FS {
 	return embedded
 }
 
+var assets fs.FS
+
+func AssetsFS() fs.FS {
+	return assets
+}
+
 const (
+	AssetsLevelsSampleMap engine.FilePath = "levels/sample-map.tmx"
+	AssetsLevelsGym01     engine.FilePath = "levels/gym-01.tmx"
+
 	EmbeddedImg10x10White        engine.FilePath = "embedded/images/img_10x10_white.png"
 	EmbeddedSplash1920x1080Black engine.FilePath = "embedded/images/splash_1920x1080_black.png"
 )
@@ -24,4 +35,8 @@ func LoadDefaultContent(assets engine.Assets, logger engine.Logger) error {
 	return assets.Load(embedded,
 		EmbeddedImg10x10White,
 	)
+}
+
+func InitContentDirectories(rootDir string) {
+	assets = os.DirFS(filepath.Join(rootDir, "content", "assets"))
 }

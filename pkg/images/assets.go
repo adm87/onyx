@@ -3,6 +3,7 @@ package images
 import (
 	"bytes"
 	"fmt"
+	"io/fs"
 
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -11,7 +12,7 @@ import (
 
 const AdapterID engine.AssetAdapterID = "images"
 
-type Adapter struct {
+type assetAdapter struct {
 	cache map[engine.FilePath]*ebiten.Image
 }
 
@@ -21,17 +22,17 @@ func GetImage(assets engine.Assets, path engine.FilePath) (*ebiten.Image, bool) 
 		return nil, false
 	}
 
-	img, exists := adapter.(*Adapter).cache[path]
+	img, exists := adapter.(*assetAdapter).cache[path]
 	return img, exists
 }
 
-func NewAdapter() *Adapter {
-	return &Adapter{
+func NewAdapter() *assetAdapter {
+	return &assetAdapter{
 		cache: make(map[engine.FilePath]*ebiten.Image),
 	}
 }
 
-func (a *Adapter) ImportAsset(path engine.FilePath, raw []byte) error {
+func (a *assetAdapter) ImportAsset(fileSystem fs.FS, path engine.FilePath, raw []byte) error {
 	if _, exists := a.cache[path]; exists {
 		return fmt.Errorf("asset with path '%s' already exists", path)
 	}
@@ -45,7 +46,7 @@ func (a *Adapter) ImportAsset(path engine.FilePath, raw []byte) error {
 	return nil
 }
 
-func (a *Adapter) DeleteAsset(path engine.FilePath) bool {
+func (a *assetAdapter) DeleteAsset(path engine.FilePath) bool {
 	deleted := false
 
 	if img, exists := a.cache[path]; exists {
@@ -57,6 +58,6 @@ func (a *Adapter) DeleteAsset(path engine.FilePath) bool {
 	return deleted
 }
 
-func (a *Adapter) SupportedExtensions() []engine.FileExt {
+func (a *assetAdapter) SupportedExtensions() []engine.FileExt {
 	return []engine.FileExt{".png", ".jpg", ".jpeg"}
 }

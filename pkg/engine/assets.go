@@ -5,7 +5,7 @@ import "io/fs"
 type AssetAdapterID string
 
 type AssetAdapter interface {
-	ImportAsset(path FilePath, raw []byte) error
+	ImportAsset(fileSystem fs.FS, path FilePath, raw []byte) error
 	DeleteAsset(path FilePath) bool
 	SupportedExtensions() []FileExt
 }
@@ -49,7 +49,7 @@ func (a *assets) Load(fileSystem fs.FS, paths ...FilePath) error {
 			continue
 		}
 
-		if err := adapter.ImportAsset(path, raw); err != nil {
+		if err := adapter.ImportAsset(fileSystem, path, raw); err != nil {
 			a.logger.Error("Failed to import asset '%s': %v", path, err)
 			continue
 		}
