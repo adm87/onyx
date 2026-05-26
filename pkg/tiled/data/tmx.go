@@ -1,0 +1,115 @@
+package data
+
+import "encoding/xml"
+
+type Orientation string
+
+const (
+	OrientationOrthogonal Orientation = "orthogonal"
+	OrientationIsometric  Orientation = "isometric"
+	OrientationStaggered  Orientation = "staggered"
+	OrientationHexagonal  Orientation = "hexagonal"
+)
+
+type RenderOrder string
+
+const (
+	RenderOrderRightDown RenderOrder = "right-down"
+	RenderOrderRightUp   RenderOrder = "right-up"
+	RenderOrderLeftDown  RenderOrder = "left-down"
+	RenderOrderLeftUp    RenderOrder = "left-up"
+)
+
+type Tmx struct {
+	Version      string           `xml:"version,attr"`
+	TiledVersion string           `xml:"tiledversion,attr"`
+	Orientation  Orientation      `xml:"orientation,attr"`
+	RenderOrder  RenderOrder      `xml:"renderorder,attr"`
+	Infinite     bool             `xml:"infinite,attr"`
+	Width        int              `xml:"width,attr"`
+	Height       int              `xml:"height,attr"`
+	TileWidth    int              `xml:"tilewidth,attr"`
+	TileHeight   int              `xml:"tileheight,attr"`
+	NextLayerID  int              `xml:"nextlayerid,attr"`
+	NextObjectID int              `xml:"nextobjectid,attr"`
+	Tilesets     []TmxTileset     `xml:"tileset"`
+	Layers       []TmxLayer       `xml:"layer"`
+	ObjectGroups []TmxObjectGroup `xml:"objectgroup"`
+}
+
+type TmxTileset struct {
+	FirstGID int    `xml:"firstgid,attr"`
+	Source   string `xml:"source,attr"`
+}
+
+type TmxLayer struct {
+	ID     int          `xml:"id,attr"`
+	Name   string       `xml:"name,attr"`
+	Width  int          `xml:"width,attr"`
+	Height int          `xml:"height,attr"`
+	Data   TmxLayerData `xml:"data"`
+}
+
+type TmxLayerData struct {
+	Encoding    string          `xml:"encoding,attr"`
+	Compression string          `xml:"compression,attr"`
+	Content     string          `xml:",chardata"`
+	Chunks      []TmxLayerChunk `xml:"chunk"`
+}
+
+type TmxLayerChunk struct {
+	X       int    `xml:"x,attr"`
+	Y       int    `xml:"y,attr"`
+	Width   int    `xml:"width,attr"`
+	Height  int    `xml:"height,attr"`
+	Content string `xml:",chardata"`
+}
+
+type TmxObjectGroup struct {
+	ID      int         `xml:"id,attr"`
+	Name    string      `xml:"name,attr"`
+	Objects []TmxObject `xml:"object"`
+}
+
+type TmxObject struct {
+	ID     int     `xml:"id,attr"`
+	Name   string  `xml:"name,attr"`
+	X      float64 `xml:"x,attr"`
+	Y      float64 `xml:"y,attr"`
+	Width  float64 `xml:"width,attr"`
+	Height float64 `xml:"height,attr"`
+}
+
+type Tsx struct {
+	Version      string   `xml:"version,attr"`
+	TiledVersion string   `xml:"tiledversion,attr"`
+	Name         string   `xml:"name,attr"`
+	TileWidth    int      `xml:"tilewidth,attr"`
+	TileHeight   int      `xml:"tileheight,attr"`
+	TileCount    int      `xml:"tilecount,attr"`
+	Columns      int      `xml:"columns,attr"`
+	Image        TsxImage `xml:"image"`
+}
+
+type TsxImage struct {
+	Source string `xml:"source,attr"`
+	Width  int    `xml:"width,attr"`
+	Height int    `xml:"height,attr"`
+}
+
+func (t *Tmx) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	type tmxAlias Tmx
+
+	if err := d.DecodeElement((*tmxAlias)(t), &start); err != nil {
+		return err
+	}
+
+	for _, attr := range start.Attr {
+		switch attr.Name.Local {
+		case "infinite":
+			t.Infinite = attr.Value == "1"
+		}
+	}
+
+	return nil
+}

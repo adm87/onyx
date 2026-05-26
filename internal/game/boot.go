@@ -29,7 +29,7 @@ func Boot() error {
 		engine.WithTitle("Onyx"),
 		engine.WithScreenSize(1280, 720),
 		engine.WithScreenScale(engine.ScreenScaleFill),
-		engine.WithInitialScene(SplashScreenSceneID),
+		engine.WithInitialScene(GameplaySceneID),
 	).WithContext(ctx)
 
 	addAssetAdapters(onyx)

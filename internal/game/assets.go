@@ -8,7 +8,16 @@ import (
 
 func addAssetAdapters(onyx engine.Game) {
 	assets := onyx.Assets()
+	logger := onyx.Logger()
 
-	assets.AddAdapter(images.AdapterID, images.NewAdapter())
-	assets.AddAdapter(tiled.AdapterID, tiled.NewAdapter())
+	imageAdapter := images.NewAdapter()
+	assets.AddAdapter(
+		images.AdapterID,
+		imageAdapter,
+	)
+
+	assets.AddAdapter(
+		tiled.AdapterID,
+		tiled.NewAdapter(imageAdapter, logger),
+	)
 }

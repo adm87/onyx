@@ -12,7 +12,7 @@ import (
 
 const AdapterID engine.AssetAdapterID = "images"
 
-type assetAdapter struct {
+type ImageAdapter struct {
 	cache map[engine.FilePath]*ebiten.Image
 }
 
@@ -22,17 +22,40 @@ func GetImage(assets engine.Assets, path engine.FilePath) (*ebiten.Image, bool) 
 		return nil, false
 	}
 
-	img, exists := adapter.(*assetAdapter).cache[path]
+	img, exists := adapter.(*ImageAdapter).cache[path]
 	return img, exists
 }
 
-func NewAdapter() *assetAdapter {
-	return &assetAdapter{
+func NewAdapter() *ImageAdapter {
+	return &ImageAdapter{
 		cache: make(map[engine.FilePath]*ebiten.Image),
 	}
 }
 
-func (a *assetAdapter) ImportAsset(fileSystem fs.FS, path engine.FilePath, raw []byte) error {
+func (a *ImageAdapter) GetImage(path engine.FilePath) (*ebiten.Image, bool) {
+	img, exists := a.cache[path]
+	return img, exists
+}
+
+func (a *ImageAdapter) HasImage(path engine.FilePath) bool {
+	_, exists := a.cache[path]
+	return exists
+}
+
+func (a *ImageAdapter) UnloadImage(path engine.FilePath) bool {
+	deleted := false
+
+	if img, exists := a.cache[path]; exists {
+		img.Deallocate()
+
+		delete(a.cache, path)
+		deleted = true
+	}
+
+	return deleted
+}
+
+func (a *ImageAdapter) ImportAsset(fileSystem fs.FS, path engine.FilePath, raw []byte) error {
 	if _, exists := a.cache[path]; exists {
 		return fmt.Errorf("asset with path '%s' already exists", path)
 	}
@@ -46,18 +69,10 @@ func (a *assetAdapter) ImportAsset(fileSystem fs.FS, path engine.FilePath, raw [
 	return nil
 }
 
-func (a *assetAdapter) DeleteAsset(path engine.FilePath) bool {
-	deleted := false
-
-	if img, exists := a.cache[path]; exists {
-		img.Deallocate()
-		deleted = true
-	}
-	delete(a.cache, path)
-
-	return deleted
+func (a *ImageAdapter) DeleteAsset(path engine.FilePath) bool {
+	return a.UnloadImage(path)
 }
 
-func (a *assetAdapter) SupportedExtensions() []engine.FileExt {
+func (a *ImageAdapter) SupportedExtensions() []engine.FileExt {
 	return []engine.FileExt{".png", ".jpg", ".jpeg"}
 }
