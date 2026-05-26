@@ -10,13 +10,11 @@ import (
 )
 
 type ImageRenderingAdapter struct {
-	logger         engine.Logger
 	renderingTasks []engine.RenderTask
 }
 
-func NewImageRenderingAdapter(logger engine.Logger) *ImageRenderingAdapter {
+func NewImageRenderingAdapter() *ImageRenderingAdapter {
 	return &ImageRenderingAdapter{
-		logger:         logger,
 		renderingTasks: make([]engine.RenderTask, 0, 100),
 	}
 }

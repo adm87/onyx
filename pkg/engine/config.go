@@ -9,9 +9,10 @@ import (
 type Config struct {
 	Title string
 
-	Width  int
-	Height int
-	FPS    int
+	Width      int
+	Height     int
+	FPS        int
+	Fullscreen bool
 
 	ScreenScale     ScreenScaleMode
 	Filter          ebiten.Filter
@@ -21,6 +22,12 @@ type Config struct {
 }
 
 type Option func(*Config)
+
+func WithFullscreen(fullscreen bool) Option {
+	return func(c *Config) {
+		c.Fullscreen = fullscreen
+	}
+}
 
 func WithFilter(filter ebiten.Filter) Option {
 	return func(c *Config) {
@@ -71,6 +78,7 @@ func defaultConfig() *Config {
 		Width:       800,
 		Height:      600,
 		FPS:         60,
+		Fullscreen:  false,
 		ScreenScale: ScreenScaleNone,
 		Filter:      ebiten.FilterLinear,
 		BackgroundColor: color.RGBA{

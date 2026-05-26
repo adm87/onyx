@@ -18,16 +18,12 @@ func RegisterPackage(assets engine.Assets, renderer engine.Renderer, logger engi
 
 	assets.AddAssetAdapter(
 		AdapterID,
-		NewAdapter(
-			logger,
-		),
+		NewAdapter(),
 	)
 
 	renderer.AddRenderingAdapter(
 		AdapterID,
-		NewImageRenderingAdapter(
-			logger,
-		),
+		NewImageRenderingAdapter(),
 	)
 
 	return nil

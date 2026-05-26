@@ -19,19 +19,13 @@ func Boot() error {
 		return err
 	}
 
-	path, err := filepath.Abs(args.RootDir)
-	if err != nil {
-		return err
-	}
-
-	content.InitContentDirectories(path)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	onyx := engine.NewGame(
 		engine.WithTitle("Onyx"),
 		engine.WithScreenSize(1280, 720),
+		engine.WithFullscreen(args.Fullscreen),
 		engine.WithScreenScale(engine.ScreenScaleFill),
 		engine.WithInitialScene(scenes.SplashScreenSceneID),
 	).WithContext(ctx)
@@ -39,6 +33,14 @@ func Boot() error {
 	if err := registerPackages(onyx); err != nil {
 		return err
 	}
+
+	path, err := filepath.Abs(args.RootDir)
+	if err != nil {
+		return err
+	}
+
+	content.InitContentDirectories(path)
+
 	if err := content.LoadDefaultContent(onyx.Assets(), onyx.Logger()); err != nil {
 		return err
 	}

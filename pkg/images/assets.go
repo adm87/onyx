@@ -11,8 +11,7 @@ import (
 )
 
 type ImageAdapter struct {
-	logger engine.Logger
-	cache  map[engine.FilePath]*ebiten.Image
+	cache map[engine.FilePath]*ebiten.Image
 }
 
 func GetImage(assets engine.Assets, path engine.FilePath) (*ebiten.Image, bool) {
@@ -25,10 +24,9 @@ func GetImage(assets engine.Assets, path engine.FilePath) (*ebiten.Image, bool) 
 	return img, exists
 }
 
-func NewAdapter(logger engine.Logger) *ImageAdapter {
+func NewAdapter() *ImageAdapter {
 	return &ImageAdapter{
-		logger: logger,
-		cache:  make(map[engine.FilePath]*ebiten.Image),
+		cache: make(map[engine.FilePath]*ebiten.Image),
 	}
 }
 
