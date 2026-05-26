@@ -21,6 +21,26 @@ type assetAdapter struct {
 	images *images.ImageAdapter
 }
 
+func GetTmx(assets engine.Assets, path engine.FilePath) (*data.Tmx, bool) {
+	adapter, found := assets.GetAdapter(AdapterID)
+	if !found {
+		return nil, false
+	}
+
+	tmx, exists := adapter.(*assetAdapter).tmxCache[path]
+	return tmx, exists
+}
+
+func GetTsx(assets engine.Assets, path engine.FilePath) (*data.Tsx, bool) {
+	adapter, found := assets.GetAdapter(AdapterID)
+	if !found {
+		return nil, false
+	}
+
+	tsx, exists := adapter.(*assetAdapter).tsxCache[path]
+	return tsx, exists
+}
+
 func NewAdapter(images *images.ImageAdapter, logger engine.Logger) *assetAdapter {
 	return &assetAdapter{
 		logger:   logger,

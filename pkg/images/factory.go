@@ -14,6 +14,7 @@ import (
 type Options struct {
 	position geom.Vec2
 	anchor   geom.Vec2
+	scale    geom.Vec2
 	layer    int
 	zIndex   int
 	visible  bool
@@ -30,11 +31,12 @@ var query = donburi.NewQuery(
 func defaultOptions() Options {
 	return Options{
 		position: geom.Vec2{X: 0, Y: 0},
-		anchor:   geom.Vec2{X: 0.5, Y: 0.5},
+		anchor:   geom.Vec2{X: 0, Y: 0},
 		layer:    0,
 		zIndex:   0,
 		visible:  true,
 		color:    color.RGBA{R: 255, G: 255, B: 255, A: 255},
+		scale:    geom.Vec2{X: 1, Y: 1},
 	}
 }
 
@@ -45,6 +47,7 @@ func CreateImage(world donburi.World, opts ...Option) *donburi.Entry {
 		rendering.Anchor,
 		rendering.Color,
 		transform.Position,
+		transform.Scale,
 	)
 	entry := world.Entry(entity)
 
@@ -61,6 +64,7 @@ func CreateImage(world donburi.World, opts ...Option) *donburi.Entry {
 	rendering.SetColor(entry, options.color)
 
 	transform.SetPosition(entry, options.position)
+	transform.SetScale(entry, options.scale)
 
 	return entry
 }
@@ -104,6 +108,12 @@ func WithColor(col color.RGBA) Option {
 func WithPosition(x, y float64) Option {
 	return func(opts *Options) {
 		opts.position = geom.Vec2{X: x, Y: y}
+	}
+}
+
+func WithScale(x, y float64) Option {
+	return func(opts *Options) {
+		opts.scale = geom.Vec2{X: x, Y: y}
 	}
 }
 
