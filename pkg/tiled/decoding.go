@@ -92,46 +92,37 @@ func decodeBase64(tileData []byte) ([]byte, error) {
 	return decoded, nil
 }
 
-func decodeGzip(tileData []byte) ([]byte, error) {
-	reader, err := gzip.NewReader(bytes.NewReader(tileData))
+func decompress(tileData []byte, newReader func(io.Reader) (io.ReadCloser, error)) ([]byte, error) {
+	reader, err := newReader(bytes.NewReader(tileData))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create gzip reader: %w", err)
+		return nil, fmt.Errorf("failed to create reader: %w", err)
 	}
 	defer reader.Close()
 
 	uncompressed, err := io.ReadAll(reader)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read gzip content: %w", err)
+		return nil, fmt.Errorf("failed to read content: %w", err)
 	}
 	return uncompressed, nil
+}
+
+func decodeGzip(tileData []byte) ([]byte, error) {
+	return decompress(tileData, func(r io.Reader) (io.ReadCloser, error) {
+		return gzip.NewReader(r)
+	})
 }
 
 func decodeZlib(tileData []byte) ([]byte, error) {
-	reader, err := zlib.NewReader(bytes.NewReader(tileData))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create zlib reader: %w", err)
-	}
-	defer reader.Close()
-
-	uncompressed, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read zlib content: %w", err)
-	}
-	return uncompressed, nil
+	return decompress(tileData, func(r io.Reader) (io.ReadCloser, error) {
+		return zlib.NewReader(r)
+	})
 }
 
 func decodeZstd(tileData []byte) ([]byte, error) {
-	reader, err := zstd.NewReader(bytes.NewReader(tileData))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create zstd reader: %w", err)
-	}
-	defer reader.Close()
-
-	uncompressed, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read zstd content: %w", err)
-	}
-	return uncompressed, nil
+	return decompress(tileData, func(r io.Reader) (io.ReadCloser, error) {
+		decoder, err := zstd.NewReader(r)
+		return decoder.IOReadCloser(), err
+	})
 }
 
 func decodeLittleEndian(tileData []byte) ([]uint32, error) {
