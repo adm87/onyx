@@ -20,6 +20,22 @@ const (
 	RenderOrderLeftUp    RenderOrder = "left-up"
 )
 
+type Encoding string
+
+const (
+	EncodingCSV    Encoding = "csv"
+	EncodingBase64 Encoding = "base64"
+)
+
+type Compression string
+
+const (
+	CompressionGzip Compression = "gzip"
+	CompressionZlib Compression = "zlib"
+	CompressionZstd Compression = "zstd"
+	CompressionNone Compression = ""
+)
+
 type Tmx struct {
 	Version      string           `xml:"version,attr"`
 	TiledVersion string           `xml:"tiledversion,attr"`
@@ -51,8 +67,8 @@ type TmxLayer struct {
 }
 
 type TmxLayerData struct {
-	Encoding    string          `xml:"encoding,attr"`
-	Compression string          `xml:"compression,attr"`
+	Encoding    Encoding        `xml:"encoding,attr"`
+	Compression Compression     `xml:"compression,attr"`
 	Content     string          `xml:",chardata"`
 	Chunks      []TmxLayerChunk `xml:"chunk"`
 }
@@ -112,4 +128,16 @@ func (t *Tmx) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	}
 
 	return nil
+}
+
+func NearestTileset(sets []TmxTileset, gid int) *TmxTileset {
+	var nearest *TmxTileset
+	for i := range sets {
+		if sets[i].FirstGID <= gid {
+			nearest = &sets[i]
+		} else {
+			break
+		}
+	}
+	return nearest
 }

@@ -1,26 +1,22 @@
 package components
 
 import (
-	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/adm87/onyx-game/pkg/engine"
 	"github.com/yohamta/donburi"
 )
 
-type ImageReg struct {
-	Ref *ebiten.Image
-}
+var Image = donburi.NewComponentType[engine.FilePath]()
 
-var Image = donburi.NewComponentType[ImageReg]()
-
-func GetImage(entry *donburi.Entry) *ebiten.Image {
+func GetImageRef(entry *donburi.Entry) engine.FilePath {
 	if !entry.HasComponent(Image) {
-		return nil
+		return ""
 	}
-	return Image.Get(entry).Ref
+	return *Image.Get(entry)
 }
 
-func SetImage(entry *donburi.Entry, ref *ebiten.Image) {
+func SetImageRef(entry *donburi.Entry, ref engine.FilePath) {
 	if !entry.HasComponent(Image) {
 		entry.AddComponent(Image)
 	}
-	donburi.SetValue(entry, Image, ImageReg{Ref: ref})
+	donburi.SetValue(entry, Image, ref)
 }

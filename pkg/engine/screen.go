@@ -3,7 +3,7 @@ package engine
 import (
 	"image/color"
 
-	"github.com/adm87/onyx/pkg/engine/geom"
+	"github.com/adm87/onyx-game/pkg/engine/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -17,6 +17,7 @@ const (
 type Screen interface {
 	ResizeBuffer(width, height int)
 	RestoreBuffer()
+	SafeArea() SafeArea
 }
 
 type SafeArea struct {
@@ -63,6 +64,10 @@ func newScreen(
 		logger:  logger,
 		isDirty: true,
 	}
+}
+
+func (s *screen) SafeArea() SafeArea {
+	return s.safeArea
 }
 
 func (s *screen) Layout(outsideWidth, outsideHeight int) (int, int) {

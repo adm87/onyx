@@ -3,11 +3,11 @@ package images
 import (
 	"image/color"
 
-	"github.com/adm87/onyx/pkg/engine/components/rendering"
-	"github.com/adm87/onyx/pkg/engine/components/transform"
-	"github.com/adm87/onyx/pkg/engine/geom"
-	"github.com/adm87/onyx/pkg/images/components"
-	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/adm87/onyx-game/pkg/engine"
+	"github.com/adm87/onyx-game/pkg/engine/components/rendering"
+	"github.com/adm87/onyx-game/pkg/engine/components/transform"
+	"github.com/adm87/onyx-game/pkg/engine/geom"
+	"github.com/adm87/onyx-game/pkg/images/components"
 	"github.com/yohamta/donburi"
 )
 
@@ -19,7 +19,7 @@ type Options struct {
 	zIndex   int
 	visible  bool
 	color    color.RGBA
-	ref      *ebiten.Image
+	ref      engine.FilePath
 }
 
 type Option func(*Options)
@@ -52,7 +52,7 @@ func CreateImage(world donburi.World, opts ...Option) *donburi.Entry {
 		opt(&options)
 	}
 
-	components.SetImage(entry, options.ref)
+	components.SetImageRef(entry, options.ref)
 
 	rendering.SetAnchor(entry, options.anchor)
 	rendering.SetLayer(entry, options.layer)
@@ -72,9 +72,9 @@ func ForEach(world donburi.World, fn func(*donburi.Entry)) {
 	})
 }
 
-func WithRef(img *ebiten.Image) Option {
+func WithRef(ref engine.FilePath) Option {
 	return func(opts *Options) {
-		opts.ref = img
+		opts.ref = ref
 	}
 }
 

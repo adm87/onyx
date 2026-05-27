@@ -6,6 +6,10 @@ type Vec2 struct {
 	X, Y float64
 }
 
+func (v Vec2) XY() (float64, float64) {
+	return v.X, v.Y
+}
+
 func (v Vec2) Add(other Vec2) Vec2 {
 	return Vec2{
 		X: v.X + other.X,

@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"image/color"
 
-	"github.com/adm87/onyx/content"
-	"github.com/adm87/onyx/pkg/engine"
-	"github.com/adm87/onyx/pkg/engine/components/rendering"
-	"github.com/adm87/onyx/pkg/images"
+	"github.com/adm87/onyx-game/content"
+	"github.com/adm87/onyx-game/pkg/engine"
+	"github.com/adm87/onyx-game/pkg/engine/components/rendering"
+	"github.com/adm87/onyx-game/pkg/images"
 	"github.com/tanema/gween"
 	"github.com/tanema/gween/ease"
 	"github.com/yohamta/donburi"
@@ -33,7 +33,7 @@ func New(assets engine.Assets, time engine.Time, screen engine.Screen) engine.Sc
 			screen.ResizeBuffer(img.Bounds().Dx(), img.Bounds().Dy())
 
 			entry = images.CreateImage(world,
-				images.WithRef(img),
+				images.WithRef(content.EmbeddedSplash1920x1080Black),
 				images.WithAnchor(0.5, 0.5),
 				images.WithColor(color.RGBA{R: 255, G: 255, B: 255, A: 0}),
 			)

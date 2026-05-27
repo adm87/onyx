@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/adm87/onyx/pkg/engine"
+	"github.com/adm87/onyx-game/pkg/engine"
 )
 
 //go:embed embedded

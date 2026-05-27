@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/adm87/onyx/content"
-	"github.com/adm87/onyx/internal/game/cli"
-	"github.com/adm87/onyx/internal/game/scenes"
-	"github.com/adm87/onyx/pkg/engine"
-	"github.com/adm87/onyx/pkg/images"
-	"github.com/adm87/onyx/pkg/tiled"
+	"github.com/adm87/onyx-game/content"
+	"github.com/adm87/onyx-game/internal/game/cli"
+	"github.com/adm87/onyx-game/internal/game/scenes"
+	"github.com/adm87/onyx-game/pkg/engine"
+	"github.com/adm87/onyx-game/pkg/images"
+	"github.com/adm87/onyx-game/pkg/tiled"
 )
 
 func Boot() error {
@@ -27,7 +27,7 @@ func Boot() error {
 		engine.WithScreenSize(1280, 720),
 		engine.WithFullscreen(args.Fullscreen),
 		engine.WithScreenScale(engine.ScreenScaleFill),
-		engine.WithInitialScene(scenes.SplashScreenSceneID),
+		engine.WithInitialScene(scenes.GameplaySceneID),
 	).WithContext(ctx)
 
 	if err := registerPackages(onyx); err != nil {
@@ -50,12 +50,16 @@ func Boot() error {
 }
 
 func registerPackages(onyx engine.Game) error {
+	assets := onyx.Assets()
+	screen := onyx.Screen()
+	renderer := onyx.Renderer()
+
 	// NOTE: The order of package registration matters, as some packages may depend on others being registered first.
 
-	if err := images.RegisterPackage(onyx.Assets(), onyx.Renderer(), onyx.Logger()); err != nil {
+	if err := images.RegisterPackage(assets, renderer); err != nil {
 		return fmt.Errorf("failed to register images package: %w", err)
 	}
-	if err := tiled.RegisterPackage(onyx.Assets(), onyx.Renderer(), onyx.Logger()); err != nil {
+	if err := tiled.RegisterPackage(assets, renderer, screen); err != nil {
 		return fmt.Errorf("failed to register tiled package: %w", err)
 	}
 

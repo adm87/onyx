@@ -9,7 +9,7 @@ import (
 )
 
 type RenderingAdapter interface {
-	GetRenderTasks(world donburi.World) []RenderTask
+	GetRenderTasks(world donburi.World, viewMatrix ebiten.GeoM) []RenderTask
 }
 
 type RenderTask struct {
@@ -20,6 +20,7 @@ type RenderTask struct {
 
 type Renderer interface {
 	AddRenderingAdapter(adapterID AdapterID, adapter RenderingAdapter)
+	GetRenderingAdapter(adapterID AdapterID) (RenderingAdapter, bool)
 }
 
 type renderer struct {
@@ -40,7 +41,7 @@ func (r *renderer) render(world donburi.World, screen *ebiten.Image, viewMatrix 
 	r.queue = r.queue[:0]
 
 	for _, adapter := range r.adapters {
-		r.queue = append(r.queue, adapter.GetRenderTasks(world)...)
+		r.queue = append(r.queue, adapter.GetRenderTasks(world, viewMatrix)...)
 	}
 
 	slices.SortFunc(r.queue, func(a, b RenderTask) int {
@@ -66,4 +67,9 @@ func (r *renderer) AddRenderingAdapter(adapterID AdapterID, adapter RenderingAda
 	}
 
 	r.adapters[adapterID] = adapter
+}
+
+func (r *renderer) GetRenderingAdapter(adapterID AdapterID) (RenderingAdapter, bool) {
+	adapter, found := r.adapters[adapterID]
+	return adapter, found
 }

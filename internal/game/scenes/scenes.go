@@ -1,9 +1,9 @@
 package scenes
 
 import (
-	"github.com/adm87/onyx/internal/game/scenes/gameplay"
-	"github.com/adm87/onyx/internal/game/scenes/splashscreen"
-	"github.com/adm87/onyx/pkg/engine"
+	"github.com/adm87/onyx-game/internal/game/scenes/gameplay"
+	"github.com/adm87/onyx-game/internal/game/scenes/splashscreen"
+	"github.com/adm87/onyx-game/pkg/engine"
 )
 
 const (

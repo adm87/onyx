@@ -2,49 +2,29 @@ package tiled
 
 import (
 	"encoding/xml"
+	"fmt"
 	"io/fs"
 	"path/filepath"
 
-	"github.com/adm87/onyx/pkg/engine"
-	"github.com/adm87/onyx/pkg/images"
-	"github.com/adm87/onyx/pkg/tiled/data"
+	"github.com/adm87/onyx-game/pkg/engine"
+	"github.com/adm87/onyx-game/pkg/images"
+	"github.com/adm87/onyx-game/pkg/tiled/data"
 )
 
 type TiledAssetAdapter struct {
-	logger engine.Logger
-
 	tmxCache map[engine.FilePath]*data.Tmx
 	tsxCache map[engine.FilePath]*data.Tsx
+	tilemaps map[engine.FilePath]*Tilemap
 
-	images *images.ImageAdapter
+	images *images.ImageAssetAdapter
 }
 
-func GetTmx(assets engine.Assets, path engine.FilePath) (*data.Tmx, bool) {
-	adapter, found := assets.GetAdapter(AdapterID)
-	if !found {
-		return nil, false
-	}
-
-	tmx, exists := adapter.(*TiledAssetAdapter).tmxCache[path]
-	return tmx, exists
-}
-
-func GetTsx(assets engine.Assets, path engine.FilePath) (*data.Tsx, bool) {
-	adapter, found := assets.GetAdapter(AdapterID)
-	if !found {
-		return nil, false
-	}
-
-	tsx, exists := adapter.(*TiledAssetAdapter).tsxCache[path]
-	return tsx, exists
-}
-
-func NewTiledAssetAdapter(images *images.ImageAdapter, logger engine.Logger) *TiledAssetAdapter {
+func NewTiledAssetAdapter(images *images.ImageAssetAdapter) *TiledAssetAdapter {
 	return &TiledAssetAdapter{
-		logger:   logger,
 		images:   images,
 		tmxCache: make(map[engine.FilePath]*data.Tmx),
 		tsxCache: make(map[engine.FilePath]*data.Tsx),
+		tilemaps: make(map[engine.FilePath]*Tilemap),
 	}
 }
 
@@ -55,13 +35,15 @@ func (a *TiledAssetAdapter) ImportAsset(fileSystem fs.FS, path engine.FilePath, 
 	case ".tsx":
 		return a.importTsx(fileSystem, path, raw)
 	default:
-		a.logger.Warn("Unsupported tiled asset file extension '%s' for asset '%s'", path.Ext(), path)
-		return nil
+		return fmt.Errorf("unsupported file extension '%s' for tiled asset '%s'", path.Ext(), path)
 	}
 }
 
 func (a *TiledAssetAdapter) DeleteAsset(path engine.FilePath) bool {
-	return false
+	delete(a.tmxCache, path)
+	delete(a.tsxCache, path)
+	delete(a.tilemaps, path)
+	return true
 }
 
 func (a *TiledAssetAdapter) SupportedExtensions() []engine.FileExt {
@@ -95,12 +77,18 @@ func (a *TiledAssetAdapter) importTmx(fileSystem fs.FS, path engine.FilePath, ra
 
 	for _, tsxPath := range tsxPaths {
 		if err := a.loadTsx(fileSystem, tsxPath); err != nil {
-			a.logger.Error("Failed to load tsx file '%s' referenced by tmx file '%s': %v", tsxPath, path, err)
-			continue
+			return fmt.Errorf("failed to load tsx file '%s' referenced by tmx file '%s': %w", tsxPath, path, err)
 		}
 	}
 
 	a.tmxCache[path] = &tmx
+
+	tilemap, err := buildTilemap(&tmx)
+	if err != nil {
+		return fmt.Errorf("failed to decode tilemap for tmx file '%s': %w", path, err)
+	}
+
+	a.tilemaps[path] = tilemap
 	return nil
 }
 
@@ -109,7 +97,6 @@ func (a *TiledAssetAdapter) loadTsx(fileSystem fs.FS, path engine.FilePath) erro
 		return nil
 	}
 
-	a.logger.Debug("Loading dependency: tsx file '%s'", path)
 	raw, err := fs.ReadFile(fileSystem, path.String())
 
 	if err != nil {
@@ -136,7 +123,7 @@ func (a *TiledAssetAdapter) importTsx(fileSystem fs.FS, path engine.FilePath, ra
 	tsx.Image.Source = srcPath.String()
 
 	if err := a.loadTilesetImage(fileSystem, srcPath); err != nil {
-		a.logger.Error("Failed to load tileset image '%s' referenced by tsx file '%s': %v", srcPath, path, err)
+		return fmt.Errorf("failed to load tileset image '%s' referenced by tsx file '%s': %w", srcPath, path, err)
 	}
 
 	a.tsxCache[path] = &tsx
@@ -148,7 +135,6 @@ func (a *TiledAssetAdapter) loadTilesetImage(fileSystem fs.FS, path engine.FileP
 		return nil
 	}
 
-	a.logger.Debug("Loading dependency: tileset image file '%s'", path)
 	raw, err := fs.ReadFile(fileSystem, path.String())
 	if err != nil {
 		return err

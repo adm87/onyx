@@ -3,50 +3,90 @@ package tiled
 import (
 	"fmt"
 
-	"github.com/adm87/onyx/pkg/engine"
-	"github.com/adm87/onyx/pkg/images"
+	"github.com/adm87/onyx-game/pkg/engine"
+	"github.com/adm87/onyx-game/pkg/images"
+	"github.com/adm87/onyx-game/pkg/tiled/components"
+	"github.com/adm87/onyx-game/pkg/tiled/data"
+	"github.com/yohamta/donburi"
+	"github.com/yohamta/donburi/filter"
 )
 
-var (
-	AdapterID engine.AdapterID = "tiled_adapter"
+const AdapterID engine.AdapterID = "tiled_adapter"
+
+var TiledQuery = donburi.NewQuery(
+	filter.Contains(components.Tiled),
 )
 
-func RegisterPackage(assets engine.Assets, renderer engine.Renderer, logger engine.Logger) error {
-	logger.Debug("Registering tiled package")
-
-	imageAssetAdapter, err := getImageAssetAdapter(assets)
-	if err != nil {
-		return fmt.Errorf("failed to get image adapter: %w", err)
+func RegisterPackage(assets engine.Assets, renderer engine.Renderer, screen engine.Screen) error {
+	imageAssetAdapter, exists := images.GetAssetAdapter(assets)
+	if !exists {
+		return fmt.Errorf("images asset adapter not found, tiled package requires images package to be registered first")
 	}
 
+	tiledAssetAdapter := NewTiledAssetAdapter(imageAssetAdapter)
 	assets.AddAssetAdapter(
 		AdapterID,
-		NewTiledAssetAdapter(
-			imageAssetAdapter,
-			logger,
-		),
+		tiledAssetAdapter,
 	)
 
 	renderer.AddRenderingAdapter(
 		AdapterID,
 		NewTiledRenderingAdapter(
-			logger,
+			tiledAssetAdapter,
+			imageAssetAdapter,
+			screen,
 		),
 	)
 
 	return nil
 }
 
-func getImageAssetAdapter(assets engine.Assets) (*images.ImageAdapter, error) {
-	adapter, found := assets.GetAdapter(images.AdapterID)
+func GetTmx(assets engine.Assets, path engine.FilePath) (*data.Tmx, bool) {
+	adapter, found := GetAssetAdapter(assets)
 	if !found {
-		return nil, fmt.Errorf("image adapter with ID '%s' not found", images.AdapterID)
+		return nil, false
 	}
 
-	imageAdapter, ok := adapter.(*images.ImageAdapter)
-	if !ok {
-		return nil, fmt.Errorf("adapter with ID '%s' is not of type '*images.ImageAdapter'", images.AdapterID)
+	tmx, exists := adapter.tmxCache[path]
+	return tmx, exists
+}
+
+func GetTsx(assets engine.Assets, path engine.FilePath) (*data.Tsx, bool) {
+	adapter, found := GetAssetAdapter(assets)
+	if !found {
+		return nil, false
 	}
 
-	return imageAdapter, nil
+	tsx, exists := adapter.tsxCache[path]
+	return tsx, exists
+}
+
+func GetTilemap(assets engine.Assets, path engine.FilePath) (*Tilemap, bool) {
+	adapter, found := GetAssetAdapter(assets)
+	if !found {
+		return nil, false
+	}
+
+	tilemap, exists := adapter.tilemaps[path]
+	return tilemap, exists
+}
+
+func GetAssetAdapter(assets engine.Assets) (*TiledAssetAdapter, bool) {
+	adapter, found := assets.GetAdapter(AdapterID)
+	if !found {
+		return nil, false
+	}
+
+	tiledAdapter, ok := adapter.(*TiledAssetAdapter)
+	return tiledAdapter, ok
+}
+
+func GetRenderingAdapter(renderer engine.Renderer) (*TiledRenderingAdapter, bool) {
+	adapter, found := renderer.GetRenderingAdapter(AdapterID)
+	if !found {
+		return nil, false
+	}
+
+	tiledRenderer, ok := adapter.(*TiledRenderingAdapter)
+	return tiledRenderer, ok
 }
