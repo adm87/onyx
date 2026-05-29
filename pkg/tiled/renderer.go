@@ -17,6 +17,7 @@ type TiledRenderingAdapter struct {
 	tiledAssetAdapter *TiledAssetAdapter
 	imageAssetAdapter *images.ImageAssetAdapter
 
+	camera engine.Camera
 	screen engine.Screen
 
 	renderingTasks []engine.RenderTask
@@ -28,10 +29,12 @@ type TiledRenderingAdapter struct {
 func NewTiledRenderingAdapter(
 	tiledAssetAdapter *TiledAssetAdapter,
 	imageAssetAdapter *images.ImageAssetAdapter,
+	camera engine.Camera,
 	screen engine.Screen) *TiledRenderingAdapter {
 	return &TiledRenderingAdapter{
 		tiledAssetAdapter: tiledAssetAdapter,
 		imageAssetAdapter: imageAssetAdapter,
+		camera:            camera,
 		screen:            screen,
 		renderingTasks:    make([]engine.RenderTask, 0, 10),
 		buffers:           make(map[engine.FilePath]*ebiten.Image),
@@ -62,17 +65,9 @@ func (a *TiledRenderingAdapter) getBuffer(ref engine.FilePath) *ebiten.Image {
 func (a *TiledRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix ebiten.GeoM) []engine.RenderTask {
 	a.renderingTasks = a.renderingTasks[:0]
 
-	// Invert the view matrix to transform screen coordinates back to world coordinates for culling
-	invViewMatrix := viewMatrix
-	invViewMatrix.Invert()
-
-	// Calculate the world coordinates of the corners of the screen to determine which tiles are visible
-	screenMinX, screenMinY := a.screen.SafeArea().Min.XY()
-	screenMaxX, screenMaxY := a.screen.SafeArea().Max.XY()
-
 	// Transform screen corners to world coordinates for culling
-	worldMinX, worldMinY := invViewMatrix.Apply(screenMinX, screenMinY)
-	worldMaxX, worldMaxY := invViewMatrix.Apply(screenMaxX, screenMaxY)
+	worldMin := a.camera.ToWorld(a.screen.SafeArea().Min)
+	worldMax := a.camera.ToWorld(a.screen.SafeArea().Max)
 
 	clear(a.drawn)
 
@@ -98,15 +93,10 @@ func (a *TiledRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix e
 			return // Don't enqueue render tasks for entities with an invalid tilemap reference
 		}
 
-		minTileX := int(math.Floor(worldMinX / float64(tmx.TileWidth)))
-		maxTileX := int(math.Ceil(worldMaxX / float64(tmx.TileWidth)))
-		minTileY := int(math.Floor(worldMinY / float64(tmx.TileHeight)))
-		maxTileY := int(math.Ceil(worldMaxY / float64(tmx.TileHeight)))
-
-		if minTileX > int(tilemap.tileBounds.Max.X) || maxTileX < int(tilemap.tileBounds.Min.X) ||
-			minTileY > int(tilemap.tileBounds.Max.Y) || maxTileY < int(tilemap.tileBounds.Min.Y) {
-			return // Don't enqueue render tasks for tilemaps that are completely outside the view
-		}
+		minTileX := int(math.Floor(worldMin.X / float64(tmx.TileWidth)))
+		maxTileX := int(math.Ceil(worldMax.X / float64(tmx.TileWidth)))
+		minTileY := int(math.Floor(worldMin.Y / float64(tmx.TileHeight)))
+		maxTileY := int(math.Ceil(worldMax.Y / float64(tmx.TileHeight)))
 
 		for i := range tilemap.layers {
 			if !tmx.Layers[i].Visible {
@@ -195,23 +185,17 @@ func (a *TiledRenderingAdapter) drawLayerToBuffer(
 
 			// Ref: https://doc.mapeditor.org/en/stable/reference/global-tile-ids/#tile-flipping
 			if tile.FlippedDiagonally() {
-				opt.GeoM.Rotate(math.Pi / 2)
+				opt.GeoM.Rotate(math.Pi * 0.5)
 				opt.GeoM.Scale(-1, 1)
-				if tile.FlippedHorizontally() {
-					opt.GeoM.Scale(-1, 1)
-				}
-				if tile.FlippedVertically() {
-					opt.GeoM.Scale(1, -1)
-				}
-			} else {
-				if tile.FlippedHorizontally() {
-					opt.GeoM.Scale(-1, 1)
-					opt.GeoM.Translate(float64(tsx.TileWidth), 0)
-				}
-				if tile.FlippedVertically() {
-					opt.GeoM.Scale(1, -1)
-					opt.GeoM.Translate(0, float64(tsx.TileHeight))
-				}
+				opt.GeoM.Translate(float64(tsx.TileHeight-tsx.TileWidth), 0)
+			}
+			if tile.FlippedHorizontally() {
+				opt.GeoM.Scale(-1, 1)
+				opt.GeoM.Translate(float64(tsx.TileWidth), 0)
+			}
+			if tile.FlippedVertically() {
+				opt.GeoM.Scale(1, -1)
+				opt.GeoM.Translate(0, float64(tsx.TileHeight))
 			}
 
 			opt.GeoM.Translate(0, float64(cellHeight-tsx.TileHeight))

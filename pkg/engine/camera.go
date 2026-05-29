@@ -52,7 +52,7 @@ func (c *camera) SetPosition(pos geom.Vec2) {
 func (c *camera) Zoom() float64 {
 	entry := c.world.Entry(c.entity)
 	scale := transform.GetScale(entry)
-	return scale.X // Assuming uniform scaling for X and Y
+	return scale.X
 }
 
 func (c *camera) SetZoom(zoom float64) {

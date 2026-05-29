@@ -2,7 +2,7 @@
 <map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="26" height="15" tilewidth="18" tileheight="18" infinite="0" nextlayerid="15" nextobjectid="1">
  <tileset firstgid="1" source="tilesets/gym02-characters.tsx"/>
  <tileset firstgid="28" source="tilesets/gym02.tsx"/>
- <layer id="1" name="Tiles" width="26" height="15" locked="1">
+ <layer id="1" name="Tiles" width="26" height="15">
   <data encoding="base64" compression="gzip">
    H4sIAAAAAAAAE62TvUoDURCF51Gs7IyoWcRSfQCrIMTCiK+gnX+JS0i0UcE1Impl418jauuj5Vw8lx0mc3cjOPAxu/fnnJ25e3MRKUBOCnIj/xueR17hMwcaYN6Z+6jwifo6z4CXhMcaWf+Dh0hZQ9B+Jp5HiFbCx3p8gm/HR/dpp+a7Vh2facLWsF+zPtR0CDbV2MBZd+6M3Yr8xGfrM+usP1DPoUdfUvZpg/kRvDl775mHzHvOmhgXFXO7oAt64BT0SYwFsKhYMvuXma/AJTgWOTkCcX5b+VzL77k36ddTupmU/553T1dq6nln7lJL38ei4r3JmvoyGU+gA+74fsb8qmqx6Ptp72z0CjGiduxvG2xx7sHUovVsHZ5nTi99bpmZayuyhI4d83rp7Ul9b+oMUnpWZ5oeeONaawx0f8/eGAYAAA==
   </data>
@@ -17,7 +17,7 @@
    H4sIAAAAAAAAE2NgGAWjYBSMgoEHM2lsviEQG0GxMQ3tmQrE04C4BYin09ieFqhd1LYHAPqrCLgYBgAA
   </data>
  </layer>
- <layer id="8" name="Characters" width="26" height="15">
+ <layer id="8" name="Characters" width="26" height="15" locked="1">
   <data encoding="base64" compression="gzip">
    H4sIAAAAAAAAE2NgGAWEgNhAO2AEAmkS1AoQqY6RgaEBm7gkCXZRG/AMoN0wwEmBXmE62oUMRKhkzijADgDzBOuPGAYAAA==
   </data>

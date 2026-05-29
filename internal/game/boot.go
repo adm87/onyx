@@ -60,6 +60,7 @@ func Boot() error {
 
 func registerPackages(onyx engine.Game) error {
 	assets := onyx.Assets()
+	camera := onyx.Camera()
 	screen := onyx.Screen()
 	renderer := onyx.Renderer()
 
@@ -68,7 +69,7 @@ func registerPackages(onyx engine.Game) error {
 	if err := images.RegisterPackage(assets, renderer); err != nil {
 		return fmt.Errorf("failed to register images package: %w", err)
 	}
-	if err := tiled.RegisterPackage(assets, renderer, screen); err != nil {
+	if err := tiled.RegisterPackage(assets, renderer, camera, screen); err != nil {
 		return fmt.Errorf("failed to register tiled package: %w", err)
 	}
 

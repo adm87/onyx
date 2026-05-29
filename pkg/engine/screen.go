@@ -18,12 +18,7 @@ type Screen interface {
 	ResizeBuffer(width, height int)
 	RestoreBuffer()
 	Size() geom.Vec2
-	SafeArea() SafeArea
-}
-
-type SafeArea struct {
-	Min geom.Vec2
-	Max geom.Vec2
+	SafeArea() geom.AABB
 }
 
 type screen struct {
@@ -34,7 +29,7 @@ type screen struct {
 	isDirty                       bool
 	scaleMode                     ScreenScaleMode
 	backgroundColor               color.RGBA
-	safeArea                      SafeArea
+	safeArea                      geom.AABB
 
 	options *ebiten.DrawImageOptions
 	buffer  *ebiten.Image
@@ -58,7 +53,7 @@ func newScreen(
 		options: &ebiten.DrawImageOptions{
 			Filter: filter,
 		},
-		safeArea: SafeArea{
+		safeArea: geom.AABB{
 			Min: geom.Vec2{X: 0, Y: 0},
 			Max: geom.Vec2{X: float64(width), Y: float64(height)},
 		},
@@ -67,7 +62,7 @@ func newScreen(
 	}
 }
 
-func (s *screen) SafeArea() SafeArea {
+func (s *screen) SafeArea() geom.AABB {
 	return s.safeArea
 }
 

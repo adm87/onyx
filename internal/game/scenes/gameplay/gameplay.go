@@ -41,7 +41,7 @@ func New(assets engine.Assets, camera engine.Camera, screen engine.Screen, time 
 			}
 
 			camera.SetPosition(tilemap.Bounds().Center())
-			camera.SetZoom(0.4)
+			camera.SetZoom(0.2)
 
 			return nil
 		},
@@ -84,18 +84,14 @@ func New(assets engine.Assets, camera engine.Camera, screen engine.Screen, time 
 
 			bounds := tilemap.Bounds()
 
-			if position.X < bounds.Min.X {
-				position.X = bounds.Min.X
-			}
-			if position.X > bounds.Max.X {
-				position.X = bounds.Max.X
-			}
-			if position.Y < bounds.Min.Y {
-				position.Y = bounds.Min.Y
-			}
-			if position.Y > bounds.Max.Y {
-				position.Y = bounds.Max.Y
-			}
+			worldMin := camera.ToWorld(screen.SafeArea().Min)
+			worldMax := camera.ToWorld(screen.SafeArea().Max)
+
+			halfScreenWidth := (worldMax.X - worldMin.X) / 2
+			halfScreenHeight := (worldMax.Y - worldMin.Y) / 2
+
+			position.X = engine.Clamp(position.X, bounds.Min.X+halfScreenWidth, bounds.Max.X-halfScreenWidth)
+			position.Y = engine.Clamp(position.Y, bounds.Min.Y+halfScreenHeight, bounds.Max.Y-halfScreenHeight)
 
 			camera.SetPosition(position)
 			return engine.SceneExitNone, nil

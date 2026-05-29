@@ -10,7 +10,7 @@ import (
 
 const AdapterID engine.AdapterID = "tiled_adapter"
 
-func RegisterPackage(assets engine.Assets, renderer engine.Renderer, screen engine.Screen) error {
+func RegisterPackage(assets engine.Assets, renderer engine.Renderer, camera engine.Camera, screen engine.Screen) error {
 	imageAssetAdapter, exists := images.GetAssetAdapter(assets)
 	if !exists {
 		return fmt.Errorf("images asset adapter not found, tiled package requires images package to be registered first")
@@ -26,6 +26,7 @@ func RegisterPackage(assets engine.Assets, renderer engine.Renderer, screen engi
 		NewTiledRenderingAdapter(
 			tiledAssetAdapter,
 			imageAssetAdapter,
+			camera,
 			screen,
 		),
 	)
