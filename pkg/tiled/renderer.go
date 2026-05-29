@@ -83,6 +83,14 @@ func (a *TiledRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix e
 	components.TilemapQuery.Each(world, func(entry *donburi.Entry) {
 		ref := components.GetTilemapRef(entry)
 
+		// Get the tilemap buffer and clear it, this will ensure we don't have artifacts from previous frames when rendering the tilemap
+		buffer := a.getBuffer(ref)
+		buffer.Clear()
+
+		// Mark the tilemap as drawn before desiding if it's visible.
+		// We do this to ensure the buffer for a valid tilemap doesn't get deallocated in case it becomes viable in the next frame.
+		a.drawn[ref] = struct{}{}
+
 		tilemap, exists := a.tiledAssetAdapter.tilemaps[ref]
 		if !exists {
 			a.logger.Error("tilemap asset not found for reference: %s", ref)
@@ -105,13 +113,6 @@ func (a *TiledRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix e
 			return // Don't enqueue render tasks for tilemaps that are completely outside the view
 		}
 
-		filter := rendering.GetFilter(entry)
-		layer := rendering.GetLayer(entry)
-		zIndex := rendering.GetZIndex(entry)
-
-		buffer := a.getBuffer(ref)
-		buffer.Clear()
-
 		for i := range tilemap.layers {
 			if !tmx.Layers[i].Visible {
 				continue // Skip invisible layers
@@ -127,6 +128,10 @@ func (a *TiledRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix e
 			)
 		}
 
+		filter := rendering.GetFilter(entry)
+		layer := rendering.GetLayer(entry)
+		zIndex := rendering.GetZIndex(entry)
+
 		a.renderingTasks = append(a.renderingTasks, engine.RenderTask{
 			Render: func(screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
 				screen.DrawImage(buffer, &ebiten.DrawImageOptions{
@@ -137,15 +142,16 @@ func (a *TiledRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix e
 			Layer:  layer,
 			ZIndex: zIndex,
 		})
-
-		a.drawn[ref] = struct{}{}
 	})
+
+	// Deallocate buffers that were detected to be no longer viable.
 	for ref, buffer := range a.buffers {
 		if _, drawn := a.drawn[ref]; !drawn {
 			buffer.Deallocate()
 			delete(a.buffers, ref)
 		}
 	}
+
 	return a.renderingTasks
 }
 
@@ -191,6 +197,30 @@ func (a *TiledRenderingAdapter) drawLayerToBuffer(
 			srcY := int(tileID / uint32(tsx.Columns) * uint32(tsx.TileHeight))
 
 			opt.GeoM.Reset()
+
+			// Ref: https://doc.mapeditor.org/en/stable/reference/global-tile-ids/#tile-flipping
+			if tile.FlippedDiagonally() {
+				opt.GeoM.Translate(-float64(tsx.TileWidth)/2, -float64(tsx.TileHeight)/2)
+				opt.GeoM.Rotate(math.Pi / 2)
+				opt.GeoM.Scale(-1, 1)
+				if tile.FlippedHorizontally() {
+					opt.GeoM.Scale(-1, 1)
+				}
+				if tile.FlippedVertically() {
+					opt.GeoM.Scale(1, -1)
+				}
+				opt.GeoM.Translate(float64(tsx.TileWidth)/2, float64(tsx.TileHeight)/2)
+			} else {
+				if tile.FlippedHorizontally() {
+					opt.GeoM.Scale(-1, 1)
+					opt.GeoM.Translate(float64(tsx.TileWidth), 0)
+				}
+				if tile.FlippedVertically() {
+					opt.GeoM.Scale(1, -1)
+					opt.GeoM.Translate(0, float64(tsx.TileHeight))
+				}
+			}
+
 			opt.GeoM.Translate(float64(tileX), float64(tileY))
 			opt.GeoM.Concat(viewMatrix)
 

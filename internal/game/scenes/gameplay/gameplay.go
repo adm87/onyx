@@ -30,7 +30,7 @@ func New(assets engine.Assets, camera engine.Camera, screen engine.Screen, time 
 			}
 
 			camera.SetPosition(tilemap.Bounds().Center())
-			camera.SetZoom(0.5)
+			camera.SetZoom(0.25)
 
 			return nil
 		},
