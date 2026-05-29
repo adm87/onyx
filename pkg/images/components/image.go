@@ -3,9 +3,15 @@ package components
 import (
 	"github.com/adm87/onyx-game/pkg/engine"
 	"github.com/yohamta/donburi"
+	"github.com/yohamta/donburi/filter"
 )
 
-var Image = donburi.NewComponentType[engine.FilePath]()
+var (
+	Image      = donburi.NewComponentType[engine.FilePath]()
+	ImageQuery = donburi.NewQuery(
+		filter.Contains(Image),
+	)
+)
 
 func GetImageRef(entry *donburi.Entry) engine.FilePath {
 	if !entry.HasComponent(Image) {

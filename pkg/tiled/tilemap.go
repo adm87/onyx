@@ -1,8 +1,6 @@
 package tiled
 
 import (
-	"math"
-
 	"github.com/adm87/onyx-game/pkg/engine/geom"
 	"github.com/adm87/onyx-game/pkg/tiled/data"
 )
@@ -29,91 +27,101 @@ func (t Tile) RotatedHexagonal120() bool {
 }
 
 type Tilemap struct {
+	layers int
 	bounds geom.AABB
-	layers []TilemapLayer
+	tiles  []Tile // Flattened array of tiles, ordered by layer and then by position
 }
 
-type TilemapLayer struct {
-	name   string
-	bounds geom.AABB
-	tiles  []Tile
+func (t *Tilemap) GetTileIndex(layer, x, y int) int {
+	return (layer * int(t.bounds.Width()*t.bounds.Height())) + (y * int(t.bounds.Width())) + x
+}
+
+func (t *Tilemap) GetTile(layer, x, y int) (Tile, bool) {
+	wx := x - int(t.bounds.Min.X)
+	wy := y - int(t.bounds.Min.Y)
+	w, h := int(t.bounds.Width()), int(t.bounds.Height())
+	if layer < 0 || layer >= t.layers || wx < 0 || wx >= w || wy < 0 || wy >= h {
+		return Tile{}, false
+	}
+	index := t.GetTileIndex(layer, wx, wy)
+	return t.tiles[index], true
+}
+
+func (t *Tilemap) Bounds() geom.AABB {
+	return t.bounds
+}
+
+func (t *Tilemap) Layers() int {
+	return t.layers
 }
 
 func buildTilemap(tmx *data.Tmx) (*Tilemap, error) {
 	min, max := findMapSize(tmx)
+	bounds := geom.AABB{Min: min, Max: max}
+	size := int(bounds.Width() * bounds.Height())
 
 	tilemap := &Tilemap{
-		bounds: geom.AABB{
-			Min: min,
-			Max: max,
-		},
-		layers: make([]TilemapLayer, len(tmx.Layers)),
+		bounds: bounds,
+		layers: len(tmx.Layers),
+		tiles:  make([]Tile, size*len(tmx.Layers)),
 	}
 
 	for i, layer := range tmx.Layers {
-		var newLayer TilemapLayer
-
-		if err := buildTilemapLayer(layer, &newLayer); err != nil {
+		if err := buildTilemapLayer(layer, tilemap, i, size, bounds); err != nil {
 			return nil, err
 		}
-
-		tilemap.layers[i] = newLayer
 	}
 
 	return tilemap, nil
 }
 
-func findMapSize(tmx *data.Tmx) (geom.Vec2, geom.Vec2) {
-	minX, minY := math.MaxInt, math.MaxInt
-	maxX, maxY := -math.MaxInt, -math.MaxInt
-
-	for _, layer := range tmx.Layers {
-		layerMin, layerMax := findLayerSize(layer)
-
-		if layerMin.X < float64(minX) {
-			minX = int(layerMin.X)
-		}
-		if layerMin.Y < float64(minY) {
-			minY = int(layerMin.Y)
-		}
-		if layerMax.X > float64(maxX) {
-			maxX = int(layerMax.X)
-		}
-		if layerMax.Y > float64(maxY) {
-			maxY = int(layerMax.Y)
-		}
-	}
-
-	return geom.Vec2{
-			X: float64(minX),
-			Y: float64(minY),
-		}, geom.Vec2{
-			X: float64(maxX),
-			Y: float64(maxY),
-		}
-}
-
-func findLayerSize(layer data.TmxLayer) (geom.Vec2, geom.Vec2) {
-	minX, minY := math.MaxInt, math.MaxInt
-	maxX, maxY := -math.MaxInt, -math.MaxInt
-
-	if len(layer.Data.Chunks) == 0 {
-		minX, minY = 0, 0
-		maxX, maxY = layer.Width, layer.Height
-	} else {
+func buildTilemapLayer(layer data.TmxLayer, tilemap *Tilemap, i, size int, bounds geom.AABB) error {
+	if len(layer.Data.Chunks) > 0 {
+		mapWidth := int(bounds.Width())
+		layerOffset := i * size
 		for _, chunk := range layer.Data.Chunks {
-			if chunk.X < minX {
-				minX = chunk.X
+			tiles, err := decodeContent(layer.Data.Encoding, layer.Data.Compression, chunk.Content)
+			if err != nil {
+				return err
 			}
-			if chunk.Y < minY {
-				minY = chunk.Y
+			chunkX := chunk.X - int(bounds.Min.X)
+			chunkY := chunk.Y - int(bounds.Min.Y)
+			chunkOffset := layerOffset + (chunkY * mapWidth) + chunkX
+			for row := 0; row < chunk.Height; row++ {
+				src := row * chunk.Width
+				dst := chunkOffset + row*mapWidth
+				copy(tilemap.tiles[dst:dst+chunk.Width], tiles[src:src+chunk.Width])
 			}
-			if chunk.X+chunk.Width > maxX {
-				maxX = chunk.X + chunk.Width
-			}
-			if chunk.Y+chunk.Height > maxY {
-				maxY = chunk.Y + chunk.Height
-			}
+		}
+	} else {
+		tiles, err := decodeContent(layer.Data.Encoding, layer.Data.Compression, layer.Data.Content)
+		if err != nil {
+			return err
+		}
+		copy(tilemap.tiles[i*size:(i+1)*size], tiles)
+	}
+	return nil
+}
+
+func findMapSize(tmx *data.Tmx) (geom.Vec2, geom.Vec2) {
+	if len(tmx.Layers) == 0 {
+		return geom.Vec2{}, geom.Vec2{}
+	}
+
+	minX, minY, maxX, maxY := findLayerSize(tmx.Layers[0])
+	for _, layer := range tmx.Layers[1:] {
+		layerMinX, layerMinY, layerMaxX, layerMaxY := findLayerSize(layer)
+		if layerMinX < minX {
+			minX = layerMinX
+		}
+		if layerMinY < minY {
+			minY = layerMinY
+		}
+		if layerMaxX > maxX {
+			maxX = layerMaxX
+		}
+		if layerMaxY > maxY {
+			maxY = layerMaxY
 		}
 	}
 
@@ -126,24 +134,29 @@ func findLayerSize(layer data.TmxLayer) (geom.Vec2, geom.Vec2) {
 		}
 }
 
-func buildTilemapLayer(tmxLayer data.TmxLayer, layer *TilemapLayer) error {
-	min, max := findLayerSize(tmxLayer)
-
-	layer.name = tmxLayer.Name
-	layer.bounds = geom.AABB{
-		Min: min,
-		Max: max,
+func findLayerSize(layer data.TmxLayer) (minX, minY, maxX, maxY int) {
+	if len(layer.Data.Chunks) == 0 {
+		return 0, 0, layer.Width, layer.Height
 	}
 
-	tiles, err := decodeContent(
-		tmxLayer.Data.Encoding,
-		tmxLayer.Data.Compression,
-		tmxLayer.Data.Content,
-	)
-	if err != nil {
-		return err
-	}
-	layer.tiles = tiles
+	first := layer.Data.Chunks[0]
+	minX, minY = first.X, first.Y
+	maxX, maxY = first.X+first.Width, first.Y+first.Height
 
-	return nil
+	for _, chunk := range layer.Data.Chunks[1:] {
+		if chunk.X < minX {
+			minX = chunk.X
+		}
+		if chunk.Y < minY {
+			minY = chunk.Y
+		}
+		if chunk.X+chunk.Width > maxX {
+			maxX = chunk.X + chunk.Width
+		}
+		if chunk.Y+chunk.Height > maxY {
+			maxY = chunk.Y + chunk.Height
+		}
+	}
+
+	return minX, minY, maxX, maxY
 }

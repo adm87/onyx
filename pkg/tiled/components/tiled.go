@@ -3,20 +3,26 @@ package components
 import (
 	"github.com/adm87/onyx-game/pkg/engine"
 	"github.com/yohamta/donburi"
+	"github.com/yohamta/donburi/filter"
 )
 
-var Tiled = donburi.NewComponentType[engine.FilePath]()
+var (
+	Tilemap      = donburi.NewComponentType[engine.FilePath]()
+	TilemapQuery = donburi.NewQuery(
+		filter.Contains(Tilemap),
+	)
+)
 
-func GetTiledRef(entry *donburi.Entry) engine.FilePath {
-	if !entry.HasComponent(Tiled) {
+func GetTilemapRef(entry *donburi.Entry) engine.FilePath {
+	if !entry.HasComponent(Tilemap) {
 		return ""
 	}
-	return *Tiled.Get(entry)
+	return *Tilemap.Get(entry)
 }
 
-func SetTiledRef(entry *donburi.Entry, ref engine.FilePath) {
-	if !entry.HasComponent(Tiled) {
-		entry.AddComponent(Tiled)
+func SetTilemapRef(entry *donburi.Entry, ref engine.FilePath) {
+	if !entry.HasComponent(Tilemap) {
+		entry.AddComponent(Tilemap)
 	}
-	donburi.SetValue(entry, Tiled, ref)
+	donburi.SetValue(entry, Tilemap, ref)
 }

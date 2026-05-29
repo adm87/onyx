@@ -32,7 +32,7 @@ func New(assets engine.Assets, time engine.Time, screen engine.Screen) engine.Sc
 
 			screen.ResizeBuffer(img.Bounds().Dx(), img.Bounds().Dy())
 
-			entry = images.CreateImage(world,
+			entry = images.CreateImageEntity(world,
 				images.WithRef(content.EmbeddedSplash1920x1080Black),
 				images.WithAnchor(0.5, 0.5),
 				images.WithColor(color.RGBA{R: 255, G: 255, B: 255, A: 0}),

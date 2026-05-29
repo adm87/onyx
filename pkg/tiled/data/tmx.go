@@ -59,11 +59,12 @@ type TmxTileset struct {
 }
 
 type TmxLayer struct {
-	ID     int          `xml:"id,attr"`
-	Name   string       `xml:"name,attr"`
-	Width  int          `xml:"width,attr"`
-	Height int          `xml:"height,attr"`
-	Data   TmxLayerData `xml:"data"`
+	ID      int          `xml:"id,attr"`
+	Name    string       `xml:"name,attr"`
+	Width   int          `xml:"width,attr"`
+	Height  int          `xml:"height,attr"`
+	Visible bool         `xml:"visible,attr"`
+	Data    TmxLayerData `xml:"data"`
 }
 
 type TmxLayerData struct {
@@ -130,10 +131,29 @@ func (t *Tmx) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	return nil
 }
 
-func NearestTileset(sets []TmxTileset, gid int) *TmxTileset {
+func (l *TmxLayer) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	type layerAlias TmxLayer
+
+	if err := d.DecodeElement((*layerAlias)(l), &start); err != nil {
+		return err
+	}
+
+	l.Visible = true // Default to visible if the attribute is not present
+
+	for _, attr := range start.Attr {
+		switch attr.Name.Local {
+		case "visible":
+			l.Visible = attr.Value == "1"
+		}
+	}
+
+	return nil
+}
+
+func NearestTileset(sets []TmxTileset, gid uint32) *TmxTileset {
 	var nearest *TmxTileset
 	for i := range sets {
-		if sets[i].FirstGID <= gid {
+		if sets[i].FirstGID <= int(gid) {
 			nearest = &sets[i]
 		} else {
 			break

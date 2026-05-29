@@ -11,6 +11,7 @@ import (
 	"github.com/adm87/onyx-game/pkg/engine"
 	"github.com/adm87/onyx-game/pkg/images"
 	"github.com/adm87/onyx-game/pkg/tiled"
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 func Boot() error {
@@ -28,6 +29,7 @@ func Boot() error {
 		engine.WithFullscreen(args.Fullscreen),
 		engine.WithScreenScale(engine.ScreenScaleFill),
 		engine.WithInitialScene(scenes.GameplaySceneID),
+		engine.WithFilter(ebiten.FilterNearest),
 	).WithContext(ctx)
 
 	if err := registerPackages(onyx); err != nil {
@@ -53,13 +55,14 @@ func registerPackages(onyx engine.Game) error {
 	assets := onyx.Assets()
 	screen := onyx.Screen()
 	renderer := onyx.Renderer()
+	logger := onyx.Logger()
 
 	// NOTE: The order of package registration matters, as some packages may depend on others being registered first.
 
 	if err := images.RegisterPackage(assets, renderer); err != nil {
 		return fmt.Errorf("failed to register images package: %w", err)
 	}
-	if err := tiled.RegisterPackage(assets, renderer, screen); err != nil {
+	if err := tiled.RegisterPackage(assets, renderer, screen, logger); err != nil {
 		return fmt.Errorf("failed to register tiled package: %w", err)
 	}
 

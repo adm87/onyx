@@ -14,13 +14,14 @@ const (
 func AddScenes(onyx engine.Game) {
 	s := onyx.Scenes()
 
+	assets := onyx.Assets()
+	time := onyx.Time()
+	screen := onyx.Screen()
+	camera := onyx.Camera()
+
 	s.AddScene(
 		SplashScreenSceneID,
-		splashscreen.New(
-			onyx.Assets(),
-			onyx.Time(),
-			onyx.Screen(),
-		),
+		splashscreen.New(assets, time, screen),
 		engine.SceneTransitions{
 			splashscreen.CompleteExitCode: GameplaySceneID,
 		},
@@ -28,12 +29,7 @@ func AddScenes(onyx engine.Game) {
 
 	s.AddScene(
 		GameplaySceneID,
-		gameplay.New(
-			onyx.Assets(),
-			onyx.Camera(),
-			onyx.Screen(),
-			onyx.Time(),
-		),
+		gameplay.New(assets, camera, screen, time),
 		engine.SceneTransitions{},
 	)
 }

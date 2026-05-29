@@ -17,6 +17,7 @@ const (
 type Screen interface {
 	ResizeBuffer(width, height int)
 	RestoreBuffer()
+	Size() geom.Vec2
 	SafeArea() SafeArea
 }
 
@@ -94,6 +95,11 @@ func (s *screen) ResizeBuffer(width, height int) {
 
 func (s *screen) RestoreBuffer() {
 	s.ResizeBuffer(s.originalWidth, s.originalHeight)
+}
+
+func (s *screen) Size() geom.Vec2 {
+	bufWidth, bufHeight := s.buffer.Bounds().Dx(), s.buffer.Bounds().Dy()
+	return geom.Vec2{X: float64(bufWidth), Y: float64(bufHeight)}
 }
 
 func (s *screen) calculateScreenScale(outsideWidth, outsideHeight int) {

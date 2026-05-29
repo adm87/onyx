@@ -12,6 +12,8 @@ var CameraTag = donburi.NewTag("Camera")
 type Camera interface {
 	Position() geom.Vec2
 	SetPosition(pos geom.Vec2)
+	Zoom() float64
+	SetZoom(zoom float64)
 	ToWorld(screen geom.Vec2) geom.Vec2
 	ToScreen(world geom.Vec2) geom.Vec2
 }
@@ -45,6 +47,17 @@ func (c *camera) Position() geom.Vec2 {
 func (c *camera) SetPosition(pos geom.Vec2) {
 	entry := c.world.Entry(c.entity)
 	transform.SetPosition(entry, pos)
+}
+
+func (c *camera) Zoom() float64 {
+	entry := c.world.Entry(c.entity)
+	scale := transform.GetScale(entry)
+	return scale.X // Assuming uniform scaling for X and Y
+}
+
+func (c *camera) SetZoom(zoom float64) {
+	entry := c.world.Entry(c.entity)
+	transform.SetScale(entry, geom.Vec2{X: zoom, Y: zoom})
 }
 
 func (c *camera) view() ebiten.GeoM {

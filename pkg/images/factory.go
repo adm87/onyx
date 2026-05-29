@@ -11,7 +11,7 @@ import (
 	"github.com/yohamta/donburi"
 )
 
-type Options struct {
+type ImageOptions struct {
 	position geom.Vec2
 	anchor   geom.Vec2
 	scale    geom.Vec2
@@ -22,10 +22,10 @@ type Options struct {
 	ref      engine.FilePath
 }
 
-type Option func(*Options)
+type ImageOption func(*ImageOptions)
 
-func defaultOptions() Options {
-	return Options{
+func defaultImageOptions() ImageOptions {
+	return ImageOptions{
 		position: geom.Vec2{X: 0, Y: 0},
 		anchor:   geom.Vec2{X: 0, Y: 0},
 		layer:    0,
@@ -36,7 +36,7 @@ func defaultOptions() Options {
 	}
 }
 
-func CreateImage(world donburi.World, opts ...Option) *donburi.Entry {
+func CreateImageEntity(world donburi.World, opts ...ImageOption) *donburi.Entry {
 	entity := world.Create(
 		components.Image,
 		rendering.Renderer,
@@ -47,7 +47,7 @@ func CreateImage(world donburi.World, opts ...Option) *donburi.Entry {
 	)
 	entry := world.Entry(entity)
 
-	options := defaultOptions()
+	options := defaultImageOptions()
 	for _, opt := range opts {
 		opt(&options)
 	}
@@ -66,56 +66,50 @@ func CreateImage(world donburi.World, opts ...Option) *donburi.Entry {
 	return entry
 }
 
-func ForEach(world donburi.World, fn func(*donburi.Entry)) {
-	ImageQuery.Each(world, func(entry *donburi.Entry) {
-		fn(entry)
-	})
-}
-
-func WithRef(ref engine.FilePath) Option {
-	return func(opts *Options) {
+func WithRef(ref engine.FilePath) ImageOption {
+	return func(opts *ImageOptions) {
 		opts.ref = ref
 	}
 }
 
-func WithAnchor(x, y float64) Option {
-	return func(opts *Options) {
+func WithAnchor(x, y float64) ImageOption {
+	return func(opts *ImageOptions) {
 		opts.anchor = geom.Vec2{X: x, Y: y}
 	}
 }
 
-func WithLayer(layer int) Option {
-	return func(opts *Options) {
+func WithLayer(layer int) ImageOption {
+	return func(opts *ImageOptions) {
 		opts.layer = layer
 	}
 }
 
-func WithZIndex(zIndex int) Option {
-	return func(opts *Options) {
+func WithZIndex(zIndex int) ImageOption {
+	return func(opts *ImageOptions) {
 		opts.zIndex = zIndex
 	}
 }
 
-func WithColor(col color.RGBA) Option {
-	return func(opts *Options) {
+func WithColor(col color.RGBA) ImageOption {
+	return func(opts *ImageOptions) {
 		opts.color = col
 	}
 }
 
-func WithPosition(x, y float64) Option {
-	return func(opts *Options) {
+func WithPosition(x, y float64) ImageOption {
+	return func(opts *ImageOptions) {
 		opts.position = geom.Vec2{X: x, Y: y}
 	}
 }
 
-func WithScale(x, y float64) Option {
-	return func(opts *Options) {
+func WithScale(x, y float64) ImageOption {
+	return func(opts *ImageOptions) {
 		opts.scale = geom.Vec2{X: x, Y: y}
 	}
 }
 
-func WithVisible(visible bool) Option {
-	return func(opts *Options) {
+func WithVisible(visible bool) ImageOption {
+	return func(opts *ImageOptions) {
 		opts.visible = visible
 	}
 }

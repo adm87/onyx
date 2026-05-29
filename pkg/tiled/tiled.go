@@ -5,19 +5,12 @@ import (
 
 	"github.com/adm87/onyx-game/pkg/engine"
 	"github.com/adm87/onyx-game/pkg/images"
-	"github.com/adm87/onyx-game/pkg/tiled/components"
 	"github.com/adm87/onyx-game/pkg/tiled/data"
-	"github.com/yohamta/donburi"
-	"github.com/yohamta/donburi/filter"
 )
 
 const AdapterID engine.AdapterID = "tiled_adapter"
 
-var TiledQuery = donburi.NewQuery(
-	filter.Contains(components.Tiled),
-)
-
-func RegisterPackage(assets engine.Assets, renderer engine.Renderer, screen engine.Screen) error {
+func RegisterPackage(assets engine.Assets, renderer engine.Renderer, screen engine.Screen, logger engine.Logger) error {
 	imageAssetAdapter, exists := images.GetAssetAdapter(assets)
 	if !exists {
 		return fmt.Errorf("images asset adapter not found, tiled package requires images package to be registered first")
@@ -28,16 +21,15 @@ func RegisterPackage(assets engine.Assets, renderer engine.Renderer, screen engi
 		AdapterID,
 		tiledAssetAdapter,
 	)
-
 	renderer.AddRenderingAdapter(
 		AdapterID,
 		NewTiledRenderingAdapter(
 			tiledAssetAdapter,
 			imageAssetAdapter,
 			screen,
+			logger,
 		),
 	)
-
 	return nil
 }
 
