@@ -19,10 +19,19 @@ func New(assets engine.Assets, camera engine.Camera, screen engine.Screen, time 
 			if err := assets.Load(content.AssetsFS(), content.AssetsLevelsSampleMap); err != nil {
 				return fmt.Errorf("failed to load level asset: %w", err)
 			}
+
 			tiled.CreateTilemap(world,
 				tiled.WithTilemapRef(content.AssetsLevelsSampleMap),
 			)
-			camera.SetZoom(0.2)
+
+			tilemap, exists := tiled.GetTilemap(assets, content.AssetsLevelsSampleMap)
+			if !exists {
+				return fmt.Errorf("tilemap asset not found: %s", content.AssetsLevelsSampleMap)
+			}
+
+			camera.SetPosition(tilemap.Bounds().Center())
+			camera.SetZoom(0.5)
+
 			return nil
 		},
 		OnUpdate: func(ctx context.Context, world donburi.World) (engine.SceneExitCode, error) {
@@ -48,11 +57,32 @@ func New(assets engine.Assets, camera engine.Camera, screen engine.Screen, time 
 				ebiten.SetFullscreen(!ebiten.IsFullscreen())
 			}
 
+			tilemap, exists := tiled.GetTilemap(assets, content.AssetsLevelsSampleMap)
+			if !exists {
+				return engine.SceneExitNone, fmt.Errorf("tilemap asset not found: %s", content.AssetsLevelsSampleMap)
+			}
+
+			bounds := tilemap.Bounds()
+
+			if position.X < bounds.Min.X {
+				position.X = bounds.Min.X
+			}
+			if position.X > bounds.Max.X {
+				position.X = bounds.Max.X
+			}
+			if position.Y < bounds.Min.Y {
+				position.Y = bounds.Min.Y
+			}
+			if position.Y > bounds.Max.Y {
+				position.Y = bounds.Max.Y
+			}
+
 			camera.SetPosition(position)
 			return engine.SceneExitNone, nil
 		},
-		OnRender: func(ctx context.Context, world donburi.World, screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
-			ebitenutil.DebugPrint(screen, "FPS: "+fmt.Sprintf("%.2f", ebiten.ActualFPS()))
+		OnRender: func(ctx context.Context, world donburi.World, img *ebiten.Image, viewMatrix ebiten.GeoM) error {
+			minX, minY := screen.SafeArea().Min.XY()
+			ebitenutil.DebugPrintAt(img, "FPS: "+fmt.Sprintf("%.2f", ebiten.ActualFPS()), int(minX)+10, int(minY)+10)
 			return nil
 		},
 	}

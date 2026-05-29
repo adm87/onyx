@@ -100,8 +100,8 @@ func (a *TiledRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix e
 		minTileY := int(math.Floor(worldMinY / float64(tmx.TileHeight)))
 		maxTileY := int(math.Ceil(worldMaxY / float64(tmx.TileHeight)))
 
-		if minTileX > int(tilemap.bounds.Max.X) || maxTileX < int(tilemap.bounds.Min.X) ||
-			minTileY > int(tilemap.bounds.Max.Y) || maxTileY < int(tilemap.bounds.Min.Y) {
+		if minTileX > int(tilemap.tileBounds.Max.X) || maxTileX < int(tilemap.tileBounds.Min.X) ||
+			minTileY > int(tilemap.tileBounds.Max.Y) || maxTileY < int(tilemap.tileBounds.Min.Y) {
 			return // Don't enqueue render tasks for tilemaps that are completely outside the view
 		}
 

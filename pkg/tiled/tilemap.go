@@ -27,19 +27,20 @@ func (t Tile) RotatedHexagonal120() bool {
 }
 
 type Tilemap struct {
-	layers int
-	bounds geom.AABB
-	tiles  []Tile // Flattened array of tiles, ordered by layer and then by position
+	layers     int
+	bounds     geom.AABB
+	tileBounds geom.AABB
+	tiles      []Tile // Flattened array of tiles, ordered by layer and then by position
 }
 
 func (t *Tilemap) GetTileIndex(layer, x, y int) int {
-	return (layer * int(t.bounds.Width()*t.bounds.Height())) + (y * int(t.bounds.Width())) + x
+	return (layer * int(t.tileBounds.Width()*t.tileBounds.Height())) + (y * int(t.tileBounds.Width())) + x
 }
 
 func (t *Tilemap) GetTile(layer, x, y int) (Tile, bool) {
-	wx := x - int(t.bounds.Min.X)
-	wy := y - int(t.bounds.Min.Y)
-	w, h := int(t.bounds.Width()), int(t.bounds.Height())
+	wx := x - int(t.tileBounds.Min.X)
+	wy := y - int(t.tileBounds.Min.Y)
+	w, h := int(t.tileBounds.Width()), int(t.tileBounds.Height())
 	if layer < 0 || layer >= t.layers || wx < 0 || wx >= w || wy < 0 || wy >= h {
 		return Tile{}, false
 	}
@@ -51,23 +52,38 @@ func (t *Tilemap) Bounds() geom.AABB {
 	return t.bounds
 }
 
+func (t *Tilemap) TileBounds() geom.AABB {
+	return t.tileBounds
+}
+
 func (t *Tilemap) Layers() int {
 	return t.layers
 }
 
 func buildTilemap(tmx *data.Tmx) (*Tilemap, error) {
 	min, max := findMapSize(tmx)
-	bounds := geom.AABB{Min: min, Max: max}
-	size := int(bounds.Width() * bounds.Height())
+	tileBounds := geom.AABB{Min: min, Max: max}
+	bounds := geom.AABB{
+		Min: geom.Vec2{
+			X: tileBounds.Min.X * float64(tmx.TileWidth),
+			Y: tileBounds.Min.Y * float64(tmx.TileHeight),
+		},
+		Max: geom.Vec2{
+			X: tileBounds.Max.X * float64(tmx.TileWidth),
+			Y: tileBounds.Max.Y * float64(tmx.TileHeight),
+		},
+	}
+	size := int(tileBounds.Width() * tileBounds.Height())
 
 	tilemap := &Tilemap{
-		bounds: bounds,
-		layers: len(tmx.Layers),
-		tiles:  make([]Tile, size*len(tmx.Layers)),
+		tileBounds: tileBounds,
+		bounds:     bounds,
+		layers:     len(tmx.Layers),
+		tiles:      make([]Tile, size*len(tmx.Layers)),
 	}
 
 	for i, layer := range tmx.Layers {
-		if err := buildTilemapLayer(layer, tilemap, i, size, bounds); err != nil {
+		if err := buildTilemapLayer(layer, tilemap, i, size, tileBounds); err != nil {
 			return nil, err
 		}
 	}
