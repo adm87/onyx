@@ -7,26 +7,37 @@ import (
 	"github.com/adm87/onyx-game/content"
 	"github.com/adm87/onyx-game/pkg/engine"
 	"github.com/adm87/onyx-game/pkg/tiled"
+	"github.com/adm87/onyx-game/pkg/tiled/components"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/yohamta/donburi"
 )
 
+var testMaps = []engine.FilePath{
+	content.AssetsLevelsGym01,
+	content.AssetsLevelsGym02,
+	content.AssetsLevelsGym03,
+}
+
 func New(assets engine.Assets, camera engine.Camera, screen engine.Screen, time engine.Time) engine.SceneState {
+	var entity donburi.Entity
+
+	mapIndex := 0
 	return engine.SceneState{
 		OnEnter: func(ctx context.Context, world donburi.World) error {
-			if err := assets.Load(content.AssetsFS(), content.AssetsLevelsSampleMap); err != nil {
+			if err := assets.Load(content.AssetsFS(), testMaps...); err != nil {
 				return fmt.Errorf("failed to load level asset: %w", err)
 			}
 
-			tiled.CreateTilemap(world,
-				tiled.WithTilemapRef(content.AssetsLevelsSampleMap),
+			entry := tiled.CreateTilemap(world,
+				tiled.WithTilemapRef(testMaps[mapIndex]),
 			)
+			entity = entry.Entity()
 
-			tilemap, exists := tiled.GetTilemap(assets, content.AssetsLevelsSampleMap)
+			tilemap, exists := tiled.GetTilemap(assets, testMaps[mapIndex])
 			if !exists {
-				return fmt.Errorf("tilemap asset not found: %s", content.AssetsLevelsSampleMap)
+				return fmt.Errorf("tilemap asset not found: %s", testMaps[mapIndex])
 			}
 
 			camera.SetPosition(tilemap.Bounds().Center())
@@ -57,9 +68,18 @@ func New(assets engine.Assets, camera engine.Camera, screen engine.Screen, time 
 				ebiten.SetFullscreen(!ebiten.IsFullscreen())
 			}
 
-			tilemap, exists := tiled.GetTilemap(assets, content.AssetsLevelsSampleMap)
+			if inpututil.IsKeyJustPressed(ebiten.KeyN) {
+				mapIndex = (mapIndex + 1) % len(testMaps)
+				components.SetTilemapRef(world.Entry(entity), testMaps[mapIndex])
+			}
+			if inpututil.IsKeyJustPressed(ebiten.KeyP) {
+				mapIndex = (mapIndex - 1 + len(testMaps)) % len(testMaps)
+				components.SetTilemapRef(world.Entry(entity), testMaps[mapIndex])
+			}
+
+			tilemap, exists := tiled.GetTilemap(assets, testMaps[mapIndex])
 			if !exists {
-				return engine.SceneExitNone, fmt.Errorf("tilemap asset not found: %s", content.AssetsLevelsSampleMap)
+				return engine.SceneExitNone, fmt.Errorf("tilemap asset not found: %s", testMaps[mapIndex])
 			}
 
 			bounds := tilemap.Bounds()

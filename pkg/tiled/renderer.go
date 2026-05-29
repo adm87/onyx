@@ -18,7 +18,6 @@ type TiledRenderingAdapter struct {
 	imageAssetAdapter *images.ImageAssetAdapter
 
 	screen engine.Screen
-	logger engine.Logger
 
 	renderingTasks []engine.RenderTask
 
@@ -29,13 +28,11 @@ type TiledRenderingAdapter struct {
 func NewTiledRenderingAdapter(
 	tiledAssetAdapter *TiledAssetAdapter,
 	imageAssetAdapter *images.ImageAssetAdapter,
-	screen engine.Screen,
-	logger engine.Logger) *TiledRenderingAdapter {
+	screen engine.Screen) *TiledRenderingAdapter {
 	return &TiledRenderingAdapter{
 		tiledAssetAdapter: tiledAssetAdapter,
 		imageAssetAdapter: imageAssetAdapter,
 		screen:            screen,
-		logger:            logger,
 		renderingTasks:    make([]engine.RenderTask, 0, 10),
 		buffers:           make(map[engine.FilePath]*ebiten.Image),
 		drawn:             make(map[engine.FilePath]struct{}),
@@ -93,13 +90,11 @@ func (a *TiledRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix e
 
 		tilemap, exists := a.tiledAssetAdapter.tilemaps[ref]
 		if !exists {
-			a.logger.Error("tilemap asset not found for reference: %s", ref)
 			return // Don't enqueue render tasks for entities with an invalid tilemap reference
 		}
 
 		tmx, exists := a.tiledAssetAdapter.tmxCache[ref]
 		if !exists {
-			a.logger.Error("tmx data not found for tilemap reference: %s", ref)
 			return // Don't enqueue render tasks for entities with an invalid tilemap reference
 		}
 
@@ -180,13 +175,11 @@ func (a *TiledRenderingAdapter) drawLayerToBuffer(
 
 			tsx, exists := a.tiledAssetAdapter.tsxCache[tsxPath]
 			if !exists {
-				a.logger.Error("tsx data not found for tileset image: %s", tileset.Source)
 				continue // Skip tiles that reference a tileset without tsx data
 			}
 
 			tilesetImg, exists := a.imageAssetAdapter.GetImage(engine.FilePath(tsx.Image.Source))
 			if !exists {
-				a.logger.Error("failed to get image asset for tileset: %s", tileset.Source)
 				continue // Skip tiles that reference a missing tileset image
 			}
 

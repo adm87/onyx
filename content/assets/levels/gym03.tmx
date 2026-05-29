@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="26" height="15" tilewidth="18" tileheight="18" infinite="0" nextlayerid="11" nextobjectid="1">
+ <tileset firstgid="1" source="tilesets/gym02-characters.tsx"/>
+ <tileset firstgid="28" source="tilesets/gym02.tsx"/>
+ <layer id="1" name="Tiles" width="26" height="15">
+  <data encoding="base64" compression="gzip">
+   H4sIAAAAAAAAE7WQPY7CQAyF5yxAwZIWBAVi6fkRItWCBBQr9gJ7AIrUUBGIBBJwADoWyhwNW+tIjuXJBASWPjkztt8bx5h0rMx7AnQPnCWrFSmXKF+AP+D6Qv8CkTdujvqROGX0wD4H7X7q0Mb9XbtPHHWM3xw9tqgAH0CZssdqDfbdAXqUedSBmTGLvH6DJ97YJe++UrP9P+mDe+KOntJ7FueZMW3Mkdgr+c9Rhg9G878ntjwtNY/xBXwCI4Ux9XwDezHHvbeKJs63mFYN8IEACFlGqhbfxHsndLkmzg+Frs+0NQJC+krdQMwMxbwvejSPUMmh5ZwwF7UfpWfj2FFjLWbBJw7TPvGjmnmYW+7v0csJxhgGAAA=
+  </data>
+ </layer>
+ <layer id="9" name="Tiles (layer)" width="26" height="15">
+  <data encoding="base64" compression="gzip">
+   H4sIAAAAAAAAE2NgGAWjYBSMAvqCKCQcTUN7piHh6WToj2SgvRsHIwAAJw4gqxgGAAA=
+  </data>
+ </layer>
+ <layer id="7" name="Water" width="26" height="15">
+  <data encoding="base64" compression="gzip">
+   H4sIAAAAAAAAE2NgYGDoZ6APGLVn8NqzEIj76GDPKBgFwxEE0gmn0gkDAAkZFuQYBgAA
+  </data>
+ </layer>
+ <layer id="8" name="Characters" width="26" height="15">
+  <data encoding="base64" compression="gzip">
+   H4sIAAAAAAAAE2NgGLpAaqAdgAcwMTA0EKtWkobuwAWkB8BOUoAgCeE3EICVhmYLUMkcPiS2GJXMHAyAf6AdMAIAAJNtSuAYBgAA
+  </data>
+ </layer>
+</map>

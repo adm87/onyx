@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	"fmt"
+	"image/color"
 	"path/filepath"
 
 	"github.com/adm87/onyx-game/content"
@@ -30,6 +31,12 @@ func Boot() error {
 		engine.WithScreenScale(engine.ScreenScaleFill),
 		engine.WithInitialScene(scenes.GameplaySceneID),
 		engine.WithFilter(ebiten.FilterNearest),
+		engine.WithBackgroundColor(color.RGBA{
+			R: 0x64,
+			G: 0x95,
+			B: 0xed,
+			A: 0xff,
+		}),
 	).WithContext(ctx)
 
 	if err := registerPackages(onyx); err != nil {
@@ -55,14 +62,13 @@ func registerPackages(onyx engine.Game) error {
 	assets := onyx.Assets()
 	screen := onyx.Screen()
 	renderer := onyx.Renderer()
-	logger := onyx.Logger()
 
 	// NOTE: The order of package registration matters, as some packages may depend on others being registered first.
 
 	if err := images.RegisterPackage(assets, renderer); err != nil {
 		return fmt.Errorf("failed to register images package: %w", err)
 	}
-	if err := tiled.RegisterPackage(assets, renderer, screen, logger); err != nil {
+	if err := tiled.RegisterPackage(assets, renderer, screen); err != nil {
 		return fmt.Errorf("failed to register tiled package: %w", err)
 	}
 
