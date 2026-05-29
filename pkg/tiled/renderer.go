@@ -115,8 +115,9 @@ func (a *TiledRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix e
 			a.drawLayerToBuffer(
 				buffer,
 				tilemap,
-				tmx,
+				tmx.Tilesets,
 				i,
+				tmx.TileWidth, tmx.TileHeight,
 				minTileX, maxTileX,
 				minTileY, maxTileY,
 				viewMatrix,
@@ -153,8 +154,9 @@ func (a *TiledRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix e
 func (a *TiledRenderingAdapter) drawLayerToBuffer(
 	buffer *ebiten.Image,
 	tilemap *Tilemap,
-	tmx *data.Tmx,
+	tilesets []data.TmxTileset,
 	layer int,
+	cellWidth, cellHeight int,
 	minTileX, maxTileX int,
 	minTileY, maxTileY int,
 	viewMatrix ebiten.GeoM,
@@ -170,7 +172,7 @@ func (a *TiledRenderingAdapter) drawLayerToBuffer(
 				continue // Skip empty tiles
 			}
 
-			tileset := data.NearestTileset(tmx.Tilesets, tile.id)
+			tileset := data.NearestTileset(tilesets, tile.id)
 			tsxPath := engine.FilePath(tileset.Source)
 
 			tsx, exists := a.tiledAssetAdapter.tsxCache[tsxPath]
@@ -183,7 +185,7 @@ func (a *TiledRenderingAdapter) drawLayerToBuffer(
 				continue // Skip tiles that reference a missing tileset image
 			}
 
-			tileX, tileY := x*tsx.TileWidth, y*tsx.TileHeight
+			tileX, tileY := x*cellWidth, y*cellHeight
 			tileID := tile.id - uint32(tileset.FirstGID)
 
 			srcX := int(tileID % uint32(tsx.Columns) * uint32(tsx.TileWidth))
@@ -193,7 +195,6 @@ func (a *TiledRenderingAdapter) drawLayerToBuffer(
 
 			// Ref: https://doc.mapeditor.org/en/stable/reference/global-tile-ids/#tile-flipping
 			if tile.FlippedDiagonally() {
-				opt.GeoM.Translate(-float64(tsx.TileWidth)/2, -float64(tsx.TileHeight)/2)
 				opt.GeoM.Rotate(math.Pi / 2)
 				opt.GeoM.Scale(-1, 1)
 				if tile.FlippedHorizontally() {
@@ -202,7 +203,6 @@ func (a *TiledRenderingAdapter) drawLayerToBuffer(
 				if tile.FlippedVertically() {
 					opt.GeoM.Scale(1, -1)
 				}
-				opt.GeoM.Translate(float64(tsx.TileWidth)/2, float64(tsx.TileHeight)/2)
 			} else {
 				if tile.FlippedHorizontally() {
 					opt.GeoM.Scale(-1, 1)
@@ -214,14 +214,16 @@ func (a *TiledRenderingAdapter) drawLayerToBuffer(
 				}
 			}
 
+			opt.GeoM.Translate(0, float64(cellHeight-tsx.TileHeight))
+			opt.GeoM.Translate(float64(tsx.TileOffset.X), float64(tsx.TileOffset.Y))
 			opt.GeoM.Translate(float64(tileX), float64(tileY))
 			opt.GeoM.Concat(viewMatrix)
 
 			buffer.DrawImage(tilesetImg.SubImage(
 				image.Rect(
 					srcX, srcY,
-					srcX+tmx.TileWidth,
-					srcY+tmx.TileHeight,
+					srcX+tsx.TileWidth,
+					srcY+tsx.TileHeight,
 				),
 			).(*ebiten.Image), &opt)
 		}

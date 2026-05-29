@@ -23,7 +23,7 @@ var testMaps = []engine.FilePath{
 func New(assets engine.Assets, camera engine.Camera, screen engine.Screen, time engine.Time) engine.SceneState {
 	var entity donburi.Entity
 
-	mapIndex := 0
+	mapIndex := 1
 	return engine.SceneState{
 		OnEnter: func(ctx context.Context, world donburi.World) error {
 			if err := assets.Load(content.AssetsFS(), testMaps...); err != nil {
@@ -41,7 +41,7 @@ func New(assets engine.Assets, camera engine.Camera, screen engine.Screen, time 
 			}
 
 			camera.SetPosition(tilemap.Bounds().Center())
-			camera.SetZoom(0.25)
+			camera.SetZoom(0.4)
 
 			return nil
 		},

@@ -1,6 +1,8 @@
 package data
 
-import "encoding/xml"
+import (
+	"encoding/xml"
+)
 
 type Orientation string
 
@@ -98,20 +100,26 @@ type TmxObject struct {
 }
 
 type Tsx struct {
-	Version      string   `xml:"version,attr"`
-	TiledVersion string   `xml:"tiledversion,attr"`
-	Name         string   `xml:"name,attr"`
-	TileWidth    int      `xml:"tilewidth,attr"`
-	TileHeight   int      `xml:"tileheight,attr"`
-	TileCount    int      `xml:"tilecount,attr"`
-	Columns      int      `xml:"columns,attr"`
-	Image        TsxImage `xml:"image"`
+	Version      string    `xml:"version,attr"`
+	TiledVersion string    `xml:"tiledversion,attr"`
+	Name         string    `xml:"name,attr"`
+	TileWidth    int       `xml:"tilewidth,attr"`
+	TileHeight   int       `xml:"tileheight,attr"`
+	TileCount    int       `xml:"tilecount,attr"`
+	Columns      int       `xml:"columns,attr"`
+	Image        TsxImage  `xml:"image"`
+	TileOffset   TsxOffset `xml:"tileoffset"`
 }
 
 type TsxImage struct {
 	Source string `xml:"source,attr"`
 	Width  int    `xml:"width,attr"`
 	Height int    `xml:"height,attr"`
+}
+
+type TsxOffset struct {
+	X int `xml:"x,attr"`
+	Y int `xml:"y,attr"`
 }
 
 func (t *Tmx) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
