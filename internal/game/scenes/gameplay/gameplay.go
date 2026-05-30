@@ -16,14 +16,12 @@ import (
 
 var testMaps = []engine.FilePath{
 	content.AssetsLevelsGym01,
-	content.AssetsLevelsGym02,
-	content.AssetsLevelsGym03,
 }
 
 func New(assets engine.Assets, camera engine.Camera, screen engine.Screen, time engine.Time) engine.SceneState {
 	var entity donburi.Entity
 
-	mapIndex := 1
+	mapIndex := 0
 	return engine.SceneState{
 		OnEnter: func(ctx context.Context, world donburi.World) error {
 			if err := assets.Load(content.AssetsFS(), testMaps...); err != nil {
