@@ -1,8 +1,8 @@
 package engine
 
 import (
-	"github.com/adm87/onyx-game/pkg/engine/components/transform"
-	"github.com/adm87/onyx-game/pkg/engine/geom"
+	"github.com/adm87/onyx/pkg/engine/components/transform"
+	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )

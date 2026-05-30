@@ -70,12 +70,13 @@ func NewGame(opts ...Option) Game {
 		scenes.world,
 		screen,
 	)
+	collision := newCollision()
 
 	return &game{
 		ctx:       context.Background(),
 		assets:    assets,
 		camera:    camera,
-		collision: newCollision(),
+		collision: collision,
 		logger:    logger,
 		renderer:  renderer,
 		screen:    screen,

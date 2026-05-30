@@ -3,7 +3,7 @@ package rendering
 import (
 	"image/color"
 
-	"github.com/adm87/onyx-game/pkg/engine/geom"
+	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )

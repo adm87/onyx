@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/adm87/onyx-game/internal/game"
+	"github.com/adm87/onyx/internal/game"
 )
 
 func main() {

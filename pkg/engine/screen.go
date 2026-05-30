@@ -2,8 +2,9 @@ package engine
 
 import (
 	"image/color"
+	"math"
 
-	"github.com/adm87/onyx-game/pkg/engine/geom"
+	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -127,8 +128,8 @@ func (s *screen) calculateScreenScale(outsideWidth, outsideHeight int) {
 func (s *screen) scaleLayout(bufWidth, bufHeight, outsideWidth, outsideHeight int) {
 	s.layoutWidth = int(float64(outsideWidth) / s.scale)
 	s.layoutHeight = int(float64(outsideHeight) / s.scale)
-	s.safeArea.Min.X = (float64(bufWidth) - float64(s.layoutWidth)) / 2
-	s.safeArea.Min.Y = (float64(bufHeight) - float64(s.layoutHeight)) / 2
+	s.safeArea.Min.X = math.Floor((float64(bufWidth) - float64(s.layoutWidth)) / 2)
+	s.safeArea.Min.Y = math.Floor((float64(bufHeight) - float64(s.layoutHeight)) / 2)
 	s.safeArea.Max.X = s.safeArea.Min.X + float64(s.layoutWidth)
 	s.safeArea.Max.Y = s.safeArea.Min.Y + float64(s.layoutHeight)
 }

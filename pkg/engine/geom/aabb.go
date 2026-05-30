@@ -5,6 +5,19 @@ type AABB struct {
 	Max Vec2
 }
 
+func (a AABB) Translate(offset Vec2) AABB {
+	return AABB{
+		Min: Vec2{
+			X: a.Min.X + offset.X,
+			Y: a.Min.Y + offset.Y,
+		},
+		Max: Vec2{
+			X: a.Max.X + offset.X,
+			Y: a.Max.Y + offset.Y,
+		},
+	}
+}
+
 func (a AABB) Width() float64 {
 	return a.Max.X - a.Min.X
 }

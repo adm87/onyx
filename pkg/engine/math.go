@@ -1,6 +1,6 @@
 package engine
 
-import "github.com/adm87/onyx-game/pkg/engine/geom"
+import "github.com/adm87/onyx/pkg/engine/geom"
 
 type number interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 |

@@ -1,7 +1,7 @@
 package components
 
 import (
-	"github.com/adm87/onyx-game/pkg/engine"
+	"github.com/adm87/onyx/pkg/engine"
 	"github.com/yohamta/donburi"
 	"github.com/yohamta/donburi/filter"
 )

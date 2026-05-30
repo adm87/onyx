@@ -1,7 +1,7 @@
 package images
 
 import (
-	"github.com/adm87/onyx-game/pkg/engine"
+	"github.com/adm87/onyx/pkg/engine"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 

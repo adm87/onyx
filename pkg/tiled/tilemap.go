@@ -1,8 +1,8 @@
 package tiled
 
 import (
-	"github.com/adm87/onyx-game/pkg/engine/geom"
-	"github.com/adm87/onyx-game/pkg/tiled/data"
+	"github.com/adm87/onyx/pkg/engine/geom"
+	"github.com/adm87/onyx/pkg/tiled/data"
 )
 
 type Tile struct {

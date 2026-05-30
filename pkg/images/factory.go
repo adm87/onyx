@@ -3,11 +3,11 @@ package images
 import (
 	"image/color"
 
-	"github.com/adm87/onyx-game/pkg/engine"
-	"github.com/adm87/onyx-game/pkg/engine/components/rendering"
-	"github.com/adm87/onyx-game/pkg/engine/components/transform"
-	"github.com/adm87/onyx-game/pkg/engine/geom"
-	"github.com/adm87/onyx-game/pkg/images/components"
+	"github.com/adm87/onyx/pkg/engine"
+	"github.com/adm87/onyx/pkg/engine/components/rendering"
+	"github.com/adm87/onyx/pkg/engine/components/transform"
+	"github.com/adm87/onyx/pkg/engine/geom"
+	"github.com/adm87/onyx/pkg/images/components"
 	"github.com/yohamta/donburi"
 )
 

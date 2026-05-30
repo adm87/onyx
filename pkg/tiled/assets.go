@@ -6,9 +6,9 @@ import (
 	"io/fs"
 	"path/filepath"
 
-	"github.com/adm87/onyx-game/pkg/engine"
-	"github.com/adm87/onyx-game/pkg/images"
-	"github.com/adm87/onyx-game/pkg/tiled/data"
+	"github.com/adm87/onyx/pkg/engine"
+	"github.com/adm87/onyx/pkg/images"
+	"github.com/adm87/onyx/pkg/tiled/data"
 )
 
 type TiledAssetAdapter struct {

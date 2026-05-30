@@ -4,11 +4,11 @@ import (
 	"image"
 	"math"
 
-	"github.com/adm87/onyx-game/pkg/engine"
-	"github.com/adm87/onyx-game/pkg/engine/components/rendering"
-	"github.com/adm87/onyx-game/pkg/images"
-	"github.com/adm87/onyx-game/pkg/tiled/components"
-	"github.com/adm87/onyx-game/pkg/tiled/data"
+	"github.com/adm87/onyx/pkg/engine"
+	"github.com/adm87/onyx/pkg/engine/components/rendering"
+	"github.com/adm87/onyx/pkg/images"
+	"github.com/adm87/onyx/pkg/tiled/components"
+	"github.com/adm87/onyx/pkg/tiled/data"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
@@ -152,6 +152,7 @@ func (a *TiledRenderingAdapter) drawLayerToBuffer(
 	viewMatrix ebiten.GeoM,
 ) {
 	opt := ebiten.DrawImageOptions{}
+
 	for y := minTileY; y <= maxTileY; y++ {
 		for x := minTileX; x <= maxTileX; x++ {
 			tile, ok := tilemap.GetTile(layer, x, y)

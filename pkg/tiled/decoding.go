@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/adm87/onyx-game/pkg/tiled/data"
+	"github.com/adm87/onyx/pkg/tiled/data"
 	"github.com/klauspost/compress/zstd"
 )
 

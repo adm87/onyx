@@ -1,7 +1,7 @@
 package colliders
 
 import (
-	"github.com/adm87/onyx-game/pkg/engine/geom"
+	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/yohamta/donburi"
 )
 
@@ -69,12 +69,12 @@ func SetBodyType(entry *donburi.Entry, bodyType BodyType) {
 	colliderData.Body = bodyType
 }
 
-func GetBoxCollider(entry *donburi.Entry) (geom.AABB, bool) {
+func GetBoxCollider(entry *donburi.Entry) geom.AABB {
 	boxCollider := BoxCollider.Get(entry)
 	if boxCollider == nil {
-		return geom.AABB{}, false
+		return geom.AABB{}
 	}
-	return *boxCollider, true
+	return *boxCollider
 }
 
 func SetBoxCollider(entry *donburi.Entry, aabb geom.AABB) {

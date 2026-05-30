@@ -3,48 +3,78 @@ package gameplay
 import (
 	"context"
 	"fmt"
+	"image/color"
 
-	"github.com/adm87/onyx-game/content"
-	"github.com/adm87/onyx-game/pkg/engine"
-	"github.com/adm87/onyx-game/pkg/tiled"
-	"github.com/adm87/onyx-game/pkg/tiled/components"
+	"github.com/adm87/onyx/content"
+	"github.com/adm87/onyx/pkg/engine"
+	"github.com/adm87/onyx/pkg/engine/components/colliders"
+	"github.com/adm87/onyx/pkg/engine/components/transform"
+	"github.com/adm87/onyx/pkg/engine/geom"
+	"github.com/adm87/onyx/pkg/engine/partitioning"
+	"github.com/adm87/onyx/pkg/images"
+	"github.com/adm87/onyx/pkg/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/yohamta/donburi"
 )
 
-var testMaps = []engine.FilePath{
-	content.AssetsLevelsGym01,
-}
+func New(
+	assets engine.Assets,
+	camera engine.Camera,
+	collision engine.Collision,
+	screen engine.Screen,
+	time engine.Time) engine.SceneState {
 
-func New(assets engine.Assets, camera engine.Camera, screen engine.Screen, time engine.Time) engine.SceneState {
+	var tilemap *tiled.Tilemap
 	var entity donburi.Entity
 
-	mapIndex := 0
 	return engine.SceneState{
 		OnEnter: func(ctx context.Context, world donburi.World) error {
-			if err := assets.Load(content.AssetsFS(), testMaps...); err != nil {
+			if err := assets.Load(content.AssetsFS(), content.AssetsLevelsGym01); err != nil {
 				return fmt.Errorf("failed to load level asset: %w", err)
 			}
 
-			entry := tiled.CreateTilemap(world,
-				tiled.WithTilemapRef(testMaps[mapIndex]),
+			tiled.CreateTilemap(world,
+				tiled.WithTilemapRef(content.AssetsLevelsGym01),
 			)
-			entity = entry.Entity()
 
-			tilemap, exists := tiled.GetTilemap(assets, testMaps[mapIndex])
+			tm, exists := tiled.GetTilemap(assets, content.AssetsLevelsGym01)
 			if !exists {
-				return fmt.Errorf("tilemap asset not found: %s", testMaps[mapIndex])
+				return fmt.Errorf("tilemap asset not found: %s", content.AssetsLevelsGym01)
 			}
+			tilemap = tm
 
 			camera.SetPosition(tilemap.Bounds().Center())
-			camera.SetZoom(0.2)
+			camera.SetZoom(0.3)
 
+			img, exists := images.GetImage(assets, content.EmbeddedImg10x10White)
+			if !exists {
+				return fmt.Errorf("failed to load embedded image: %s", content.EmbeddedImg10x10White)
+			}
+
+			width, height := img.Bounds().Dx(), img.Bounds().Dy()
+			halfWidth, halfHeight := float64(width)/2, float64(height)/2
+
+			entry := images.CreateImageEntity(world,
+				images.WithRef(content.EmbeddedImg10x10White),
+				images.WithLayer(1),
+				images.WithPosition(tilemap.Bounds().Center().XY()),
+				images.WithAnchor(0.5, 0.5),
+			)
+
+			colliders.SetBoxCollider(entry, geom.AABB{
+				Min: geom.Vec2{X: -halfWidth, Y: -halfHeight},
+				Max: geom.Vec2{X: halfWidth, Y: halfHeight},
+			})
+			collision.Add(entry)
+
+			entity = entry.Entity()
 			return nil
 		},
 		OnUpdate: func(ctx context.Context, world donburi.World) (engine.SceneExitCode, error) {
-			position := camera.Position()
+			entry := world.Entry(entity)
+			position := transform.GetPosition(entry)
 
 			if ebiten.IsKeyPressed(ebiten.KeyW) || ebiten.IsKeyPressed(ebiten.KeyUp) {
 				position.Y -= 100 * time.DeltaTime()
@@ -66,37 +96,42 @@ func New(assets engine.Assets, camera engine.Camera, screen engine.Screen, time 
 				ebiten.SetFullscreen(!ebiten.IsFullscreen())
 			}
 
-			if inpututil.IsKeyJustPressed(ebiten.KeyN) {
-				mapIndex = (mapIndex + 1) % len(testMaps)
-				components.SetTilemapRef(world.Entry(entity), testMaps[mapIndex])
-			}
-			if inpututil.IsKeyJustPressed(ebiten.KeyP) {
-				mapIndex = (mapIndex - 1 + len(testMaps)) % len(testMaps)
-				components.SetTilemapRef(world.Entry(entity), testMaps[mapIndex])
-			}
+			camera.SetPosition(position)
+			transform.SetPosition(entry, position)
 
-			tilemap, exists := tiled.GetTilemap(assets, testMaps[mapIndex])
-			if !exists {
-				return engine.SceneExitNone, fmt.Errorf("tilemap asset not found: %s", testMaps[mapIndex])
-			}
-
-			bounds := tilemap.Bounds()
+			collision.Update(entry)
+			return engine.SceneExitNone, nil
+		},
+		OnRender: func(ctx context.Context, world donburi.World, img *ebiten.Image, viewMatrix ebiten.GeoM) error {
+			partitioning.DrawDebug(img, collision.Partitioning(), screen.SafeArea(), viewMatrix)
 
 			worldMin := camera.ToWorld(screen.SafeArea().Min)
 			worldMax := camera.ToWorld(screen.SafeArea().Max)
 
-			halfScreenWidth := (worldMax.X - worldMin.X) / 2
-			halfScreenHeight := (worldMax.Y - worldMin.Y) / 2
+			entities := collision.Query(geom.AABB{
+				Min: worldMin,
+				Max: worldMax,
+			})
 
-			position.X = engine.Clamp(position.X, bounds.Min.X+halfScreenWidth, bounds.Max.X-halfScreenWidth)
-			position.Y = engine.Clamp(position.Y, bounds.Min.Y+halfScreenHeight, bounds.Max.Y-halfScreenHeight)
+			for _, entity := range entities {
+				entry := world.Entry(entity)
 
-			camera.SetPosition(position)
-			return engine.SceneExitNone, nil
-		},
-		OnRender: func(ctx context.Context, world donburi.World, img *ebiten.Image, viewMatrix ebiten.GeoM) error {
-			minX, minY := screen.SafeArea().Min.XY()
-			ebitenutil.DebugPrintAt(img, "FPS: "+fmt.Sprintf("%.2f", ebiten.ActualFPS()), int(minX)+10, int(minY)+10)
+				position := transform.GetPosition(entry)
+				collider := colliders.GetBoxCollider(entry).Translate(position)
+
+				screenMinX, screenMinY := viewMatrix.Apply(collider.Min.X, collider.Min.Y)
+				screenMaxX, screenMaxY := viewMatrix.Apply(collider.Max.X, collider.Max.Y)
+
+				vector.StrokeRect(img,
+					float32(screenMinX),
+					float32(screenMinY),
+					float32(screenMaxX-screenMinX),
+					float32(screenMaxY-screenMinY),
+					2,
+					color.RGBA{0, 255, 0, 100},
+					false,
+				)
+			}
 			return nil
 		},
 	}

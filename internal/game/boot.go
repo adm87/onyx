@@ -6,12 +6,12 @@ import (
 	"image/color"
 	"path/filepath"
 
-	"github.com/adm87/onyx-game/content"
-	"github.com/adm87/onyx-game/internal/game/cli"
-	"github.com/adm87/onyx-game/internal/game/scenes"
-	"github.com/adm87/onyx-game/pkg/engine"
-	"github.com/adm87/onyx-game/pkg/images"
-	"github.com/adm87/onyx-game/pkg/tiled"
+	"github.com/adm87/onyx/content"
+	"github.com/adm87/onyx/internal/game/cli"
+	"github.com/adm87/onyx/internal/game/scenes"
+	"github.com/adm87/onyx/pkg/engine"
+	"github.com/adm87/onyx/pkg/images"
+	"github.com/adm87/onyx/pkg/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -26,7 +26,7 @@ func Boot() error {
 
 	onyx := engine.NewGame(
 		engine.WithTitle("Onyx"),
-		engine.WithScreenSize(1280, 720),
+		engine.WithScreenSize(800, 420),
 		engine.WithFullscreen(args.Fullscreen),
 		engine.WithScreenScale(engine.ScreenScaleFill),
 		engine.WithInitialScene(scenes.GameplaySceneID),

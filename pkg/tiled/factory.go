@@ -1,8 +1,8 @@
 package tiled
 
 import (
-	"github.com/adm87/onyx-game/pkg/engine"
-	"github.com/adm87/onyx-game/pkg/tiled/components"
+	"github.com/adm87/onyx/pkg/engine"
+	"github.com/adm87/onyx/pkg/tiled/components"
 	"github.com/yohamta/donburi"
 )
 
