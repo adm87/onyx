@@ -9,7 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
-func DrawDebug[T comparable](screen *ebiten.Image, hash *SpatialHash[T], safeArea geom.AABB, viewMatrix ebiten.GeoM) {
+func DebugDrawSpatialHash[T comparable](screen *ebiten.Image, hash *SpatialHash[T], safeArea geom.AABB, viewMatrix ebiten.GeoM) {
 	ebitenutil.DebugPrintAt(screen, "Spatial Hash Debug", int(safeArea.Min.X), int(safeArea.Min.Y))
 
 	invViewMatrix := viewMatrix

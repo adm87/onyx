@@ -1,6 +1,8 @@
 package partitioning
 
 import (
+	"math"
+
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/engine/storage"
 )
@@ -182,15 +184,15 @@ func (h *SpatialHash[T]) getNearestGrid(size float64) int {
 }
 
 func (h *SpatialHash[T]) getCells(aabb geom.AABB, grid *spatialGrid) []spatialCoord {
-	cellMinX := int64(aabb.Min.X / grid.cellSize)
-	cellMinY := int64(aabb.Min.Y / grid.cellSize)
-	cellMaxX := int64(aabb.Max.X / grid.cellSize)
-	cellMaxY := int64(aabb.Max.Y / grid.cellSize)
+	cellMinX := math.Floor(aabb.Min.X / grid.cellSize)
+	cellMinY := math.Floor(aabb.Min.Y / grid.cellSize)
+	cellMaxX := math.Floor(aabb.Max.X / grid.cellSize)
+	cellMaxY := math.Floor(aabb.Max.Y / grid.cellSize)
 
 	h.cells = h.cells[:0]
 	for x := cellMinX; x <= cellMaxX; x++ {
 		for y := cellMinY; y <= cellMaxY; y++ {
-			h.cells = append(h.cells, encodeCoord(x, y))
+			h.cells = append(h.cells, encodeCoord(int64(x), int64(y)))
 		}
 	}
 	return h.cells

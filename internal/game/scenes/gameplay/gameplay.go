@@ -34,7 +34,6 @@ func New(
 			if err := assets.Load(content.AssetsFS(), content.AssetsLevelsGym01); err != nil {
 				return fmt.Errorf("failed to load level asset: %w", err)
 			}
-
 			tiled.CreateTilemap(world,
 				tiled.WithTilemapRef(content.AssetsLevelsGym01),
 			)
@@ -103,7 +102,7 @@ func New(
 			return engine.SceneExitNone, nil
 		},
 		OnRender: func(ctx context.Context, world donburi.World, img *ebiten.Image, viewMatrix ebiten.GeoM) error {
-			partitioning.DrawDebug(img, collision.Partitioning(), screen.SafeArea(), viewMatrix)
+			partitioning.DebugDrawSpatialHash(img, collision.Partitioning(), screen.SafeArea(), viewMatrix)
 
 			worldMin := camera.ToWorld(screen.SafeArea().Min)
 			worldMax := camera.ToWorld(screen.SafeArea().Max)

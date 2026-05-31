@@ -67,13 +67,12 @@ func (c *collision) Update(entry *donburi.Entry) bool {
 
 	c.partitioning.Remove(idx)
 
-	newIdx, ok := c.partitioning.Insert(entity, collider.Translate(position))
+	idx, ok := c.partitioning.Insert(entity, collider.Translate(position))
 	if !ok {
-		delete(c.entities, entity)
 		return false
 	}
 
-	c.entities[entity] = newIdx
+	c.entities[entity] = idx
 	return true
 }
 
