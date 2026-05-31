@@ -5,7 +5,6 @@ import (
 
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/images"
-	"github.com/adm87/onyx/pkg/tiled/data"
 )
 
 const AdapterID engine.AdapterID = "tiled_adapter"
@@ -33,7 +32,7 @@ func RegisterPackage(assets engine.Assets, renderer engine.Renderer, camera engi
 	return nil
 }
 
-func GetTmx(assets engine.Assets, path engine.FilePath) (*data.Tmx, bool) {
+func GetTmx(assets engine.Assets, path engine.FilePath) (*Tmx, bool) {
 	adapter, found := GetAssetAdapter(assets)
 	if !found {
 		return nil, false
@@ -43,7 +42,7 @@ func GetTmx(assets engine.Assets, path engine.FilePath) (*data.Tmx, bool) {
 	return tmx, exists
 }
 
-func GetTsx(assets engine.Assets, path engine.FilePath) (*data.Tsx, bool) {
+func GetTsx(assets engine.Assets, path engine.FilePath) (*Tsx, bool) {
 	adapter, found := GetAssetAdapter(assets)
 	if !found {
 		return nil, false

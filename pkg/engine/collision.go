@@ -18,21 +18,27 @@ type Collision interface {
 }
 
 type collision struct {
-	partitioning *partitioning.SpatialHash[donburi.Entity]
-	entities     map[donburi.Entity]partitioning.SpatialIndex
+	staticPartitions *partitioning.SpatialHash[donburi.Entity]
+	partitions       *partitioning.SpatialHash[donburi.Entity]
 
+	entities   map[donburi.Entity]partitioning.SpatialIndex
 	queryCache []donburi.Entity
 }
 
 func newCollision() *collision {
 	return &collision{
-		partitioning: partitioning.NewSpatialHash[donburi.Entity](64, 32, 64, 128),
-		entities:     make(map[donburi.Entity]partitioning.SpatialIndex),
+		staticPartitions: partitioning.NewSpatialHash[donburi.Entity](100, 32, 64),
+		partitions:       partitioning.NewSpatialHash[donburi.Entity](100, 16),
+		entities:         make(map[donburi.Entity]partitioning.SpatialIndex),
 	}
 }
 
+func (c *collision) StaticPartitioning() *partitioning.SpatialHash[donburi.Entity] {
+	return c.staticPartitions
+}
+
 func (c *collision) Partitioning() *partitioning.SpatialHash[donburi.Entity] {
-	return c.partitioning
+	return c.partitions
 }
 
 func (c *collision) Add(entry *donburi.Entry) bool {
@@ -45,7 +51,7 @@ func (c *collision) Add(entry *donburi.Entry) bool {
 	collider := colliders.GetBoxCollider(entry)
 	position := transform.GetPosition(entry)
 
-	idx, ok := c.partitioning.Insert(entity, collider.Translate(position))
+	idx, ok := c.partitions.Insert(entity, collider.Translate(position))
 	if !ok {
 		return false
 	}
@@ -65,12 +71,12 @@ func (c *collision) Update(entry *donburi.Entry) bool {
 	collider := colliders.GetBoxCollider(entry)
 	position := transform.GetPosition(entry)
 
-	return c.partitioning.Reinsert(idx, collider.Translate(position))
+	return c.partitions.Reinsert(idx, collider.Translate(position))
 }
 
 func (c *collision) Query(aabb geom.AABB) []donburi.Entity {
 	c.queryCache = c.queryCache[:0]
-	c.partitioning.QueryAll(aabb, func(e donburi.Entity) bool {
+	c.partitions.QueryAll(aabb, func(e donburi.Entity) bool {
 		c.queryCache = append(c.queryCache, e)
 		return true
 	})

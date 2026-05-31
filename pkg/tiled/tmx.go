@@ -1,4 +1,4 @@
-package data
+package tiled
 
 import (
 	"encoding/xml"

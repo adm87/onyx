@@ -26,7 +26,7 @@ func Boot() error {
 
 	onyx := engine.NewGame(
 		engine.WithTitle("Onyx"),
-		engine.WithScreenSize(800, 420),
+		engine.WithScreenSize(1280, 720),
 		engine.WithFullscreen(args.Fullscreen),
 		engine.WithScreenScale(engine.ScreenScaleFill),
 		engine.WithInitialScene(scenes.GameplaySceneID),

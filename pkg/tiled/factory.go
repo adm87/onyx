@@ -2,7 +2,6 @@ package tiled
 
 import (
 	"github.com/adm87/onyx/pkg/engine"
-	"github.com/adm87/onyx/pkg/tiled/components"
 	"github.com/yohamta/donburi"
 )
 
@@ -20,7 +19,7 @@ func defaultTilemapOptions() *TilemapOptions {
 
 func CreateTilemap(world donburi.World, opts ...TilemapOption) *donburi.Entry {
 	entity := world.Create(
-		components.Tilemap,
+		TilemapComponent,
 	)
 	entry := world.Entry(entity)
 
@@ -29,7 +28,7 @@ func CreateTilemap(world donburi.World, opts ...TilemapOption) *donburi.Entry {
 		opt(options)
 	}
 
-	components.SetTilemapRef(entry, options.TilemapRef)
+	SetTilemapRef(entry, options.TilemapRef)
 
 	return entry
 }

@@ -7,20 +7,15 @@ import (
 	"github.com/adm87/onyx/pkg/engine/storage"
 )
 
-type SpatialIndex uint64
-
-type spatialCoord uint64
+type (
+	SpatialIndex uint64
+	spatialCoord uint64
+)
 
 func encodeCoord(cellX, cellY int64) spatialCoord {
 	x := uint64(cellX) & 0xFFFFFFFF
 	y := uint64(cellY) & 0xFFFFFFFF
 	return spatialCoord(x | (y << 32))
-}
-
-func decodeCoord(coord spatialCoord) (cellX, cellY int64) {
-	x := int64(uint64(coord) & 0xFFFFFFFF)
-	y := int64((uint64(coord) >> 32) & 0xFFFFFFFF)
-	return x, y
 }
 
 type spatialEntry struct {

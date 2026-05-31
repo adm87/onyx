@@ -7,8 +7,6 @@ import (
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/images"
-	"github.com/adm87/onyx/pkg/tiled/components"
-	"github.com/adm87/onyx/pkg/tiled/data"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
@@ -72,8 +70,8 @@ func (a *TiledRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix e
 	clear(a.drawn)
 
 	// Iterate over all entities with a Tilemap component and enqueue render tasks for visible tiles
-	components.TilemapQuery.Each(world, func(entry *donburi.Entry) {
-		ref := components.GetTilemapRef(entry)
+	TilemapQuery.Each(world, func(entry *donburi.Entry) {
+		ref := GetTilemapRef(entry)
 
 		// Get the tilemap buffer and clear it, this will ensure we don't have artifacts from previous frames when rendering the tilemap
 		buffer := a.getBuffer(ref)
@@ -144,7 +142,7 @@ func (a *TiledRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix e
 func (a *TiledRenderingAdapter) drawLayerToBuffer(
 	buffer *ebiten.Image,
 	tilemap *Tilemap,
-	tilesets []data.TmxTileset,
+	tilesets []TmxTileset,
 	layer int,
 	cellWidth, cellHeight int,
 	minTileX, maxTileX int,
@@ -163,7 +161,7 @@ func (a *TiledRenderingAdapter) drawLayerToBuffer(
 				continue // Skip empty tiles
 			}
 
-			tileset := data.NearestTileset(tilesets, tile.id)
+			tileset := NearestTileset(tilesets, tile.id)
 			tsxPath := engine.FilePath(tileset.Source)
 
 			tsx, exists := a.tiledAssetAdapter.tsxCache[tsxPath]

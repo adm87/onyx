@@ -1,9 +1,6 @@
 package tiled
 
-import (
-	"github.com/adm87/onyx/pkg/engine/geom"
-	"github.com/adm87/onyx/pkg/tiled/data"
-)
+import "github.com/adm87/onyx/pkg/engine/geom"
 
 type Tile struct {
 	id    uint32
@@ -60,7 +57,7 @@ func (t *Tilemap) Layers() int {
 	return t.layers
 }
 
-func buildTilemap(tmx *data.Tmx) (*Tilemap, error) {
+func buildTilemap(tmx *Tmx) (*Tilemap, error) {
 	min, max := findMapSize(tmx)
 	tileBounds := geom.AABB{Min: min, Max: max}
 	bounds := geom.AABB{
@@ -91,7 +88,7 @@ func buildTilemap(tmx *data.Tmx) (*Tilemap, error) {
 	return tilemap, nil
 }
 
-func buildTilemapLayer(layer data.TmxLayer, tilemap *Tilemap, i, size int, bounds geom.AABB) error {
+func buildTilemapLayer(layer TmxLayer, tilemap *Tilemap, i, size int, bounds geom.AABB) error {
 	if len(layer.Data.Chunks) > 0 {
 		mapWidth := int(bounds.Width())
 		layerOffset := i * size
@@ -119,7 +116,7 @@ func buildTilemapLayer(layer data.TmxLayer, tilemap *Tilemap, i, size int, bound
 	return nil
 }
 
-func findMapSize(tmx *data.Tmx) (geom.Vec2, geom.Vec2) {
+func findMapSize(tmx *Tmx) (geom.Vec2, geom.Vec2) {
 	if len(tmx.Layers) == 0 {
 		return geom.Vec2{}, geom.Vec2{}
 	}
@@ -150,7 +147,7 @@ func findMapSize(tmx *data.Tmx) (geom.Vec2, geom.Vec2) {
 		}
 }
 
-func findLayerSize(layer data.TmxLayer) (minX, minY, maxX, maxY int) {
+func findLayerSize(layer TmxLayer) (minX, minY, maxX, maxY int) {
 	if len(layer.Data.Chunks) == 0 {
 		return 0, 0, layer.Width, layer.Height
 	}

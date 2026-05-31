@@ -45,7 +45,7 @@ func New(
 			tilemap = tm
 
 			camera.SetPosition(tilemap.Bounds().Center())
-			camera.SetZoom(0.3)
+			camera.SetZoom(0.2)
 
 			img, exists := images.GetImage(assets, content.EmbeddedImg10x10White)
 			if !exists {

@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/adm87/onyx/pkg/tiled/data"
 	"github.com/klauspost/compress/zstd"
 )
 
@@ -22,18 +21,18 @@ const (
 	GidMask                 uint32 = 0x1FFFFFFF
 )
 
-func decodeContent(format data.Encoding, compression data.Compression, content string) ([]Tile, error) {
+func decodeContent(format Encoding, compression Compression, content string) ([]Tile, error) {
 	content = strings.TrimSpace(content)
 
 	switch format {
-	case data.EncodingCSV:
+	case EncodingCSV:
 		tileData, err := decodeCsv([]byte(content))
 		if err != nil {
 			return nil, err
 		}
 		return decodeTiles(tileData)
 
-	case data.EncodingBase64:
+	case EncodingBase64:
 		tileData, err := decodeBase64Compressed([]byte(content), compression)
 		if err != nil {
 			return nil, err
@@ -45,7 +44,7 @@ func decodeContent(format data.Encoding, compression data.Compression, content s
 	}
 }
 
-func decodeBase64Compressed(content []byte, compression data.Compression) ([]uint32, error) {
+func decodeBase64Compressed(content []byte, compression Compression) ([]uint32, error) {
 	decoded, err := decodeBase64(content)
 	if err != nil {
 		return nil, err
@@ -53,13 +52,13 @@ func decodeBase64Compressed(content []byte, compression data.Compression) ([]uin
 
 	var raw []byte
 	switch compression {
-	case data.CompressionNone:
+	case CompressionNone:
 		raw = decoded
-	case data.CompressionGzip:
+	case CompressionGzip:
 		raw, err = decodeGzip(decoded)
-	case data.CompressionZlib:
+	case CompressionZlib:
 		raw, err = decodeZlib(decoded)
-	case data.CompressionZstd:
+	case CompressionZstd:
 		raw, err = decodeZstd(decoded)
 	default:
 		return nil, fmt.Errorf("unsupported compression format: %s", compression)

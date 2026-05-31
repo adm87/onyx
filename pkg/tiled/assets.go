@@ -8,12 +8,11 @@ import (
 
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/images"
-	"github.com/adm87/onyx/pkg/tiled/data"
 )
 
 type TiledAssetAdapter struct {
-	tmxCache map[engine.FilePath]*data.Tmx
-	tsxCache map[engine.FilePath]*data.Tsx
+	tmxCache map[engine.FilePath]*Tmx
+	tsxCache map[engine.FilePath]*Tsx
 	tilemaps map[engine.FilePath]*Tilemap
 
 	images *images.ImageAssetAdapter
@@ -22,8 +21,8 @@ type TiledAssetAdapter struct {
 func NewTiledAssetAdapter(images *images.ImageAssetAdapter) *TiledAssetAdapter {
 	return &TiledAssetAdapter{
 		images:   images,
-		tmxCache: make(map[engine.FilePath]*data.Tmx),
-		tsxCache: make(map[engine.FilePath]*data.Tsx),
+		tmxCache: make(map[engine.FilePath]*Tmx),
+		tsxCache: make(map[engine.FilePath]*Tsx),
 		tilemaps: make(map[engine.FilePath]*Tilemap),
 	}
 }
@@ -55,7 +54,7 @@ func (a *TiledAssetAdapter) importTmx(fileSystem fs.FS, path engine.FilePath, ra
 		return nil
 	}
 
-	var tmx data.Tmx
+	var tmx Tmx
 
 	if err := xml.Unmarshal(raw, &tmx); err != nil {
 		return err
@@ -111,7 +110,7 @@ func (a *TiledAssetAdapter) importTsx(fileSystem fs.FS, path engine.FilePath, ra
 		return nil
 	}
 
-	var tsx data.Tsx
+	var tsx Tsx
 
 	if err := xml.Unmarshal(raw, &tsx); err != nil {
 		return err
