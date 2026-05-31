@@ -4,7 +4,6 @@ import (
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
-	"github.com/adm87/onyx/pkg/images/components"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
@@ -24,8 +23,8 @@ func NewImageRenderingAdapter(assetAdapter *ImageAssetAdapter) *ImageRenderingAd
 func (a *ImageRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix ebiten.GeoM) []engine.RenderTask {
 	a.renderingTasks = a.renderingTasks[:0]
 
-	components.ImageQuery.Each(world, func(e *donburi.Entry) {
-		ref := components.GetImageRef(e)
+	ImageQuery.Each(world, func(e *donburi.Entry) {
+		ref := GetImageRef(e)
 		if ref == "" {
 			return // Don't enqueue render tasks for entities without an image
 		}

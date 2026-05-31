@@ -7,7 +7,6 @@ import (
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
-	"github.com/adm87/onyx/pkg/images/components"
 	"github.com/yohamta/donburi"
 )
 
@@ -38,7 +37,7 @@ func defaultImageOptions() ImageOptions {
 
 func CreateImageEntity(world donburi.World, opts ...ImageOption) *donburi.Entry {
 	entity := world.Create(
-		components.Image,
+		Image,
 		rendering.Renderer,
 		rendering.Anchor,
 		rendering.Color,
@@ -52,7 +51,7 @@ func CreateImageEntity(world donburi.World, opts ...ImageOption) *donburi.Entry 
 		opt(&options)
 	}
 
-	components.SetImageRef(entry, options.ref)
+	SetImageRef(entry, options.ref)
 
 	rendering.SetAnchor(entry, options.anchor)
 	rendering.SetLayer(entry, options.layer)

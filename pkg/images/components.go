@@ -1,4 +1,4 @@
-package components
+package images
 
 import (
 	"github.com/adm87/onyx/pkg/engine"
