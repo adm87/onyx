@@ -65,15 +65,7 @@ func (c *collision) Update(entry *donburi.Entry) bool {
 	collider := colliders.GetBoxCollider(entry)
 	position := transform.GetPosition(entry)
 
-	c.partitioning.Remove(idx)
-
-	idx, ok := c.partitioning.Insert(entity, collider.Translate(position))
-	if !ok {
-		return false
-	}
-
-	c.entities[entity] = idx
-	return true
+	return c.partitioning.Reinsert(idx, collider.Translate(position))
 }
 
 func (c *collision) Query(aabb geom.AABB) []donburi.Entity {

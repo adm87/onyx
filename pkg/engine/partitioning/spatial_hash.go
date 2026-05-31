@@ -68,27 +68,11 @@ func (h *SpatialHash[T]) Insert(value T, aabb geom.AABB) (SpatialIndex, bool) {
 		return 0, false
 	}
 
-	width := aabb.Max.X - aabb.Min.X
-	height := aabb.Max.Y - aabb.Min.Y
-
-	idx := h.getNearestGrid(max(width, height))
-
-	grid := &h.grids[idx]
-	h.getCells(aabb, grid)
-
 	index := h.nextIndex
 	h.nextIndex++
 
-	entry := spatialEntry{
-		key:   key,
-		grid:  idx,
-		cells: make([]spatialCoord, len(h.cells)),
-	}
-
-	for i, cell := range h.cells {
-		grid.cells[cell] = append(grid.cells[cell], index)
-		entry.cells[i] = cell
-	}
+	entry := spatialEntry{key: key}
+	h.addToGrid(index, &entry, aabb)
 
 	h.index[index] = entry
 	return index, true
@@ -100,6 +84,40 @@ func (h *SpatialHash[T]) Remove(index SpatialIndex) bool {
 		return false
 	}
 
+	h.removeFromGrid(index, &entry)
+	delete(h.index, index)
+	return h.storage.Remove(entry.key)
+}
+
+func (h *SpatialHash[T]) Reinsert(index SpatialIndex, aabb geom.AABB) bool {
+	entry, exists := h.index[index]
+	if !exists {
+		return false
+	}
+
+	h.removeFromGrid(index, &entry)
+	h.addToGrid(index, &entry, aabb)
+	h.index[index] = entry
+	return true
+}
+
+func (h *SpatialHash[T]) addToGrid(index SpatialIndex, entry *spatialEntry, aabb geom.AABB) {
+	width := aabb.Max.X - aabb.Min.X
+	height := aabb.Max.Y - aabb.Min.Y
+
+	idx := h.getNearestGrid(max(width, height))
+	grid := &h.grids[idx]
+	h.getCells(aabb, grid)
+
+	entry.grid = idx
+	entry.cells = entry.cells[:0]
+	for _, cell := range h.cells {
+		grid.cells[cell] = append(grid.cells[cell], index)
+		entry.cells = append(entry.cells, cell)
+	}
+}
+
+func (h *SpatialHash[T]) removeFromGrid(index SpatialIndex, entry *spatialEntry) {
 	grid := &h.grids[entry.grid]
 	for _, cell := range entry.cells {
 		indices := grid.cells[cell]
@@ -113,9 +131,6 @@ func (h *SpatialHash[T]) Remove(index SpatialIndex) bool {
 			delete(grid.cells, cell)
 		}
 	}
-
-	delete(h.index, index)
-	return h.storage.Remove(entry.key)
 }
 
 // QueryNearest returns all values on the same grid resolution as the provided AABB.
