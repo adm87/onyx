@@ -54,6 +54,8 @@ func (a *ImageRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix e
 			Filter: filter,
 		}
 
+		alpah := float32(col.A) / 255
+
 		a.renderingTasks = append(a.renderingTasks, engine.RenderTask{
 			Render: func(screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
 				opts.GeoM.Reset()
@@ -63,7 +65,7 @@ func (a *ImageRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix e
 
 				// NOTE: Just using ScaleWithColor doesn't work as expected, it seems to ignore the alpha component of the color.
 				opts.ColorScale.ScaleWithColor(col)
-				opts.ColorScale.ScaleAlpha(float32(col.A) / 255)
+				opts.ColorScale.ScaleAlpha(alpah)
 
 				screen.DrawImage(img, &opts)
 				return nil

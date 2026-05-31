@@ -2,25 +2,30 @@ package tiled
 
 import "github.com/adm87/onyx/pkg/engine/geom"
 
-type Tile struct {
-	id    uint32
-	flags uint32
+type Tile uint64
+
+func (t Tile) ID() uint32 {
+	return uint32(t & Tile(GidMask))
+}
+
+func (t Tile) Flags() uint32 {
+	return uint32(t &^ Tile(GidMask))
 }
 
 func (t Tile) FlippedHorizontally() bool {
-	return t.flags&FlippedHorizontallyFlag != 0
+	return t.Flags()&FlippedHorizontallyFlag != 0
 }
 
 func (t Tile) FlippedVertically() bool {
-	return t.flags&FlippedVerticallyFlag != 0
+	return t.Flags()&FlippedVerticallyFlag != 0
 }
 
 func (t Tile) FlippedDiagonally() bool {
-	return t.flags&FlippedDiagonallyFlag != 0
+	return t.Flags()&FlippedDiagonallyFlag != 0
 }
 
 func (t Tile) RotatedHexagonal120() bool {
-	return t.flags&RotatedHexagonal120Flag != 0
+	return t.Flags()&RotatedHexagonal120Flag != 0
 }
 
 type Tilemap struct {
@@ -39,7 +44,7 @@ func (t *Tilemap) GetTile(layer, x, y int) (Tile, bool) {
 	wy := y - int(t.tileBounds.Min.Y)
 	w, h := int(t.tileBounds.Width()), int(t.tileBounds.Height())
 	if layer < 0 || layer >= t.layers || wx < 0 || wx >= w || wy < 0 || wy >= h {
-		return Tile{}, false
+		return Tile(0), false
 	}
 	index := t.GetTileIndex(layer, wx, wy)
 	return t.tiles[index], true

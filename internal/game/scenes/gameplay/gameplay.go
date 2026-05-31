@@ -26,21 +26,23 @@ func New(
 	screen engine.Screen,
 	time engine.Time) engine.SceneState {
 
+	const tilemapRef = content.AssetsLevelsGym01
+
 	var tilemap *tiled.Tilemap
 	var entity donburi.Entity
 
 	return engine.SceneState{
 		OnEnter: func(ctx context.Context, world donburi.World) error {
-			if err := assets.Load(content.AssetsFS(), content.AssetsLevelsGym01); err != nil {
+			if err := assets.Load(content.AssetsFS(), tilemapRef); err != nil {
 				return fmt.Errorf("failed to load level asset: %w", err)
 			}
 			tiled.CreateTilemap(world,
-				tiled.WithTilemapRef(content.AssetsLevelsGym01),
+				tiled.WithTilemapRef(tilemapRef),
 			)
 
-			tm, exists := tiled.GetTilemap(assets, content.AssetsLevelsGym01)
+			tm, exists := tiled.GetTilemap(assets, tilemapRef)
 			if !exists {
-				return fmt.Errorf("tilemap asset not found: %s", content.AssetsLevelsGym01)
+				return fmt.Errorf("tilemap asset not found: %s", tilemapRef)
 			}
 			tilemap = tm
 

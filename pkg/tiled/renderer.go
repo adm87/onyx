@@ -157,11 +157,12 @@ func (a *TiledRenderingAdapter) drawLayerToBuffer(
 			if !ok {
 				continue // Skip tiles that are outside the bounds of the tile array
 			}
-			if tile.id == 0 {
+
+			if tile.ID() == 0 {
 				continue // Skip empty tiles
 			}
 
-			tileset := NearestTileset(tilesets, tile.id)
+			tileset := NearestTileset(tilesets, tile.ID())
 			tsxPath := engine.FilePath(tileset.Source)
 
 			tsx, exists := a.tiledAssetAdapter.tsxCache[tsxPath]
@@ -175,7 +176,7 @@ func (a *TiledRenderingAdapter) drawLayerToBuffer(
 			}
 
 			tileX, tileY := x*cellWidth, y*cellHeight
-			tileID := tile.id - uint32(tileset.FirstGID)
+			tileID := tile.ID() - uint32(tileset.FirstGID)
 
 			srcX := int(tileID % uint32(tsx.Columns) * uint32(tsx.TileWidth))
 			srcY := int(tileID / uint32(tsx.Columns) * uint32(tsx.TileHeight))
