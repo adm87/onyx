@@ -28,8 +28,11 @@ func New(
 
 	const tilemapRef = content.AssetsLevelsGym01
 
-	var tilemap *tiled.Tilemap
 	var entity donburi.Entity
+	var path vector.Path
+
+	debugDrawColliders := false
+	debugDrawPartitions := false
 
 	return engine.SceneState{
 		OnEnter: func(ctx context.Context, world donburi.World) error {
@@ -40,11 +43,17 @@ func New(
 				tiled.WithTilemapRef(tilemapRef),
 			)
 
-			tm, exists := tiled.GetTilemap(assets, tilemapRef)
+			tilemap, exists := tiled.GetTilemap(assets, tilemapRef)
 			if !exists {
 				return fmt.Errorf("tilemap asset not found: %s", tilemapRef)
 			}
-			tilemap = tm
+
+			tmx, exists := tiled.GetTmx(assets, tilemapRef)
+			if !exists {
+				return fmt.Errorf("tmx asset not found for tilemap: %s", tilemapRef)
+			}
+
+			buildStaticCollision(world, collision, tmx)
 
 			camera.SetPosition(tilemap.Bounds().Center())
 			camera.SetZoom(0.2)
@@ -68,6 +77,8 @@ func New(
 				Min: geom.Vec2{X: -halfWidth, Y: -halfHeight},
 				Max: geom.Vec2{X: halfWidth, Y: halfHeight},
 			})
+			colliders.SetColliderType(entry, colliders.ColliderTypeDynamic)
+
 			collision.Add(entry)
 
 			entity = entry.Entity()
@@ -97,43 +108,107 @@ func New(
 				ebiten.SetFullscreen(!ebiten.IsFullscreen())
 			}
 
+			if inpututil.IsKeyJustPressed(ebiten.Key1) {
+				debugDrawColliders = !debugDrawColliders
+			}
+			if inpututil.IsKeyJustPressed(ebiten.Key2) {
+				debugDrawPartitions = !debugDrawPartitions
+			}
+
 			camera.SetPosition(position)
 			transform.SetPosition(entry, position)
 
 			collision.Update(entry)
+
+			collision.Simulate()
 			return engine.SceneExitNone, nil
 		},
 		OnRender: func(ctx context.Context, world donburi.World, img *ebiten.Image, viewMatrix ebiten.GeoM) error {
-			partitioning.DebugDrawSpatialHash(img, collision.Partitioning(), screen.SafeArea(), viewMatrix)
-
-			worldMin := camera.ToWorld(screen.SafeArea().Min)
-			worldMax := camera.ToWorld(screen.SafeArea().Max)
-
-			entities := collision.Query(geom.AABB{
-				Min: worldMin,
-				Max: worldMax,
-			})
-
-			for _, entity := range entities {
-				entry := world.Entry(entity)
-
-				position := transform.GetPosition(entry)
-				collider := colliders.GetBoxCollider(entry).Translate(position)
-
-				screenMinX, screenMinY := viewMatrix.Apply(collider.Min.X, collider.Min.Y)
-				screenMaxX, screenMaxY := viewMatrix.Apply(collider.Max.X, collider.Max.Y)
-
-				vector.StrokeRect(img,
-					float32(screenMinX),
-					float32(screenMinY),
-					float32(screenMaxX-screenMinX),
-					float32(screenMaxY-screenMinY),
-					2,
-					color.RGBA{0, 255, 0, 100},
-					false,
-				)
+			if debugDrawColliders {
+				debugDrawEntityColliders(world, camera, screen, collision, &path, img, viewMatrix)
+			}
+			if debugDrawPartitions {
+				partitioning.DebugDrawSpatialHash(img, collision.Partitioning(), screen.SafeArea(), viewMatrix, color.RGBA{G: 255, A: 255})
+				partitioning.DebugDrawSpatialHash(img, collision.StaticPartitioning(), screen.SafeArea(), viewMatrix, color.RGBA{R: 255, A: 255})
 			}
 			return nil
 		},
+	}
+}
+
+func buildStaticCollision(world donburi.World, collision engine.Collision, tmx *tiled.Tmx) {
+	tmx.ObjectGroups.EachInGroup("collision_static", func(object *tiled.TmxObject) {
+		entry := world.Entry(world.Create(
+			colliders.BoxCollider,
+			transform.Position,
+		))
+		colliders.SetBoxCollider(entry, geom.AABB{
+			Min: geom.Vec2{X: 0, Y: 0},
+			Max: geom.Vec2{X: object.Width, Y: object.Height},
+		})
+		colliders.SetColliderType(entry, colliders.ColliderTypeStatic)
+		transform.SetPosition(entry, geom.Vec2{
+			X: object.X,
+			Y: object.Y,
+		})
+		collision.Add(entry)
+	})
+}
+
+func debugDrawEntityColliders(
+	world donburi.World,
+	camera engine.Camera,
+	screen engine.Screen,
+	collision engine.Collision,
+	path *vector.Path,
+	img *ebiten.Image,
+	viewMatrix ebiten.GeoM) {
+
+	worldMin := camera.ToWorld(screen.SafeArea().Min)
+	worldMax := camera.ToWorld(screen.SafeArea().Max)
+
+	entities := collision.QueryStatic(geom.AABB{
+		Min: worldMin,
+		Max: worldMax,
+	})
+	println("Static entities in view:", len(entities))
+
+	path.Reset()
+
+	debugPathEntityColliders(world, path, entities, viewMatrix)
+
+	opts := &vector.DrawPathOptions{}
+	opts.ColorScale.ScaleWithColor(color.RGBA{R: 200, G: 200, A: 255})
+	vector.StrokePath(img, path, &vector.StrokeOptions{Width: 2}, opts)
+
+	entities = collision.Query(geom.AABB{
+		Min: worldMin,
+		Max: worldMax,
+	})
+
+	path.Reset()
+
+	debugPathEntityColliders(world, path, entities, viewMatrix)
+
+	opts = &vector.DrawPathOptions{}
+	opts.ColorScale.ScaleWithColor(color.RGBA{B: 255, A: 255})
+	vector.StrokePath(img, path, &vector.StrokeOptions{Width: 2}, opts)
+}
+
+func debugPathEntityColliders(world donburi.World, path *vector.Path, entities []donburi.Entity, viewMatrix ebiten.GeoM) {
+	for _, entity := range entities {
+		entry := world.Entry(entity)
+
+		position := transform.GetPosition(entry)
+		collider := colliders.GetBoxCollider(entry).Translate(position)
+
+		screenMinX, screenMinY := viewMatrix.Apply(collider.Min.X, collider.Min.Y)
+		screenMaxX, screenMaxY := viewMatrix.Apply(collider.Max.X, collider.Max.Y)
+
+		path.MoveTo(float32(screenMinX), float32(screenMinY))
+		path.LineTo(float32(screenMaxX), float32(screenMinY))
+		path.LineTo(float32(screenMaxX), float32(screenMaxY))
+		path.LineTo(float32(screenMinX), float32(screenMaxY))
+		path.Close()
 	}
 }

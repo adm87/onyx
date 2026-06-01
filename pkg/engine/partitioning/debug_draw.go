@@ -5,12 +5,11 @@ import (
 
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
-func DebugDrawSpatialHash[T comparable](screen *ebiten.Image, hash *SpatialHash[T], safeArea geom.AABB, viewMatrix ebiten.GeoM) {
-	ebitenutil.DebugPrintAt(screen, "Spatial Hash Debug", int(safeArea.Min.X), int(safeArea.Min.Y))
+func DebugDrawSpatialHash[T comparable](screen *ebiten.Image, hash *SpatialHash[T], safeArea geom.AABB, viewMatrix ebiten.GeoM, color color.Color) {
+	path := vector.Path{}
 
 	invViewMatrix := viewMatrix
 	invViewMatrix.Invert()
@@ -38,17 +37,17 @@ func DebugDrawSpatialHash[T comparable](screen *ebiten.Image, hash *SpatialHash[
 					screenMinX, screenMinY := viewMatrix.Apply(cellMinX, cellMinY)
 					screenMaxX, screenMaxY := viewMatrix.Apply(cellMaxX, cellMaxY)
 
-					vector.StrokeRect(screen,
-						float32(screenMinX),
-						float32(screenMinY),
-						float32(screenMaxX-screenMinX),
-						float32(screenMaxY-screenMinY),
-						2,
-						color.RGBA{255, 0, 0, 100},
-						false,
-					)
+					path.MoveTo(float32(screenMinX), float32(screenMinY))
+					path.LineTo(float32(screenMaxX), float32(screenMinY))
+					path.LineTo(float32(screenMaxX), float32(screenMaxY))
+					path.LineTo(float32(screenMinX), float32(screenMaxY))
+					path.Close()
 				}
 			}
 		}
 	}
+
+	opts := &vector.DrawPathOptions{}
+	opts.ColorScale.ScaleWithColor(color)
+	vector.StrokePath(screen, &path, &vector.StrokeOptions{Width: 2}, opts)
 }

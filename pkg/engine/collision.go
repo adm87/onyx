@@ -10,11 +10,15 @@ import (
 
 type Collision interface {
 	Partitioning() *partitioning.SpatialHash[donburi.Entity]
+	StaticPartitioning() *partitioning.SpatialHash[donburi.Entity]
 
 	Add(entry *donburi.Entry) bool
+	Remove(entry *donburi.Entry) bool
 	Update(entry *donburi.Entry) bool
+	Simulate()
 
 	Query(aabb geom.AABB) []donburi.Entity
+	QueryStatic(aabb geom.AABB) []donburi.Entity
 }
 
 type collision struct {
@@ -48,15 +52,46 @@ func (c *collision) Add(entry *donburi.Entry) bool {
 		return false
 	}
 
+	collisionType := colliders.GetColliderType(entry)
 	collider := colliders.GetBoxCollider(entry)
 	position := transform.GetPosition(entry)
 
-	idx, ok := c.partitions.Insert(entity, collider.Translate(position))
+	var idx partitioning.SpatialIndex
+	var ok bool
+
+	switch collisionType {
+	case colliders.ColliderTypeStatic:
+		idx, ok = c.staticPartitions.Insert(entity, collider.Translate(position))
+	default:
+		idx, ok = c.partitions.Insert(entity, collider.Translate(position))
+	}
+
 	if !ok {
 		return false
 	}
 
 	c.entities[entity] = idx
+	return true
+}
+
+func (c *collision) Remove(entry *donburi.Entry) bool {
+	entity := entry.Entity()
+
+	idx, exists := c.entities[entity]
+	if !exists {
+		return false
+	}
+
+	collisionType := colliders.GetColliderType(entry)
+
+	switch collisionType {
+	case colliders.ColliderTypeStatic:
+		c.staticPartitions.Remove(idx)
+	default:
+		c.partitions.Remove(idx)
+	}
+
+	delete(c.entities, entity)
 	return true
 }
 
@@ -81,4 +116,17 @@ func (c *collision) Query(aabb geom.AABB) []donburi.Entity {
 		return true
 	})
 	return c.queryCache
+}
+
+func (c *collision) QueryStatic(aabb geom.AABB) []donburi.Entity {
+	c.queryCache = c.queryCache[:0]
+	c.staticPartitions.QueryAll(aabb, func(e donburi.Entity) bool {
+		c.queryCache = append(c.queryCache, e)
+		return true
+	})
+	return c.queryCache
+}
+
+func (c *collision) Simulate() {
+
 }

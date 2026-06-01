@@ -38,21 +38,36 @@ const (
 	CompressionNone Compression = ""
 )
 
+type TmxObjectGroups []TmxObjectGroup
+
+func (g TmxObjectGroups) EachInGroup(groupName string, fn func(object *TmxObject)) {
+	for i := range g {
+		group := &g[i]
+		if group.Name == groupName {
+			for j := range group.Objects {
+				object := &group.Objects[j]
+				fn(object)
+			}
+			return
+		}
+	}
+}
+
 type Tmx struct {
-	Version      string           `xml:"version,attr"`
-	TiledVersion string           `xml:"tiledversion,attr"`
-	Orientation  Orientation      `xml:"orientation,attr"`
-	RenderOrder  RenderOrder      `xml:"renderorder,attr"`
-	Infinite     bool             `xml:"infinite,attr"`
-	Width        int              `xml:"width,attr"`
-	Height       int              `xml:"height,attr"`
-	TileWidth    int              `xml:"tilewidth,attr"`
-	TileHeight   int              `xml:"tileheight,attr"`
-	NextLayerID  int              `xml:"nextlayerid,attr"`
-	NextObjectID int              `xml:"nextobjectid,attr"`
-	Tilesets     []TmxTileset     `xml:"tileset"`
-	Layers       []TmxLayer       `xml:"layer"`
-	ObjectGroups []TmxObjectGroup `xml:"objectgroup"`
+	Version      string          `xml:"version,attr"`
+	TiledVersion string          `xml:"tiledversion,attr"`
+	Orientation  Orientation     `xml:"orientation,attr"`
+	RenderOrder  RenderOrder     `xml:"renderorder,attr"`
+	Infinite     bool            `xml:"infinite,attr"`
+	Width        int             `xml:"width,attr"`
+	Height       int             `xml:"height,attr"`
+	TileWidth    int             `xml:"tilewidth,attr"`
+	TileHeight   int             `xml:"tileheight,attr"`
+	NextLayerID  int             `xml:"nextlayerid,attr"`
+	NextObjectID int             `xml:"nextobjectid,attr"`
+	Tilesets     []TmxTileset    `xml:"tileset"`
+	Layers       []TmxLayer      `xml:"layer"`
+	ObjectGroups TmxObjectGroups `xml:"objectgroup"`
 }
 
 type TmxTileset struct {

@@ -31,12 +31,7 @@ func Boot() error {
 		engine.WithScreenScale(engine.ScreenScaleFill),
 		engine.WithInitialScene(scenes.GameplaySceneID),
 		engine.WithFilter(ebiten.FilterNearest),
-		engine.WithBackgroundColor(color.RGBA{
-			R: 0x64,
-			G: 0x95,
-			B: 0xed,
-			A: 0xff,
-		}),
+		engine.WithBackgroundColor(color.RGBA{}),
 	).WithContext(ctx)
 
 	if err := registerPackages(onyx); err != nil {

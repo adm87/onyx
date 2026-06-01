@@ -38,11 +38,10 @@ var (
 )
 
 func GetColliderType(entry *donburi.Entry) ColliderType {
-	colliderData := Collider.Get(entry)
-	if colliderData == nil {
+	if !entry.HasComponent(Collider) {
 		return ColliderTypeStatic
 	}
-	return colliderData.Type
+	return Collider.Get(entry).Type
 }
 
 func SetColliderType(entry *donburi.Entry, colliderType ColliderType) {
@@ -54,11 +53,10 @@ func SetColliderType(entry *donburi.Entry, colliderType ColliderType) {
 }
 
 func GetBodyType(entry *donburi.Entry) BodyType {
-	colliderData := Collider.Get(entry)
-	if colliderData == nil {
+	if !entry.HasComponent(Collider) {
 		return BodyTypeBox
 	}
-	return colliderData.Body
+	return Collider.Get(entry).Body
 }
 
 func SetBodyType(entry *donburi.Entry, bodyType BodyType) {
@@ -70,11 +68,13 @@ func SetBodyType(entry *donburi.Entry, bodyType BodyType) {
 }
 
 func GetBoxCollider(entry *donburi.Entry) geom.AABB {
-	boxCollider := BoxCollider.Get(entry)
-	if boxCollider == nil {
-		return geom.AABB{}
+	if !entry.HasComponent(BoxCollider) {
+		return geom.AABB{
+			Min: geom.Vec2{X: 0, Y: 0},
+			Max: geom.Vec2{X: 1, Y: 1},
+		}
 	}
-	return *boxCollider
+	return *BoxCollider.Get(entry)
 }
 
 func SetBoxCollider(entry *donburi.Entry, aabb geom.AABB) {
