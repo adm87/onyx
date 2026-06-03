@@ -3,7 +3,6 @@ package gameplay
 import (
 	"context"
 	"fmt"
-	"image/color"
 
 	"github.com/adm87/onyx/content"
 	"github.com/adm87/onyx/pkg/engine"
@@ -11,12 +10,10 @@ import (
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
-	"github.com/adm87/onyx/pkg/engine/partitioning/spatialhash"
 	"github.com/adm87/onyx/pkg/images"
 	"github.com/adm87/onyx/pkg/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/yohamta/donburi"
 )
 
@@ -31,7 +28,6 @@ func New(
 
 	var player donburi.Entity
 	var level donburi.Entity
-	var path vector.Path
 
 	debugDrawColliders := false
 	debugDrawPartitions := false
@@ -69,20 +65,20 @@ func New(
 			}
 
 			width, height := img.Bounds().Dx(), img.Bounds().Dy()
+			hWidth, hHeight := float64(width)/2, float64(height)/2
 
 			entry := images.CreateImageEntity(world,
 				images.WithRef(content.EmbeddedImg10x10White),
 				images.WithLayer(1),
 				images.WithPosition(tilemap.Bounds().Center().XY()),
+				images.WithAnchor(0.5, 0.5),
 			)
 			entry.AddComponent(colliders.DynamicColliderType)
 
 			colliders.SetBoxCollider(entry, geom.AABB{
-				Min: geom.Vec2{},
-				Max: geom.Vec2{X: float64(width), Y: float64(height)},
+				Min: geom.Vec2{X: -hWidth, Y: -hHeight},
+				Max: geom.Vec2{X: hWidth, Y: hHeight},
 			})
-
-			collision.Add(entry)
 
 			player = entry.Entity()
 			return nil
@@ -126,19 +122,9 @@ func New(
 			camera.SetPosition(position)
 			transform.SetPosition(entry, position)
 
-			collision.Update(entry)
-
-			collision.Simulate(world)
 			return engine.SceneExitNone, nil
 		},
 		OnRender: func(ctx context.Context, world donburi.World, img *ebiten.Image, viewMatrix ebiten.GeoM) error {
-			if debugDrawPartitions {
-				spatialhash.DebugDrawSpatialHash(img, collision.StaticPartitioning(), screen.SafeArea(), viewMatrix, color.RGBA{R: 255, A: 255})
-				spatialhash.DebugDrawSpatialHash(img, collision.Partitioning(), screen.SafeArea(), viewMatrix, color.RGBA{G: 255, A: 255})
-			}
-			if debugDrawColliders {
-				debugDrawEntityColliders(world, camera, screen, collision, &path, img, viewMatrix)
-			}
 			return nil
 		},
 	}
@@ -159,63 +145,5 @@ func buildStaticCollision(world donburi.World, collision engine.Collision, tmx *
 			X: object.X,
 			Y: object.Y,
 		})
-		collision.Add(entry)
 	})
-}
-
-func debugDrawEntityColliders(
-	world donburi.World,
-	camera engine.Camera,
-	screen engine.Screen,
-	collision engine.Collision,
-	path *vector.Path,
-	img *ebiten.Image,
-	viewMatrix ebiten.GeoM) {
-
-	worldMin := camera.ToWorld(screen.SafeArea().Min)
-	worldMax := camera.ToWorld(screen.SafeArea().Max)
-
-	entities := collision.QueryStatic(geom.AABB{
-		Min: worldMin,
-		Max: worldMax,
-	})
-
-	path.Reset()
-
-	debugPathEntityColliders(world, path, entities, viewMatrix)
-
-	opts := &vector.DrawPathOptions{}
-	opts.ColorScale.ScaleWithColor(color.RGBA{R: 200, G: 200, A: 255})
-	vector.StrokePath(img, path, &vector.StrokeOptions{Width: 2}, opts)
-
-	entities = collision.Query(geom.AABB{
-		Min: worldMin,
-		Max: worldMax,
-	})
-
-	path.Reset()
-
-	debugPathEntityColliders(world, path, entities, viewMatrix)
-
-	opts = &vector.DrawPathOptions{}
-	opts.ColorScale.ScaleWithColor(color.RGBA{G: 255, B: 255, A: 255})
-	vector.StrokePath(img, path, &vector.StrokeOptions{Width: 2}, opts)
-}
-
-func debugPathEntityColliders(world donburi.World, path *vector.Path, entities []donburi.Entity, viewMatrix ebiten.GeoM) {
-	for _, entity := range entities {
-		entry := world.Entry(entity)
-
-		position := transform.GetPosition(entry)
-		collider := colliders.GetBoxCollider(entry).Translate(position)
-
-		screenMinX, screenMinY := viewMatrix.Apply(collider.Min.X, collider.Min.Y)
-		screenMaxX, screenMaxY := viewMatrix.Apply(collider.Max.X, collider.Max.Y)
-
-		path.MoveTo(float32(screenMinX), float32(screenMinY))
-		path.LineTo(float32(screenMaxX), float32(screenMinY))
-		path.LineTo(float32(screenMaxX), float32(screenMaxY))
-		path.LineTo(float32(screenMinX), float32(screenMaxY))
-		path.Close()
-	}
 }
