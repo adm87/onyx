@@ -25,14 +25,13 @@ type camera struct {
 }
 
 func newCamera(world donburi.World) *camera {
-	entity := world.Create(
-		transform.Position,
-		transform.Scale,
-		transform.Matrix,
-		CameraTag,
-	)
 	return &camera{
-		entity: entity,
+		entity: world.Create(
+			transform.Position,
+			transform.Scale,
+			transform.Matrix,
+			CameraTag,
+		),
 	}
 }
 

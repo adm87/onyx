@@ -28,6 +28,7 @@ func New(
 
 	var player donburi.Entity
 	var level donburi.Entity
+	var corners [4]donburi.Entity
 
 	debugDrawColliders := false
 	debugDrawPartitions := false
@@ -80,6 +81,26 @@ func New(
 				Max: geom.Vec2{X: hWidth, Y: hHeight},
 			})
 
+			for i := range corners {
+				aX, aY := 0.0, 0.0
+				switch i {
+				case 0:
+					aX, aY = 0, 0
+				case 1:
+					aX, aY = 1, 0
+				case 2:
+					aX, aY = 1, 1
+				case 3:
+					aX, aY = 0, 1
+				}
+				cornerEntry := images.CreateImageEntity(world,
+					images.WithRef(content.EmbeddedImg10x10White),
+					images.WithLayer(1),
+					images.WithAnchor(aX, aY),
+				)
+				corners[i] = cornerEntry.Entity()
+			}
+
 			player = entry.Entity()
 			return nil
 		},
@@ -87,17 +108,27 @@ func New(
 			entry := world.Entry(player)
 			position := transform.GetPosition(entry)
 
-			if ebiten.IsKeyPressed(ebiten.KeyW) || ebiten.IsKeyPressed(ebiten.KeyUp) {
+			if ebiten.IsKeyPressed(ebiten.KeyW) {
 				position.Y -= 100 * time.DeltaTime()
 			}
-			if ebiten.IsKeyPressed(ebiten.KeyS) || ebiten.IsKeyPressed(ebiten.KeyDown) {
+			if ebiten.IsKeyPressed(ebiten.KeyS) {
 				position.Y += 100 * time.DeltaTime()
 			}
-			if ebiten.IsKeyPressed(ebiten.KeyA) || ebiten.IsKeyPressed(ebiten.KeyLeft) {
+			if ebiten.IsKeyPressed(ebiten.KeyA) {
 				position.X -= 100 * time.DeltaTime()
 			}
-			if ebiten.IsKeyPressed(ebiten.KeyD) || ebiten.IsKeyPressed(ebiten.KeyRight) {
+			if ebiten.IsKeyPressed(ebiten.KeyD) {
 				position.X += 100 * time.DeltaTime()
+			}
+			if ebiten.IsKeyPressed(ebiten.KeyUp) {
+				zoom := camera.Zoom(world)
+				zoom *= 1 + (0.5 * time.DeltaTime())
+				camera.SetZoom(world, zoom)
+			}
+			if ebiten.IsKeyPressed(ebiten.KeyDown) {
+				zoom := camera.Zoom(world)
+				zoom /= 1 + (0.5 * time.DeltaTime())
+				camera.SetZoom(world, zoom)
 			}
 
 			if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
@@ -121,6 +152,23 @@ func New(
 
 			camera.SetPosition(world, position)
 			transform.SetPosition(entry, position)
+
+			min := camera.ToWorld(world, screen, screen.SafeArea().Min)
+			max := camera.ToWorld(world, screen, screen.SafeArea().Max)
+
+			for i := range corners {
+				entry := world.Entry(corners[i])
+				switch i {
+				case 0:
+					transform.SetPosition(entry, min)
+				case 1:
+					transform.SetPosition(entry, geom.Vec2{X: max.X, Y: min.Y})
+				case 2:
+					transform.SetPosition(entry, max)
+				case 3:
+					transform.SetPosition(entry, geom.Vec2{X: min.X, Y: max.Y})
+				}
+			}
 
 			return engine.SceneExitNone, nil
 		},
