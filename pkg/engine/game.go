@@ -56,21 +56,23 @@ func NewGame(opts ...Option) Game {
 		cfg.BackgroundColor,
 		logger,
 	)
+	collision := newCollision(
+		logger,
+	)
+	renderer := newRenderer(
+		logger,
+	)
 	scenes := newScenes(
 		cfg.InitialScene,
+		collision,
+		renderer,
 		logger,
 	)
 	time := newTime(
 		cfg.FPS,
 	)
-	renderer := newRenderer(
-		logger,
-	)
 	camera := newCamera(
 		scenes.world,
-	)
-	collision := newCollision(
-		logger,
 	)
 
 	return &game{
@@ -136,7 +138,7 @@ func (g *game) Update() error {
 		return g.ctx.Err()
 	default:
 		g.time.tick()
-		return g.scenes.update(g.ctx)
+		return g.scenes.update(g.ctx, g.time.fixedSteps)
 	}
 }
 
@@ -148,10 +150,6 @@ func (g *game) Draw(screen *ebiten.Image) {
 		g.screen.buffer.Fill(g.screen.backgroundColor)
 
 		viewMatrix := g.camera.view(g.scenes.world, g.screen)
-		if err := g.renderer.render(g.scenes.world, g.screen.buffer, viewMatrix); err != nil {
-			g.logger.Error("core render pipeline: %v", err)
-			return
-		}
 		if err := g.scenes.render(g.ctx, g.screen.buffer, viewMatrix); err != nil {
 			g.logger.Error("scene render pipeline: %v", err)
 			return

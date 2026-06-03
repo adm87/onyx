@@ -29,7 +29,7 @@ func Boot() error {
 		engine.WithScreenSize(1280, 720),
 		engine.WithFullscreen(args.Fullscreen),
 		engine.WithScreenScale(engine.ScreenScaleFill),
-		engine.WithInitialScene(scenes.GameplaySceneID),
+		engine.WithInitialScene(scenes.SplashScreenSceneID),
 		engine.WithFilter(ebiten.FilterNearest),
 		engine.WithBackgroundColor(color.RGBA{}),
 	).WithContext(ctx)
