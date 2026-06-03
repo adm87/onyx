@@ -37,7 +37,7 @@ func SetFilter(entry *donburi.Entry, filter ebiten.Filter) {
 
 func IsVisible(entry *donburi.Entry) bool {
 	if !entry.HasComponent(Renderer) {
-		return false
+		return true
 	}
 	return Renderer.Get(entry).Visible
 }

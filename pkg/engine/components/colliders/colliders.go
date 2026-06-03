@@ -3,14 +3,7 @@ package colliders
 import (
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/yohamta/donburi"
-)
-
-type ColliderType uint8
-
-const (
-	ColliderTypeStatic ColliderType = iota
-	ColliderTypeDynamic
-	ColliderTypeKinematic
+	"github.com/yohamta/donburi/filter"
 )
 
 type BodyType uint8
@@ -22,10 +15,15 @@ const (
 type CollisionLayer uint16
 
 type ColliderData struct {
-	Type  ColliderType
 	Layer CollisionLayer
 	Body  BodyType
 }
+
+var (
+	StaticColliderType    = donburi.NewTag("static_collider")
+	DynamicColliderType   = donburi.NewTag("dynamic_collider")
+	KinematicColliderType = donburi.NewTag("kinematic_collider")
+)
 
 var (
 	Collider = donburi.NewComponentType[ColliderData](ColliderData{
@@ -37,19 +35,28 @@ var (
 	})
 )
 
-func GetColliderType(entry *donburi.Entry) ColliderType {
-	if !entry.HasComponent(Collider) {
-		return ColliderTypeStatic
-	}
-	return Collider.Get(entry).Type
+var (
+	StaticColliderQuery = donburi.NewQuery(
+		filter.Contains(StaticColliderType),
+	)
+	DynamicColliderQuery = donburi.NewQuery(
+		filter.Contains(DynamicColliderType),
+	)
+	KinematicColliderQuery = donburi.NewQuery(
+		filter.Contains(KinematicColliderType),
+	)
+)
+
+func IsStatic(entry *donburi.Entry) bool {
+	return entry.HasComponent(StaticColliderType)
 }
 
-func SetColliderType(entry *donburi.Entry, colliderType ColliderType) {
-	if !entry.HasComponent(Collider) {
-		entry.AddComponent(Collider)
-	}
-	colliderData := Collider.Get(entry)
-	colliderData.Type = colliderType
+func IsDynamic(entry *donburi.Entry) bool {
+	return entry.HasComponent(DynamicColliderType)
+}
+
+func IsKinematic(entry *donburi.Entry) bool {
+	return entry.HasComponent(KinematicColliderType)
 }
 
 func GetBodyType(entry *donburi.Entry) BodyType {

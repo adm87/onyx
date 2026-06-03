@@ -6,26 +6,26 @@
     "fileStates": {
         "content/assets/levels/gym01.tmx": {
             "scale": 2.82,
-            "selectedLayer": 0,
+            "selectedLayer": 1,
             "viewCenter": {
-                "x": 160.10638297872342,
-                "y": 96.09929078014184
+                "x": 136.17021276595744,
+                "y": 95.74468085106383
             }
         },
         "content/assets/levels/gym02.tmx": {
             "scale": 1.9304487179487178,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 229.99833969782503,
-                "y": 131.3166196247717
+                "x": 234.14245392661465,
+                "y": 135.201726714262
             }
         },
         "content/assets/levels/gym03.tmx": {
             "scale": 1.78,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 240.73033707865167,
-                "y": 139.3258426966292
+                "x": 234.26966292134836,
+                "y": 134.8314606741573
             }
         },
         "content/assets/levels/tileset-characters.tsx": {
@@ -35,7 +35,7 @@
             "scaleInDock": 1
         },
         "content/assets/levels/tilesets/gym01.tsx": {
-            "scaleInDock": 1,
+            "scaleInDock": 3,
             "scaleInEditor": 1
         },
         "content/assets/levels/tilesets/gym02-character.tsx": {
@@ -43,10 +43,11 @@
             "scaleInEditor": 1
         },
         "content/assets/levels/tilesets/gym02-characters.tsx": {
-            "scaleInDock": 1,
+            "scaleInDock": 3,
             "scaleInEditor": 1
         },
         "content/assets/levels/tilesets/gym02.tsx": {
+            "scaleInDock": 3,
             "scaleInEditor": 1
         },
         "content/assets/levels/tilesets/tilemap_packed.tsx": {
@@ -56,15 +57,18 @@
     "last.externalTilesetPath": "/Users/adm87/Projects/Go/onyx/content/assets/levels/tilesets",
     "last.imagePath": "/Users/adm87/Projects/Go/onyx/content/assets/levels/images",
     "openFiles": [
-        "content/assets/levels/gym01.tmx"
+        "content/assets/levels/gym01.tmx",
+        "content/assets/levels/gym02.tmx",
+        "content/assets/levels/gym03.tmx"
     ],
     "project": "onyx-tiled.tiled-project",
     "recentFiles": [
+        "content/assets/levels/gym03.tmx",
+        "content/assets/levels/gym02.tmx",
+        "content/assets/levels/gym01.tmx",
         "content/assets/levels/tilesets/gym02-characters.tsx",
         "content/assets/levels/tilesets/gym02.tsx",
-        "content/assets/levels/gym02.tmx",
         "content/assets/levels/tilesets/gym02-character.tsx",
-        "content/assets/levels/gym01.tmx",
         "content/assets/levels/tilesets/gym01.tsx"
     ]
 }

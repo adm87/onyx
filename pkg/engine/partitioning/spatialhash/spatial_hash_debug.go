@@ -1,4 +1,4 @@
-package partitioning
+package spatialhash
 
 import (
 	"image/color"

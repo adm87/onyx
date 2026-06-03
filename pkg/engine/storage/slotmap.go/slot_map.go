@@ -1,4 +1,4 @@
-package storage
+package slotmap
 
 import "math"
 
@@ -33,17 +33,11 @@ type SlotMap[T any] struct {
 	freeSlots []uint32
 }
 
-// NewSlotMap creates a new SlotMap with the specified initial capacity.
-func NewSlotMap[T any](capacity int) *SlotMap[T] {
-	slots := make([]slot[T], 0, capacity)
-	freeSlots := make([]uint32, 0, capacity)
-	for i := range capacity {
-		freeSlots = append(freeSlots, uint32(i))
-		slots = append(slots, slot[T]{gen: 0, used: false})
-	}
+// New creates a new SlotMap with the specified initial capacity.
+func New[T any](capacity int) *SlotMap[T] {
 	return &SlotMap[T]{
-		slots:     slots,
-		freeSlots: freeSlots,
+		slots:     make([]slot[T], 0, capacity),
+		freeSlots: make([]uint32, 0, capacity),
 	}
 }
 
@@ -76,10 +70,16 @@ func (m *SlotMap[T]) Remove(key SlotKey) bool {
 		return false
 	}
 
+	var zero T
+	slot.data = zero
 	slot.used = false
-	slot.gen++
 
-	m.freeSlots = append(m.freeSlots, key.Index())
+	if slot.gen < math.MaxUint32 {
+		slot.gen++
+		m.freeSlots = append(m.freeSlots, key.Index())
+	}
+
+	// If gen == MaxUint32, the slot is permanently retired.
 	return true
 }
 
@@ -139,11 +139,15 @@ func (m *SlotMap[T]) Capacity() int {
 
 // Clear removes all entries from the SlotMap and resets it to its initial state.
 func (m *SlotMap[T]) Clear() {
+	var zero T
 	m.freeSlots = m.freeSlots[:0]
 	for i := range m.slots {
+		m.slots[i].data = zero
 		m.slots[i].used = false
-		m.slots[i].gen++
-		m.freeSlots = append(m.freeSlots, uint32(i))
+		if m.slots[i].gen < math.MaxUint32 {
+			m.slots[i].gen++
+			m.freeSlots = append(m.freeSlots, uint32(i))
+		}
 	}
 }
 
@@ -164,9 +168,8 @@ func (m *SlotMap[T]) Each(f func(key SlotKey, value T) bool) {
 func (m *SlotMap[T]) append(value T) (SlotKey, bool) {
 	index := uint32(len(m.slots))
 	if index == math.MaxUint32 {
-		// Realistically, this should never happen in practice for a typical game, but we'll check to prevent overflow.
 		return 0, false
 	}
 	m.slots = append(m.slots, slot[T]{data: value, gen: 0, used: true})
-	return newSlotKey(index, m.slots[index].gen), true
+	return newSlotKey(index, 0), true
 }

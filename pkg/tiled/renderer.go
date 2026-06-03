@@ -73,6 +73,15 @@ func (a *TiledRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix e
 	TilemapQuery.Each(world, func(entry *donburi.Entry) {
 		ref := GetTilemapRef(entry)
 
+		visible := rendering.IsVisible(entry)
+		if !visible {
+			return // Skip invisible tilemaps
+		}
+
+		filter := rendering.GetFilter(entry)
+		layer := rendering.GetLayer(entry)
+		zIndex := rendering.GetZIndex(entry)
+
 		// Get the tilemap buffer and clear it, this will ensure we don't have artifacts from previous frames when rendering the tilemap
 		buffer := a.getBuffer(ref)
 		buffer.Clear()
@@ -111,10 +120,6 @@ func (a *TiledRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix e
 				viewMatrix,
 			)
 		}
-
-		filter := rendering.GetFilter(entry)
-		layer := rendering.GetLayer(entry)
-		zIndex := rendering.GetZIndex(entry)
 
 		a.renderingTasks = append(a.renderingTasks, engine.RenderTask{
 			Render: func(screen *ebiten.Image, viewMatrix ebiten.GeoM) error {

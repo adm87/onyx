@@ -8,9 +8,10 @@ import (
 	"github.com/adm87/onyx/content"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/components/colliders"
+	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
-	"github.com/adm87/onyx/pkg/engine/partitioning"
+	"github.com/adm87/onyx/pkg/engine/partitioning/spatialhash"
 	"github.com/adm87/onyx/pkg/images"
 	"github.com/adm87/onyx/pkg/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -28,20 +29,24 @@ func New(
 
 	const tilemapRef = content.AssetsLevelsGym01
 
-	var entity donburi.Entity
+	var player donburi.Entity
+	var level donburi.Entity
 	var path vector.Path
 
 	debugDrawColliders := false
 	debugDrawPartitions := false
+	debugVisibilityToggle := true
 
 	return engine.SceneState{
 		OnEnter: func(ctx context.Context, world donburi.World) error {
 			if err := assets.Load(content.AssetsFS(), tilemapRef); err != nil {
 				return fmt.Errorf("failed to load level asset: %w", err)
 			}
-			tiled.CreateTilemap(world,
+
+			lvlEntry := tiled.CreateTilemap(world,
 				tiled.WithTilemapRef(tilemapRef),
 			)
+			level = lvlEntry.Entity()
 
 			tilemap, exists := tiled.GetTilemap(assets, tilemapRef)
 			if !exists {
@@ -64,28 +69,26 @@ func New(
 			}
 
 			width, height := img.Bounds().Dx(), img.Bounds().Dy()
-			halfWidth, halfHeight := float64(width)/2, float64(height)/2
 
 			entry := images.CreateImageEntity(world,
 				images.WithRef(content.EmbeddedImg10x10White),
 				images.WithLayer(1),
 				images.WithPosition(tilemap.Bounds().Center().XY()),
-				images.WithAnchor(0.5, 0.5),
 			)
+			entry.AddComponent(colliders.DynamicColliderType)
 
 			colliders.SetBoxCollider(entry, geom.AABB{
-				Min: geom.Vec2{X: -halfWidth, Y: -halfHeight},
-				Max: geom.Vec2{X: halfWidth, Y: halfHeight},
+				Min: geom.Vec2{},
+				Max: geom.Vec2{X: float64(width), Y: float64(height)},
 			})
-			colliders.SetColliderType(entry, colliders.ColliderTypeDynamic)
 
 			collision.Add(entry)
 
-			entity = entry.Entity()
+			player = entry.Entity()
 			return nil
 		},
 		OnUpdate: func(ctx context.Context, world donburi.World) (engine.SceneExitCode, error) {
-			entry := world.Entry(entity)
+			entry := world.Entry(player)
 			position := transform.GetPosition(entry)
 
 			if ebiten.IsKeyPressed(ebiten.KeyW) || ebiten.IsKeyPressed(ebiten.KeyUp) {
@@ -114,22 +117,27 @@ func New(
 			if inpututil.IsKeyJustPressed(ebiten.Key2) {
 				debugDrawPartitions = !debugDrawPartitions
 			}
+			if inpututil.IsKeyJustPressed(ebiten.Key3) {
+				debugVisibilityToggle = !debugVisibilityToggle
+				rendering.SetVisible(world.Entry(level), debugVisibilityToggle)
+				rendering.SetVisible(world.Entry(player), debugVisibilityToggle)
+			}
 
 			camera.SetPosition(position)
 			transform.SetPosition(entry, position)
 
 			collision.Update(entry)
 
-			collision.Simulate()
+			collision.Simulate(world)
 			return engine.SceneExitNone, nil
 		},
 		OnRender: func(ctx context.Context, world donburi.World, img *ebiten.Image, viewMatrix ebiten.GeoM) error {
+			if debugDrawPartitions {
+				spatialhash.DebugDrawSpatialHash(img, collision.StaticPartitioning(), screen.SafeArea(), viewMatrix, color.RGBA{R: 255, A: 255})
+				spatialhash.DebugDrawSpatialHash(img, collision.Partitioning(), screen.SafeArea(), viewMatrix, color.RGBA{G: 255, A: 255})
+			}
 			if debugDrawColliders {
 				debugDrawEntityColliders(world, camera, screen, collision, &path, img, viewMatrix)
-			}
-			if debugDrawPartitions {
-				partitioning.DebugDrawSpatialHash(img, collision.Partitioning(), screen.SafeArea(), viewMatrix, color.RGBA{G: 255, A: 255})
-				partitioning.DebugDrawSpatialHash(img, collision.StaticPartitioning(), screen.SafeArea(), viewMatrix, color.RGBA{R: 255, A: 255})
 			}
 			return nil
 		},
@@ -139,6 +147,7 @@ func New(
 func buildStaticCollision(world donburi.World, collision engine.Collision, tmx *tiled.Tmx) {
 	tmx.ObjectGroups.EachInGroup("collision_static", func(object *tiled.TmxObject) {
 		entry := world.Entry(world.Create(
+			colliders.StaticColliderType,
 			colliders.BoxCollider,
 			transform.Position,
 		))
@@ -146,7 +155,6 @@ func buildStaticCollision(world donburi.World, collision engine.Collision, tmx *
 			Min: geom.Vec2{X: 0, Y: 0},
 			Max: geom.Vec2{X: object.Width, Y: object.Height},
 		})
-		colliders.SetColliderType(entry, colliders.ColliderTypeStatic)
 		transform.SetPosition(entry, geom.Vec2{
 			X: object.X,
 			Y: object.Y,
@@ -171,7 +179,6 @@ func debugDrawEntityColliders(
 		Min: worldMin,
 		Max: worldMax,
 	})
-	println("Static entities in view:", len(entities))
 
 	path.Reset()
 
@@ -191,7 +198,7 @@ func debugDrawEntityColliders(
 	debugPathEntityColliders(world, path, entities, viewMatrix)
 
 	opts = &vector.DrawPathOptions{}
-	opts.ColorScale.ScaleWithColor(color.RGBA{B: 255, A: 255})
+	opts.ColorScale.ScaleWithColor(color.RGBA{G: 255, B: 255, A: 255})
 	vector.StrokePath(img, path, &vector.StrokeOptions{Width: 2}, opts)
 }
 

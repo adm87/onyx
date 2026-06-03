@@ -1,10 +1,10 @@
-package partitioning
+package spatialhash
 
 import (
 	"math"
 
 	"github.com/adm87/onyx/pkg/engine/geom"
-	"github.com/adm87/onyx/pkg/engine/storage"
+	"github.com/adm87/onyx/pkg/engine/storage/slotmap.go"
 )
 
 type (
@@ -19,7 +19,7 @@ func encodeCoord(cellX, cellY int64) spatialCoord {
 }
 
 type spatialEntry struct {
-	key   storage.SlotKey
+	key   slotmap.SlotKey
 	cells []spatialCoord
 	grid  int
 }
@@ -33,16 +33,22 @@ type SpatialHash[T comparable] struct {
 	grids []spatialGrid
 	index map[SpatialIndex]spatialEntry
 
-	storage   *storage.SlotMap[T]
+	storage   *slotmap.SlotMap[T]
 	nextIndex SpatialIndex
 
 	cells []spatialCoord
 	seen  map[SpatialIndex]struct{}
+
+	padding [4]int
 }
 
-func NewSpatialHash[T comparable](capacity int, resolutions ...float64) *SpatialHash[T] {
-	grids := make([]spatialGrid, len(resolutions))
-	for i, res := range resolutions {
+func New[T comparable](opts ...Option) *SpatialHash[T] {
+	options := defaultOptions()
+	for _, opt := range opts {
+		opt(&options)
+	}
+	grids := make([]spatialGrid, len(options.Resolutions))
+	for i, res := range options.Resolutions {
 		grids[i] = spatialGrid{
 			cellSize: res,
 			cells:    make(map[spatialCoord][]SpatialIndex),
@@ -50,10 +56,10 @@ func NewSpatialHash[T comparable](capacity int, resolutions ...float64) *Spatial
 	}
 	return &SpatialHash[T]{
 		grids:   grids,
-		storage: storage.NewSlotMap[T](capacity),
-		index:   make(map[SpatialIndex]spatialEntry),
-		seen:    make(map[SpatialIndex]struct{}),
-		cells:   make([]spatialCoord, 0),
+		index:   make(map[SpatialIndex]spatialEntry, options.Capacity),
+		seen:    make(map[SpatialIndex]struct{}, options.Capacity),
+		storage: slotmap.New[T](options.Capacity),
+		padding: options.Padding,
 	}
 }
 
@@ -164,7 +170,6 @@ func (h *SpatialHash[T]) QueryAll(aabb geom.AABB, fn func(T) bool) {
 	for i := range h.grids {
 		grid := &h.grids[i]
 		h.getCells(aabb, grid)
-
 		for _, cell := range h.cells {
 			for _, index := range grid.cells[cell] {
 				if _, ok := h.seen[index]; !ok {
@@ -194,10 +199,10 @@ func (h *SpatialHash[T]) getNearestGrid(size float64) int {
 }
 
 func (h *SpatialHash[T]) getCells(aabb geom.AABB, grid *spatialGrid) []spatialCoord {
-	cellMinX := math.Floor(aabb.Min.X / grid.cellSize)
-	cellMinY := math.Floor(aabb.Min.Y / grid.cellSize)
-	cellMaxX := math.Floor(aabb.Max.X / grid.cellSize)
-	cellMaxY := math.Floor(aabb.Max.Y / grid.cellSize)
+	cellMinX := math.Floor(aabb.Min.X/grid.cellSize) - float64(h.padding[0])
+	cellMinY := math.Floor(aabb.Min.Y/grid.cellSize) - float64(h.padding[1])
+	cellMaxX := math.Floor(aabb.Max.X/grid.cellSize) + float64(h.padding[2])
+	cellMaxY := math.Floor(aabb.Max.Y/grid.cellSize) + float64(h.padding[3])
 
 	h.cells = h.cells[:0]
 	for x := cellMinX; x <= cellMaxX; x++ {
