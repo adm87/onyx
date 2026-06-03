@@ -101,9 +101,9 @@ func (a *TiledRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix e
 		}
 
 		minTileX := int(math.Floor(worldMin.X / float64(tmx.TileWidth)))
-		maxTileX := int(math.Ceil(worldMax.X / float64(tmx.TileWidth)))
+		maxTileX := int(math.Floor(worldMax.X / float64(tmx.TileWidth)))
 		minTileY := int(math.Floor(worldMin.Y / float64(tmx.TileHeight)))
-		maxTileY := int(math.Ceil(worldMax.Y / float64(tmx.TileHeight)))
+		maxTileY := int(math.Floor(worldMax.Y / float64(tmx.TileHeight)))
 
 		for i := range tilemap.layers {
 			if !tmx.Layers[i].Visible {
