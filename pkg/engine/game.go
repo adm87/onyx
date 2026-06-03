@@ -68,7 +68,6 @@ func NewGame(opts ...Option) Game {
 	)
 	camera := newCamera(
 		scenes.world,
-		screen,
 	)
 	collision := newCollision(
 		logger,
@@ -148,12 +147,13 @@ func (g *game) Draw(screen *ebiten.Image) {
 	default:
 		g.screen.buffer.Fill(g.screen.backgroundColor)
 
-		if err := g.renderer.render(g.scenes.world, g.screen.buffer, g.camera.view()); err != nil {
-			g.logger.Error("Failed to render scene: %v", err)
+		viewMatrix := g.camera.view(g.scenes.world, g.screen)
+		if err := g.renderer.render(g.scenes.world, g.screen.buffer, viewMatrix); err != nil {
+			g.logger.Error("core render pipeline: %v", err)
 			return
 		}
-		if err := g.scenes.render(g.ctx, g.screen.buffer, g.camera.view()); err != nil {
-			g.logger.Error("Failed to render scene: %v", err)
+		if err := g.scenes.render(g.ctx, g.screen.buffer, viewMatrix); err != nil {
+			g.logger.Error("scene render pipeline: %v", err)
 			return
 		}
 

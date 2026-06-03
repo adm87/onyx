@@ -56,8 +56,8 @@ func New(
 
 			buildStaticCollision(world, collision, tmx)
 
-			camera.SetPosition(tilemap.Bounds().Center())
-			camera.SetZoom(0.2)
+			camera.SetPosition(world, tilemap.Bounds().Center())
+			camera.SetZoom(world, 0.2)
 
 			img, exists := images.GetImage(assets, content.EmbeddedImg10x10White)
 			if !exists {
@@ -119,7 +119,7 @@ func New(
 				rendering.SetVisible(world.Entry(player), debugVisibilityToggle)
 			}
 
-			camera.SetPosition(position)
+			camera.SetPosition(world, position)
 			transform.SetPosition(entry, position)
 
 			return engine.SceneExitNone, nil

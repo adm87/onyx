@@ -9,82 +9,82 @@ import (
 
 var CameraTag = donburi.NewTag("Camera")
 
+// Camera defines the interface for interacting with a singleton camera entity within the game world.
+// It provides methods to get and set the camera's position and zoom level, as well as to convert between world and screen coordinates.
 type Camera interface {
-	Position() geom.Vec2
-	SetPosition(pos geom.Vec2)
-	Zoom() float64
-	SetZoom(zoom float64)
-	ToWorld(screen geom.Vec2) geom.Vec2
-	ToScreen(world geom.Vec2) geom.Vec2
+	Position(world donburi.World) geom.Vec2
+	SetPosition(world donburi.World, pos geom.Vec2)
+	Zoom(world donburi.World) float64
+	SetZoom(world donburi.World, zoom float64)
+	ToWorld(world donburi.World, screen Screen, position geom.Vec2) geom.Vec2
+	ToScreen(world donburi.World, screen Screen, position geom.Vec2) geom.Vec2
 }
 
 type camera struct {
-	world  donburi.World
 	entity donburi.Entity
-	screen *screen
 }
 
-func newCamera(world donburi.World, screen *screen) *camera {
+func newCamera(world donburi.World) *camera {
 	entity := world.Create(
 		transform.Position,
-		transform.Rotation,
 		transform.Scale,
 		transform.Matrix,
 		CameraTag,
 	)
 	return &camera{
-		world:  world,
 		entity: entity,
-		screen: screen,
 	}
 }
 
-func (c *camera) Position() geom.Vec2 {
-	entry := c.world.Entry(c.entity)
+func (c *camera) Position(world donburi.World) geom.Vec2 {
+	entry := world.Entry(c.entity)
 	return transform.GetPosition(entry)
 }
 
-func (c *camera) SetPosition(pos geom.Vec2) {
-	entry := c.world.Entry(c.entity)
+func (c *camera) SetPosition(world donburi.World, pos geom.Vec2) {
+	entry := world.Entry(c.entity)
 	transform.SetPosition(entry, pos)
 }
 
-func (c *camera) Zoom() float64 {
-	entry := c.world.Entry(c.entity)
+func (c *camera) Zoom(world donburi.World) float64 {
+	entry := world.Entry(c.entity)
 	scale := transform.GetScale(entry)
 	return scale.X
 }
 
-func (c *camera) SetZoom(zoom float64) {
-	entry := c.world.Entry(c.entity)
+func (c *camera) SetZoom(world donburi.World, zoom float64) {
+	entry := world.Entry(c.entity)
 	transform.SetScale(entry, geom.Vec2{X: zoom, Y: zoom})
 }
 
-func (c *camera) view() ebiten.GeoM {
-	entry := c.world.Entry(c.entity)
+func (c *camera) view(world donburi.World, screen Screen) ebiten.GeoM {
+	entry := world.Entry(c.entity)
+	safeArea := screen.SafeArea()
 
 	matrix := transform.GetMatrix(entry)
 	matrix.Invert()
 
-	viewWidth := c.screen.safeArea.Max.X - c.screen.safeArea.Min.X
-	viewHeight := c.screen.safeArea.Max.Y - c.screen.safeArea.Min.Y
+	viewWidth := safeArea.Max.X - safeArea.Min.X
+	viewHeight := safeArea.Max.Y - safeArea.Min.Y
 
-	matrix.Translate(viewWidth/2, viewHeight/2)
-	matrix.Translate(c.screen.safeArea.Min.X, c.screen.safeArea.Min.Y)
-
+	// Center and offset to safe area
+	matrix.Translate(
+		(viewWidth/2)+safeArea.Min.X,
+		(viewHeight/2)+safeArea.Min.Y,
+	)
 	return matrix
 }
 
-func (c *camera) ToWorld(screenPos geom.Vec2) geom.Vec2 {
-	invView := c.view()
+func (c *camera) ToWorld(world donburi.World, screen Screen, screenPos geom.Vec2) geom.Vec2 {
+	invView := c.view(world, screen)
 	invView.Invert()
 
 	worldX, worldY := invView.Apply(screenPos.X, screenPos.Y)
 	return geom.Vec2{X: worldX, Y: worldY}
 }
 
-func (c *camera) ToScreen(worldPos geom.Vec2) geom.Vec2 {
-	view := c.view()
+func (c *camera) ToScreen(world donburi.World, screen Screen, worldPos geom.Vec2) geom.Vec2 {
+	view := c.view(world, screen)
 
 	screenX, screenY := view.Apply(worldPos.X, worldPos.Y)
 	return geom.Vec2{X: screenX, Y: screenY}
