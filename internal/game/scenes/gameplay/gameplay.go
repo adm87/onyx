@@ -96,6 +96,7 @@ func New(
 			player = entry.Entity()
 
 			world.Add(entry)
+			world.Add(lvlEntry)
 			return nil
 		},
 		OnExit: func(ctx context.Context, world engine.World) error {

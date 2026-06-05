@@ -9,7 +9,7 @@ import (
 	"github.com/yohamta/donburi/filter"
 )
 
-type rendererInfo struct {
+type RendererInfo struct {
 	Visible bool
 	Layer   int
 	ZIndex  int
@@ -41,14 +41,14 @@ var (
 	defaultFilter   = ebiten.FilterNearest
 	defaultColor    = color.RGBA{R: 255, G: 255, B: 255, A: 255}
 	defaultAnchor   = geom.Vec2{X: 0, Y: 0}
-	defaultRenderer = rendererInfo{Visible: true}
+	defaultRenderer = RendererInfo{Visible: true}
 )
 
 var (
 	Filter   = donburi.NewComponentType[ebiten.Filter](defaultFilter)
 	Anchor   = donburi.NewComponentType[geom.Vec2](defaultAnchor)
 	Color    = donburi.NewComponentType[color.RGBA](defaultColor)
-	renderer = donburi.NewComponentType[rendererInfo](defaultRenderer)
+	Renderer = donburi.NewComponentType[RendererInfo](defaultRenderer)
 )
 
 var query = donburi.NewQuery(
@@ -56,7 +56,7 @@ var query = donburi.NewQuery(
 		Filter,
 		Anchor,
 		Color,
-		renderer,
+		Renderer,
 	),
 )
 
@@ -112,7 +112,7 @@ func Query(ecs donburi.World, fn QueryCallback) {
 		anchor := GetAnchor(entry)
 		color := GetColor(entry)
 		filter := GetFilter(entry)
-		info := renderer.Get(entry)
+		info := Renderer.Get(entry)
 		fn(entry, anchor, color, filter, info.Visible, info.Layer, info.ZIndex)
 	})
 }
@@ -124,7 +124,7 @@ func QueryWith(ecs donburi.World, q *donburi.Query, fn QueryCallback) {
 		anchor := GetAnchor(entry)
 		color := GetColor(entry)
 		filter := GetFilter(entry)
-		info := renderer.Get(entry)
+		info := Renderer.Get(entry)
 		fn(entry, anchor, color, filter, info.Visible, info.Layer, info.ZIndex)
 	})
 }
@@ -132,7 +132,7 @@ func QueryWith(ecs donburi.World, q *donburi.Query, fn QueryCallback) {
 // QueryVisible iterates over all entities with the necessary components for rendering that are also marked as visible,
 func QueryVisible(ecs donburi.World, fn QueryCallback) {
 	query.Each(ecs, func(entry *donburi.Entry) {
-		info := renderer.Get(entry)
+		info := Renderer.Get(entry)
 		if !info.Visible {
 			return
 		}
@@ -147,7 +147,7 @@ func QueryVisible(ecs donburi.World, fn QueryCallback) {
 // then applies the provided function to each entry that is also marked as visible.
 func QueryVisibleWith(ecs donburi.World, q *donburi.Query, fn QueryCallback) {
 	q.Each(ecs, func(entry *donburi.Entry) {
-		info := renderer.Get(entry)
+		info := Renderer.Get(entry)
 		if !info.Visible {
 			return
 		}
@@ -165,7 +165,7 @@ func NewRenderer(ecs donburi.World, options ...Option) *donburi.Entry {
 			Filter,
 			Anchor,
 			Color,
-			renderer,
+			Renderer,
 		),
 	), options...)
 }
@@ -181,7 +181,7 @@ func AddRenderer(entry *donburi.Entry, options ...Option) *donburi.Entry {
 	SetAnchor(entry, opts.Anchor)
 	SetColor(entry, opts.Color)
 
-	donburi.Add(entry, renderer, &rendererInfo{
+	donburi.Add(entry, Renderer, &RendererInfo{
 		Visible: opts.Visible,
 		Layer:   opts.Layer,
 		ZIndex:  opts.ZIndex,
@@ -231,60 +231,60 @@ func SetColor(entry *donburi.Entry, color color.RGBA) {
 
 // GetLayer retrieves the layer information from an entity, returning a default value if it does not exist.
 func GetLayer(entry *donburi.Entry) int {
-	if !entry.HasComponent(renderer) {
+	if !entry.HasComponent(Renderer) {
 		return defaultRenderer.Layer
 	}
-	return renderer.Get(entry).Layer
+	return Renderer.Get(entry).Layer
 }
 
 // SetLayer sets the layer information for an entity, adding it if it does not already exist.
 func SetLayer(entry *donburi.Entry, layer int) {
-	if !entry.HasComponent(renderer) {
+	if !entry.HasComponent(Renderer) {
 		info := defaultRenderer
 		info.Layer = layer
-		donburi.Add(entry, renderer, &info)
+		donburi.Add(entry, Renderer, &info)
 		return
 	}
-	info := renderer.Get(entry)
+	info := Renderer.Get(entry)
 	info.Layer = layer
 }
 
 // GetZIndex retrieves the z-index information from an entity, returning a default value if it does not exist.
 func GetZIndex(entry *donburi.Entry) int {
-	if !entry.HasComponent(renderer) {
+	if !entry.HasComponent(Renderer) {
 		return defaultRenderer.ZIndex
 	}
-	return renderer.Get(entry).ZIndex
+	return Renderer.Get(entry).ZIndex
 }
 
 // SetZIndex sets the z-index information for an entity, adding it if it does not already exist.
 func SetZIndex(entry *donburi.Entry, zIndex int) {
-	if !entry.HasComponent(renderer) {
+	if !entry.HasComponent(Renderer) {
 		info := defaultRenderer
 		info.ZIndex = zIndex
-		donburi.Add(entry, renderer, &info)
+		donburi.Add(entry, Renderer, &info)
 		return
 	}
-	info := renderer.Get(entry)
+	info := Renderer.Get(entry)
 	info.ZIndex = zIndex
 }
 
 // IsVisible retrieves the visibility information from an entity, returning a default value if it does not exist.
 func IsVisible(entry *donburi.Entry) bool {
-	if !entry.HasComponent(renderer) {
+	if !entry.HasComponent(Renderer) {
 		return defaultRenderer.Visible
 	}
-	return renderer.Get(entry).Visible
+	return Renderer.Get(entry).Visible
 }
 
 // SetVisible sets the visibility information for an entity, adding it if it does not already exist.
 func SetVisible(entry *donburi.Entry, visible bool) {
-	if !entry.HasComponent(renderer) {
+	if !entry.HasComponent(Renderer) {
 		info := defaultRenderer
 		info.Visible = visible
-		donburi.Add(entry, renderer, &info)
+		donburi.Add(entry, Renderer, &info)
 		return
 	}
-	info := renderer.Get(entry)
+	info := Renderer.Get(entry)
 	info.Visible = visible
 }
