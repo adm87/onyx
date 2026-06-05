@@ -9,6 +9,7 @@ import (
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/components/colliders"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
+	"github.com/adm87/onyx/pkg/engine/components/shapes"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/images"
@@ -40,15 +41,9 @@ func New(
 			collision := world.Collision()
 			ecs := world.ECS()
 
-			collision.AddCollisionEnter(ecs, onCollisionEnter)
-			collision.AddCollisionExit(ecs, onCollisionExit)
-
 			if err := assets.Load(content.AssetsFS(), tilemapRef); err != nil {
 				return fmt.Errorf("failed to load level asset: %w", err)
 			}
-
-			lvlEntry := tiled.CreateTiledEntity(ecs, content.AssetsLevelsGym01)
-			level = lvlEntry.Entity()
 
 			tilemap, exists := tiled.GetTilemap(assets, tilemapRef)
 			if !exists {
@@ -60,43 +55,58 @@ func New(
 				return fmt.Errorf("tmx asset not found for tilemap: %s", tilemapRef)
 			}
 
-			buildStaticCollision(world, tmx)
-
-			camera.SetPosition(tilemap.Bounds().Center())
-			camera.SetZoom(0.2)
-
 			img, exists := images.GetImageAssets(assets, content.EmbeddedImg10x10White)
 			if !exists {
 				return fmt.Errorf("failed to load embedded image: %s", content.EmbeddedImg10x10White)
 			}
 
-			width, height := img.Bounds().Dx(), img.Bounds().Dy()
-			hWidth, hHeight := float64(width)/2, float64(height)/2
+			levelEntry := tiled.CreateTiledEntity(ecs, content.AssetsLevelsGym01)
+			level = levelEntry.Entity()
 
-			aabb := geom.AABB{
-				Min: geom.Vec2{X: -hWidth, Y: -hHeight},
-				Max: geom.Vec2{X: hWidth, Y: hHeight},
-			}
-
-			entry := images.CreateImageEntity(ecs, content.EmbeddedImg10x10White)
-			colliders.AddCollider(entry,
-				colliders.WithAABB(aabb),
+			shapes.AddAABB(levelEntry,
+				shapes.WithPosition(
+					tilemap.Bounds().Min.X,
+					tilemap.Bounds().Min.Y,
+				),
+				shapes.WithSize(
+					tilemap.Bounds().Width(),
+					tilemap.Bounds().Height(),
+				),
 			)
-			rendering.SetAnchor(entry,
+			rendering.SetLayer(levelEntry, 0)
+
+			buildStaticCollision(world, tmx)
+
+			camera.SetPosition(tilemap.Bounds().Center())
+			camera.SetZoom(0.2)
+
+			width, height := float64(img.Bounds().Dx()), float64(img.Bounds().Dy())
+			hWidth, hHeight := width/2, height/2
+
+			playerEntry := images.CreateImageEntity(ecs, content.EmbeddedImg10x10White)
+			colliders.AddCollider(playerEntry)
+			shapes.AddAABB(playerEntry,
+				shapes.WithPosition(-hWidth, -hHeight),
+				shapes.WithSize(width, height),
+			)
+			rendering.SetAnchor(playerEntry,
 				geom.Vec2{
 					X: 0.5,
 					Y: 0.5,
 				},
 			)
-			rendering.SetLayer(entry, 1)
+			rendering.SetLayer(playerEntry, 1)
 
 			pos := tilemap.Bounds().Center()
-			transform.SetPosition(entry, pos)
+			transform.SetPosition(playerEntry, pos)
 
-			player = entry.Entity()
+			player = playerEntry.Entity()
 
-			world.Add(entry)
-			world.Add(lvlEntry)
+			world.Add(playerEntry)
+			world.Add(levelEntry)
+
+			collision.AddCollisionEnter(ecs, onCollisionEnter)
+			collision.AddCollisionExit(ecs, onCollisionExit)
 			return nil
 		},
 		OnExit: func(ctx context.Context, world engine.World) error {
@@ -163,19 +173,12 @@ func New(
 		},
 		OnRender: func(ctx context.Context, world engine.World, img *ebiten.Image, viewMatrix ebiten.GeoM) error {
 			ecs := world.ECS()
-			collision := world.Collision()
 
-			min := camera.ToWorld(screen, screen.SafeArea().Min)
-			max := camera.ToWorld(screen, screen.SafeArea().Max)
-			queryRegion := geom.AABB{Min: min, Max: max}
-
-			count := 0
-			collision.QueryAll(queryRegion, func(entity donburi.Entity) {
-				count++
+			shapes.QueryAABB(ecs, func(entity donburi.Entity) {
 				entry := ecs.Entry(entity)
 
 				position := transform.GetPosition(entry)
-				aabb := colliders.GetAABB(entry).Translate(position)
+				aabb := shapes.GetAABB(entry).Translate(position)
 
 				center := camera.ToScreen(screen, aabb.Center())
 
@@ -192,7 +195,6 @@ func New(
 				ebitenutil.DebugPrintAt(img, fmt.Sprintf("%d", entity), int(center.X), int(center.Y))
 			})
 
-			ebitenutil.DebugPrintAt(img, fmt.Sprintf("Colliders in view: %d", count), 10, 10)
 			return nil
 		},
 	}
@@ -202,21 +204,17 @@ func buildStaticCollision(world engine.World, tmx *tiled.Tmx) {
 	ecs := world.ECS()
 
 	tmx.ObjectGroups.EachInGroup("collision_static", func(object *tiled.TmxObject) {
-		aabb := geom.AABB{
-			Max: geom.Vec2{
-				X: object.Width,
-				Y: object.Height,
-			},
-		}
 		position := geom.Vec2{
 			X: object.X,
 			Y: object.Y,
 		}
 		entry := colliders.NewCollider(ecs,
 			colliders.AsStatic(),
-			colliders.WithAABB(aabb),
 		)
-		transform.SetPosition(entry, position)
+		shapes.AddAABB(entry,
+			shapes.WithPosition(position.X, position.Y),
+			shapes.WithSize(object.Width, object.Height),
+		)
 		world.Add(entry)
 	})
 }

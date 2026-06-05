@@ -3,6 +3,7 @@ package engine
 import (
 	"github.com/adm87/onyx/pkg/engine/components/colliders"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
+	"github.com/adm87/onyx/pkg/engine/components/shapes"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/yohamta/donburi"
 )
@@ -41,7 +42,7 @@ func (w *world) Collision() Collision {
 
 func (w *world) Add(entry *donburi.Entry) {
 	position := transform.GetPosition(entry)
-	aabb := colliders.GetAABB(entry).Translate(position)
+	aabb := shapes.GetAABB(entry).Translate(position)
 
 	if entry.HasComponent(colliders.Collision) {
 		w.collision.add(entry, aabb)
@@ -58,7 +59,7 @@ func (w *world) Remove(entry *donburi.Entry) {
 
 func (w *world) Update(entry *donburi.Entry) {
 	position := transform.GetPosition(entry)
-	aabb := colliders.GetAABB(entry).Translate(position)
+	aabb := shapes.GetAABB(entry).Translate(position)
 
 	w.collision.update(entry, aabb)
 	w.renderables.update(entry, aabb)

@@ -2,6 +2,7 @@ package engine
 
 import (
 	"github.com/adm87/onyx/pkg/engine/components/colliders"
+	"github.com/adm87/onyx/pkg/engine/components/shapes"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/engine/partitioning/spatialhash"
@@ -223,8 +224,8 @@ func (c *collision) checkCollision(ecs donburi.World) error {
 	clear(c.currentPairs)
 
 	// Broad phase: Collect potential collision pairs based on spatial hashing
-	colliders.QueryEnabledDynamic(ecs, func(entry *donburi.Entry, cl colliders.CollisionLayer, aabb geom.AABB) {
-		aabb = aabb.Translate(transform.GetPosition(entry))
+	colliders.QueryEnabledDynamic(ecs, func(entry *donburi.Entry, cl colliders.CollisionLayer) {
+		aabb := shapes.GetAABB(entry).Translate(transform.GetPosition(entry))
 		entity := entry.Entity()
 
 		c.static.QueryAll(aabb, func(otherEntity donburi.Entity) bool {
@@ -271,7 +272,7 @@ func (c *collision) validatePair(ecs donburi.World, entityA, entityB donburi.Ent
 	}
 
 	otherCL := colliders.GetCollisionLayer(otherEntry)
-	otherAABB := colliders.GetAABB(otherEntry).Translate(transform.GetPosition(otherEntry))
+	otherAABB := shapes.GetAABB(otherEntry).Translate(transform.GetPosition(otherEntry))
 
 	if !c.CheckLayers(layerA, otherCL) {
 		return true // Layers are not flagged to interact, skip
