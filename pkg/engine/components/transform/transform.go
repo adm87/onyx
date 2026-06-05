@@ -73,8 +73,8 @@ func WithRotation(rotation float64) Option {
 }
 
 // Query iterates over all entities with the necessary components for transformation and applies the provided function to each entry.
-func Query(world donburi.World, fn QueryCallback) {
-	query.Each(world, func(entry *donburi.Entry) {
+func Query(ecs donburi.World, fn QueryCallback) {
+	query.Each(ecs, func(entry *donburi.Entry) {
 		position := GetPosition(entry)
 		scale := GetScale(entry)
 		rotation := GetRotation(entry)
@@ -84,8 +84,8 @@ func Query(world donburi.World, fn QueryCallback) {
 
 // QueryWith allows you to specify a custom query to iterate over entities with the necessary components for transformation
 // and applies the provided function to each entry.
-func QueryWith(world donburi.World, q *donburi.Query, fn QueryCallback) {
-	q.Each(world, func(entry *donburi.Entry) {
+func QueryWith(ecs donburi.World, q *donburi.Query, fn QueryCallback) {
+	q.Each(ecs, func(entry *donburi.Entry) {
 		position := GetPosition(entry)
 		scale := GetScale(entry)
 		rotation := GetRotation(entry)
@@ -94,9 +94,9 @@ func QueryWith(world donburi.World, q *donburi.Query, fn QueryCallback) {
 }
 
 // NewTransform creates a new entity with the necessary components for position, scale, rotation, and transformation matrix.
-func NewTransform(world donburi.World, options ...Option) *donburi.Entry {
-	return AddTransform(world.Entry(
-		world.Create(
+func NewTransform(ecs donburi.World, options ...Option) *donburi.Entry {
+	return AddTransform(ecs.Entry(
+		ecs.Create(
 			Position,
 			Scale,
 			Rotation,

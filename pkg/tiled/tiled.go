@@ -95,8 +95,8 @@ func GetRenderingAdapter(renderer engine.Renderer) (*TiledRenderingAdapter, bool
 	return tiledRenderer, ok
 }
 
-func CreateTiledEntity(world donburi.World, ref file.FilePath) *donburi.Entry {
-	entry := asset.NewAssetReference(world, ref)
+func CreateTiledEntity(ecs donburi.World, ref file.FilePath) *donburi.Entry {
+	entry := asset.NewAssetReference(ecs, ref)
 	entry.AddComponent(Tiled)
 
 	transform.AddTransform(entry)

@@ -89,14 +89,14 @@ func WithAABB(aabb geom.AABB) Option {
 }
 
 // Query iterates over all colliders in the world, invoking the provided callback for each one.
-func Query(world donburi.World, fn QueryCallback) {
-	QueryStatic(world, fn)
-	QueryDynamic(world, fn)
+func Query(ecs donburi.World, fn QueryCallback) {
+	QueryStatic(ecs, fn)
+	QueryDynamic(ecs, fn)
 }
 
 // QueryWith allows querying colliders using a custom query, invoking the provided callback for each matching entry.
-func QueryWith(world donburi.World, q *donburi.Query, fn QueryCallback) {
-	q.Each(world, func(entry *donburi.Entry) {
+func QueryWith(ecs donburi.World, q *donburi.Query, fn QueryCallback) {
+	q.Each(ecs, func(entry *donburi.Entry) {
 		layer := GetCollisionLayer(entry)
 		aabb := GetAABB(entry)
 		fn(entry, layer, aabb)
@@ -104,8 +104,8 @@ func QueryWith(world donburi.World, q *donburi.Query, fn QueryCallback) {
 }
 
 // QueryEnabled iterates over all colliders in the world that have collision enabled, invoking the provided callback for each one.
-func QueryEnabled(world donburi.World, fn QueryCallback) {
-	Query(world, func(entry *donburi.Entry, layer CollisionLayer, aabb geom.AABB) {
+func QueryEnabled(ecs donburi.World, fn QueryCallback) {
+	Query(ecs, func(entry *donburi.Entry, layer CollisionLayer, aabb geom.AABB) {
 		if IsCollisionEnabled(entry) {
 			fn(entry, layer, aabb)
 		}
@@ -113,8 +113,8 @@ func QueryEnabled(world donburi.World, fn QueryCallback) {
 }
 
 // QueryEnabledWith allows querying colliders using a custom query and invokes the provided callback for each matching entry that has collision enabled.
-func QueryEnabledWith(world donburi.World, q *donburi.Query, fn QueryCallback) {
-	QueryWith(world, q, func(entry *donburi.Entry, layer CollisionLayer, aabb geom.AABB) {
+func QueryEnabledWith(ecs donburi.World, q *donburi.Query, fn QueryCallback) {
+	QueryWith(ecs, q, func(entry *donburi.Entry, layer CollisionLayer, aabb geom.AABB) {
 		if IsCollisionEnabled(entry) {
 			fn(entry, layer, aabb)
 		}
@@ -122,8 +122,8 @@ func QueryEnabledWith(world donburi.World, q *donburi.Query, fn QueryCallback) {
 }
 
 // QueryStatic iterates over all static colliders in the world, invoking the provided callback for each one.
-func QueryStatic(world donburi.World, fn QueryCallback) {
-	staticQuery.Each(world, func(entry *donburi.Entry) {
+func QueryStatic(ecs donburi.World, fn QueryCallback) {
+	staticQuery.Each(ecs, func(entry *donburi.Entry) {
 		layer := GetCollisionLayer(entry)
 		aabb := GetAABB(entry)
 		fn(entry, layer, aabb)
@@ -131,8 +131,8 @@ func QueryStatic(world donburi.World, fn QueryCallback) {
 }
 
 // QueryEnabledStatic iterates over all static colliders in the world that have collision enabled, invoking the provided callback for each one.
-func QueryEnabledStatic(world donburi.World, fn QueryCallback) {
-	QueryStatic(world, func(entry *donburi.Entry, layer CollisionLayer, aabb geom.AABB) {
+func QueryEnabledStatic(ecs donburi.World, fn QueryCallback) {
+	QueryStatic(ecs, func(entry *donburi.Entry, layer CollisionLayer, aabb geom.AABB) {
 		if IsCollisionEnabled(entry) {
 			fn(entry, layer, aabb)
 		}
@@ -140,8 +140,8 @@ func QueryEnabledStatic(world donburi.World, fn QueryCallback) {
 }
 
 // QueryDynamic iterates over all dynamic colliders in the world, invoking the provided callback for each one.
-func QueryDynamic(world donburi.World, fn QueryCallback) {
-	dynamicQuery.Each(world, func(entry *donburi.Entry) {
+func QueryDynamic(ecs donburi.World, fn QueryCallback) {
+	dynamicQuery.Each(ecs, func(entry *donburi.Entry) {
 		layer := GetCollisionLayer(entry)
 		aabb := GetAABB(entry)
 		fn(entry, layer, aabb)
@@ -149,8 +149,8 @@ func QueryDynamic(world donburi.World, fn QueryCallback) {
 }
 
 // QueryEnabledDynamic iterates over all dynamic colliders in the world that have collision enabled, invoking the provided callback for each one.
-func QueryEnabledDynamic(world donburi.World, fn QueryCallback) {
-	QueryDynamic(world, func(entry *donburi.Entry, layer CollisionLayer, aabb geom.AABB) {
+func QueryEnabledDynamic(ecs donburi.World, fn QueryCallback) {
+	QueryDynamic(ecs, func(entry *donburi.Entry, layer CollisionLayer, aabb geom.AABB) {
 		if IsCollisionEnabled(entry) {
 			fn(entry, layer, aabb)
 		}
@@ -158,9 +158,9 @@ func QueryEnabledDynamic(world donburi.World, fn QueryCallback) {
 }
 
 // NewCollider creates a new entity with a collider component, applying the provided options for configuration.
-func NewCollider(world donburi.World, options ...Option) *donburi.Entry {
-	return AddCollider(world.Entry(
-		world.Create(
+func NewCollider(ecs donburi.World, options ...Option) *donburi.Entry {
+	return AddCollider(ecs.Entry(
+		ecs.Create(
 			Collision,
 			AABB,
 		),

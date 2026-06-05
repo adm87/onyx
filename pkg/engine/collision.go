@@ -30,12 +30,12 @@ type Collision interface {
 	UnflagLayers(a, b colliders.CollisionLayer)     // Unflags two collision layers to prevent interactions between them during collision checks.
 	CheckLayers(a, b colliders.CollisionLayer) bool // Checks if two collision layers are flagged to interact with each other.
 
-	AddCollisionEnter(world donburi.World, callback func(world donburi.World, event CollisionEvent))
-	AddCollisionExit(world donburi.World, callback func(world donburi.World, event CollisionEvent))
-	AddCollisionStay(world donburi.World, callback func(world donburi.World, event CollisionEvent))
-	RemoveCollisionEnter(world donburi.World, callback func(world donburi.World, event CollisionEvent))
-	RemoveCollisionExit(world donburi.World, callback func(world donburi.World, event CollisionEvent))
-	RemoveCollisionStay(world donburi.World, callback func(world donburi.World, event CollisionEvent))
+	AddCollisionEnter(ecs donburi.World, callback func(ecs donburi.World, event CollisionEvent))
+	AddCollisionExit(ecs donburi.World, callback func(ecs donburi.World, event CollisionEvent))
+	AddCollisionStay(ecs donburi.World, callback func(ecs donburi.World, event CollisionEvent))
+	RemoveCollisionEnter(ecs donburi.World, callback func(ecs donburi.World, event CollisionEvent))
+	RemoveCollisionExit(ecs donburi.World, callback func(ecs donburi.World, event CollisionEvent))
+	RemoveCollisionStay(ecs donburi.World, callback func(ecs donburi.World, event CollisionEvent))
 
 	QueryAll(aabb geom.AABB, callback func(entity donburi.Entity))
 	QueryStatic(aabb geom.AABB, callback func(entity donburi.Entity))
@@ -179,28 +179,28 @@ func (c *collision) CheckLayers(a, b colliders.CollisionLayer) bool {
 	return (c.masks[a] & b) != 0
 }
 
-func (c *collision) AddCollisionEnter(world donburi.World, callback func(world donburi.World, event CollisionEvent)) {
-	c.events.enter.Subscribe(world, callback)
+func (c *collision) AddCollisionEnter(ecs donburi.World, callback func(ecs donburi.World, event CollisionEvent)) {
+	c.events.enter.Subscribe(ecs, callback)
 }
 
-func (c *collision) AddCollisionExit(world donburi.World, callback func(world donburi.World, event CollisionEvent)) {
-	c.events.exit.Subscribe(world, callback)
+func (c *collision) AddCollisionExit(ecs donburi.World, callback func(ecs donburi.World, event CollisionEvent)) {
+	c.events.exit.Subscribe(ecs, callback)
 }
 
-func (c *collision) AddCollisionStay(world donburi.World, callback func(world donburi.World, event CollisionEvent)) {
-	c.events.stay.Subscribe(world, callback)
+func (c *collision) AddCollisionStay(ecs donburi.World, callback func(ecs donburi.World, event CollisionEvent)) {
+	c.events.stay.Subscribe(ecs, callback)
 }
 
-func (c *collision) RemoveCollisionEnter(world donburi.World, callback func(world donburi.World, event CollisionEvent)) {
-	c.events.enter.Unsubscribe(world, callback)
+func (c *collision) RemoveCollisionEnter(ecs donburi.World, callback func(ecs donburi.World, event CollisionEvent)) {
+	c.events.enter.Unsubscribe(ecs, callback)
 }
 
-func (c *collision) RemoveCollisionExit(world donburi.World, callback func(world donburi.World, event CollisionEvent)) {
-	c.events.exit.Unsubscribe(world, callback)
+func (c *collision) RemoveCollisionExit(ecs donburi.World, callback func(ecs donburi.World, event CollisionEvent)) {
+	c.events.exit.Unsubscribe(ecs, callback)
 }
 
-func (c *collision) RemoveCollisionStay(world donburi.World, callback func(world donburi.World, event CollisionEvent)) {
-	c.events.stay.Unsubscribe(world, callback)
+func (c *collision) RemoveCollisionStay(ecs donburi.World, callback func(ecs donburi.World, event CollisionEvent)) {
+	c.events.stay.Unsubscribe(ecs, callback)
 }
 
 func (c *collision) QueryAll(aabb geom.AABB, callback func(entity donburi.Entity)) {
@@ -222,20 +222,20 @@ func (c *collision) QueryDynamic(aabb geom.AABB, callback func(entity donburi.En
 	})
 }
 
-func (c *collision) checkCollision(world donburi.World) error {
+func (c *collision) checkCollision(ecs donburi.World) error {
 	c.currentPairs, c.previousPairs = c.previousPairs, c.currentPairs
 	clear(c.currentPairs)
 
 	// Broad phase: Collect potential collision pairs based on spatial hashing
-	colliders.QueryEnabledDynamic(world, func(entry *donburi.Entry, cl colliders.CollisionLayer, aabb geom.AABB) {
+	colliders.QueryEnabledDynamic(ecs, func(entry *donburi.Entry, cl colliders.CollisionLayer, aabb geom.AABB) {
 		aabb = aabb.Translate(transform.GetPosition(entry))
 		entity := entry.Entity()
 
 		c.static.QueryAll(aabb, func(otherEntity donburi.Entity) bool {
-			return c.validatePair(world, entity, otherEntity, aabb, cl)
+			return c.validatePair(ecs, entity, otherEntity, aabb, cl)
 		})
 		c.dynamic.QueryAll(aabb, func(otherEntity donburi.Entity) bool {
-			return c.validatePair(world, entity, otherEntity, aabb, cl)
+			return c.validatePair(ecs, entity, otherEntity, aabb, cl)
 		})
 	})
 
@@ -245,30 +245,30 @@ func (c *collision) checkCollision(world donburi.World) error {
 	for pair := range c.currentPairs {
 		event = CollisionEvent{EntityA: pair.Low(), EntityB: pair.High()}
 		if _, existed := c.previousPairs[pair]; existed {
-			c.events.stay.Publish(world, event)
+			c.events.stay.Publish(ecs, event)
 		} else {
-			c.events.enter.Publish(world, event)
+			c.events.enter.Publish(ecs, event)
 		}
 	}
 	for pair := range c.previousPairs {
 		if _, exists := c.currentPairs[pair]; !exists {
 			event = CollisionEvent{EntityA: pair.Low(), EntityB: pair.High()}
-			c.events.exit.Publish(world, event)
+			c.events.exit.Publish(ecs, event)
 		}
 	}
 
-	c.events.enter.ProcessEvents(world)
-	c.events.exit.ProcessEvents(world)
-	c.events.stay.ProcessEvents(world)
+	c.events.enter.ProcessEvents(ecs)
+	c.events.exit.ProcessEvents(ecs)
+	c.events.stay.ProcessEvents(ecs)
 
 	return nil
 }
 
-func (c *collision) validatePair(world donburi.World, entityA, entityB donburi.Entity, boxA geom.AABB, layerA colliders.CollisionLayer) bool {
+func (c *collision) validatePair(ecs donburi.World, entityA, entityB donburi.Entity, boxA geom.AABB, layerA colliders.CollisionLayer) bool {
 	if entityA == entityB {
 		return true // Skip self-collision
 	}
-	otherEntry := world.Entry(entityB)
+	otherEntry := ecs.Entry(entityB)
 
 	if !colliders.IsCollisionEnabled(otherEntry) {
 		return true // Collision is not enabled for this entity, skip

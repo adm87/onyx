@@ -13,7 +13,6 @@ type Game interface {
 
 	Assets() Assets
 	Camera() Camera
-	Collision() Collision
 	Logger() Logger
 	Renderer() Renderer
 	Scenes() Scenes
@@ -24,14 +23,13 @@ type Game interface {
 type game struct {
 	ctx context.Context
 
-	assets    *assets
-	camera    *camera
-	collision *collision
-	logger    *logger
-	renderer  *renderer
-	scenes    *scenes
-	screen    *screen
-	time      *time
+	assets   *assets
+	camera   *camera
+	logger   *logger
+	renderer *renderer
+	scenes   *scenes
+	screen   *screen
+	time     *time
 }
 
 func setupWindow(title string, width, height int) {
@@ -70,19 +68,18 @@ func NewGame(opts ...Option) Game {
 		cfg.FPS,
 	)
 	camera := newCamera(
-		scenes.world,
+		scenes.world.ecs,
 	)
 
 	return &game{
-		ctx:       context.Background(),
-		assets:    assets,
-		camera:    camera,
-		collision: collision,
-		logger:    logger,
-		renderer:  renderer,
-		screen:    screen,
-		scenes:    scenes,
-		time:      time,
+		ctx:      context.Background(),
+		assets:   assets,
+		camera:   camera,
+		logger:   logger,
+		renderer: renderer,
+		screen:   screen,
+		scenes:   scenes,
+		time:     time,
 	}
 }
 
@@ -92,10 +89,6 @@ func (g *game) Assets() Assets {
 
 func (g *game) Camera() Camera {
 	return g.camera
-}
-
-func (g *game) Collision() Collision {
-	return g.collision
 }
 
 func (g *game) Logger() Logger {
@@ -147,7 +140,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 	default:
 		g.screen.buffer.Fill(g.screen.backgroundColor)
 
-		viewMatrix := g.camera.view(g.scenes.world, g.screen)
+		viewMatrix := g.camera.view(g.scenes.world.ecs, g.screen)
 		if err := g.scenes.render(g.ctx, g.screen.buffer, viewMatrix); err != nil {
 			g.logger.Error("scene render pipeline: %v", err)
 			return

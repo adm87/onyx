@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/yohamta/donburi"
 )
 
 type (
@@ -19,26 +18,24 @@ type Scenes interface {
 }
 
 type SceneState struct {
-	OnEnter       func(ctx context.Context, world donburi.World) error
-	OnExit        func(ctx context.Context, world donburi.World) error
-	OnUpdate      func(ctx context.Context, world donburi.World) (SceneExitCode, error)
-	OnFixedUpdate func(ctx context.Context, world donburi.World) error
-	OnLateUpdate  func(ctx context.Context, world donburi.World) error
-	OnRender      func(ctx context.Context, world donburi.World, screen *ebiten.Image, viewMatrix ebiten.GeoM) error
+	OnEnter       func(ctx context.Context, world World) error
+	OnExit        func(ctx context.Context, world World) error
+	OnUpdate      func(ctx context.Context, world World) (SceneExitCode, error)
+	OnFixedUpdate func(ctx context.Context, world World) error
+	OnLateUpdate  func(ctx context.Context, world World) error
+	OnRender      func(ctx context.Context, world World, screen *ebiten.Image, viewMatrix ebiten.GeoM) error
 }
 
 type scenes struct {
-	collision *collision
-	renderer  *renderer
-	logger    *logger
+	world    *world
+	renderer *renderer
+	logger   *logger
 
 	scenes      map[SceneID]SceneState
 	transitions map[SceneID]SceneTransitions
 
 	currentScene SceneID
 	nextScene    SceneID
-
-	world donburi.World
 }
 
 const (
@@ -48,14 +45,13 @@ const (
 
 func newScenes(initialScene SceneID, collision *collision, renderer *renderer, logger *logger) *scenes {
 	return &scenes{
-		collision:    collision,
 		renderer:     renderer,
 		logger:       logger,
 		scenes:       make(map[SceneID]SceneState),
 		transitions:  make(map[SceneID]SceneTransitions),
 		currentScene: SceneIDNone,
 		nextScene:    initialScene,
-		world:        donburi.NewWorld(),
+		world:        newWorld(),
 	}
 }
 
@@ -100,7 +96,7 @@ func (s *scenes) update(ctx context.Context, steps int) error {
 }
 
 func (s *scenes) render(ctx context.Context, screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
-	if err := s.renderer.render(s.world, screen, viewMatrix); err != nil {
+	if err := s.renderer.render(s.world.ecs, screen, viewMatrix); err != nil {
 		return err
 	}
 	return s.renderCurrent(ctx, screen, viewMatrix)
@@ -185,7 +181,7 @@ func (s *scenes) fixedUpdateCurrent(ctx context.Context, currentState SceneState
 				return err
 			}
 		}
-		if err := s.collision.checkCollision(s.world); err != nil {
+		if err := s.world.collision.checkCollision(s.world.ecs); err != nil {
 			return err
 		}
 	}

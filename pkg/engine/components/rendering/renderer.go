@@ -107,8 +107,8 @@ func WithFilter(filter ebiten.Filter) Option {
 }
 
 // Query iterates over all entities with the necessary components for rendering and applies the provided function to each entry.
-func Query(world donburi.World, fn QueryCallback) {
-	query.Each(world, func(entry *donburi.Entry) {
+func Query(ecs donburi.World, fn QueryCallback) {
+	query.Each(ecs, func(entry *donburi.Entry) {
 		anchor := GetAnchor(entry)
 		color := GetColor(entry)
 		filter := GetFilter(entry)
@@ -119,8 +119,8 @@ func Query(world donburi.World, fn QueryCallback) {
 
 // QueryWith iterates over all entities that match the provided query and have the necessary components for rendering,
 // then applies the provided function to each entry.
-func QueryWith(world donburi.World, q *donburi.Query, fn QueryCallback) {
-	q.Each(world, func(entry *donburi.Entry) {
+func QueryWith(ecs donburi.World, q *donburi.Query, fn QueryCallback) {
+	q.Each(ecs, func(entry *donburi.Entry) {
 		anchor := GetAnchor(entry)
 		color := GetColor(entry)
 		filter := GetFilter(entry)
@@ -130,8 +130,8 @@ func QueryWith(world donburi.World, q *donburi.Query, fn QueryCallback) {
 }
 
 // QueryVisible iterates over all entities with the necessary components for rendering that are also marked as visible,
-func QueryVisible(world donburi.World, fn QueryCallback) {
-	query.Each(world, func(entry *donburi.Entry) {
+func QueryVisible(ecs donburi.World, fn QueryCallback) {
+	query.Each(ecs, func(entry *donburi.Entry) {
 		info := renderer.Get(entry)
 		if !info.Visible {
 			return
@@ -145,8 +145,8 @@ func QueryVisible(world donburi.World, fn QueryCallback) {
 
 // QueryVisibleWith iterates over all entities that match the provided query and have the necessary components for rendering,
 // then applies the provided function to each entry that is also marked as visible.
-func QueryVisibleWith(world donburi.World, q *donburi.Query, fn QueryCallback) {
-	q.Each(world, func(entry *donburi.Entry) {
+func QueryVisibleWith(ecs donburi.World, q *donburi.Query, fn QueryCallback) {
+	q.Each(ecs, func(entry *donburi.Entry) {
 		info := renderer.Get(entry)
 		if !info.Visible {
 			return
@@ -159,9 +159,9 @@ func QueryVisibleWith(world donburi.World, q *donburi.Query, fn QueryCallback) {
 }
 
 // NewRenderer creates a new entity with the necessary components for rendering and applies the provided options.
-func NewRenderer(world donburi.World, options ...Option) *donburi.Entry {
-	return AddRenderer(world.Entry(
-		world.Create(
+func NewRenderer(ecs donburi.World, options ...Option) *donburi.Entry {
+	return AddRenderer(ecs.Entry(
+		ecs.Create(
 			Filter,
 			Anchor,
 			Color,

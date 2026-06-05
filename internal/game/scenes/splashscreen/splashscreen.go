@@ -19,7 +19,9 @@ func New(assets engine.Assets, time engine.Time, screen engine.Screen) engine.Sc
 	var entry *donburi.Entry
 	var sequence *gween.Sequence
 	return engine.SceneState{
-		OnEnter: func(ctx context.Context, world donburi.World) error {
+		OnEnter: func(ctx context.Context, world engine.World) error {
+			ecs := world.ECS()
+
 			if err := assets.Load(content.EmbeddedFS(), content.EmbeddedSplash1920x1080Black); err != nil {
 				return err
 			}
@@ -31,7 +33,7 @@ func New(assets engine.Assets, time engine.Time, screen engine.Screen) engine.Sc
 
 			screen.ResizeBuffer(img.Bounds().Dx(), img.Bounds().Dy())
 
-			entry = images.CreateImageEntity(world, content.EmbeddedSplash1920x1080Black)
+			entry = images.CreateImageEntity(ecs, content.EmbeddedSplash1920x1080Black)
 
 			sequence = gween.NewSequence(
 				gween.New(0, 0, 0.5, ease.Linear),
@@ -42,8 +44,9 @@ func New(assets engine.Assets, time engine.Time, screen engine.Screen) engine.Sc
 			)
 			return nil
 		},
-		OnExit: func(ctx context.Context, world donburi.World) error {
-			world.Remove(entry.Entity())
+		OnExit: func(ctx context.Context, world engine.World) error {
+			ecs := world.ECS()
+			ecs.Remove(entry.Entity())
 
 			assets.Unload(content.EmbeddedSplash1920x1080Black)
 			screen.RestoreBuffer()
@@ -53,7 +56,7 @@ func New(assets engine.Assets, time engine.Time, screen engine.Screen) engine.Sc
 
 			return nil
 		},
-		OnUpdate: func(ctx context.Context, world donburi.World) (engine.SceneExitCode, error) {
+		OnUpdate: func(ctx context.Context, world engine.World) (engine.SceneExitCode, error) {
 			opacity, _, complete := sequence.Update(float32(time.DeltaTime()))
 
 			color := rendering.GetColor(entry)

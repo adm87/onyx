@@ -9,9 +9,9 @@ const UnknownRef file.FilePath = "unknown"
 
 var AssetReference = donburi.NewComponentType[file.FilePath](UnknownRef)
 
-func NewAssetReference(world donburi.World, path file.FilePath) *donburi.Entry {
-	return AddAssetReference(world.Entry(
-		world.Create(
+func NewAssetReference(ecs donburi.World, path file.FilePath) *donburi.Entry {
+	return AddAssetReference(ecs.Entry(
+		ecs.Create(
 			AssetReference,
 		),
 	), path)

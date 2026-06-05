@@ -24,10 +24,10 @@ func NewImageRenderingAdapter(assetAdapter *ImageAssetAdapter) *ImageRenderingAd
 	}
 }
 
-func (a *ImageRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix ebiten.GeoM) []engine.RenderTask {
+func (a *ImageRenderingAdapter) GetRenderTasks(ecs donburi.World, viewMatrix ebiten.GeoM) []engine.RenderTask {
 	a.renderingTasks = a.renderingTasks[:0]
 
-	rendering.QueryVisibleWith(world, ImageQuery,
+	rendering.QueryVisibleWith(ecs, ImageQuery,
 		func(entry *donburi.Entry, anchor geom.Vec2, color color.RGBA, filter ebiten.Filter, visible bool, layer, zIndex int) {
 			ref := asset.GetAssetReference(entry)
 			if ref == asset.UnknownRef {

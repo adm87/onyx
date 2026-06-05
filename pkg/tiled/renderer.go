@@ -65,16 +65,16 @@ func (a *TiledRenderingAdapter) getBuffer(ref file.FilePath) *ebiten.Image {
 	return buffer
 }
 
-func (a *TiledRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix ebiten.GeoM) []engine.RenderTask {
+func (a *TiledRenderingAdapter) GetRenderTasks(ecs donburi.World, viewMatrix ebiten.GeoM) []engine.RenderTask {
 	a.renderingTasks = a.renderingTasks[:0]
 
 	// Transform screen corners to world coordinates for culling
-	worldMin := a.camera.ToWorld(world, a.screen, a.screen.SafeArea().Min)
-	worldMax := a.camera.ToWorld(world, a.screen, a.screen.SafeArea().Max)
+	worldMin := a.camera.ToWorld(ecs, a.screen, a.screen.SafeArea().Min)
+	worldMax := a.camera.ToWorld(ecs, a.screen, a.screen.SafeArea().Max)
 
 	clear(a.drawn)
 
-	rendering.QueryWith(world, TiledQuery,
+	rendering.QueryWith(ecs, TiledQuery,
 		func(entry *donburi.Entry, anchor geom.Vec2, color color.RGBA, filter ebiten.Filter, visible bool, layer, zIndex int) {
 			// TODO - apply color tint, anchor, and filter to tilemap rendering (currently ignored)
 

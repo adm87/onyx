@@ -65,8 +65,8 @@ func GetImageAssets(assets engine.Assets, path file.FilePath) (*ebiten.Image, bo
 	return img, exists
 }
 
-func CreateImageEntity(world donburi.World, ref file.FilePath) *donburi.Entry {
-	entry := asset.NewAssetReference(world, ref)
+func CreateImageEntity(ecs donburi.World, ref file.FilePath) *donburi.Entry {
+	entry := asset.NewAssetReference(ecs, ref)
 	entry.AddComponent(Image)
 
 	transform.AddTransform(entry)

@@ -23,7 +23,6 @@ import (
 func New(
 	assets engine.Assets,
 	camera engine.Camera,
-	collision engine.Collision,
 	screen engine.Screen,
 	time engine.Time) engine.SceneState {
 
@@ -37,15 +36,18 @@ func New(
 	debugVisibilityToggle := true
 
 	return engine.SceneState{
-		OnEnter: func(ctx context.Context, world donburi.World) error {
-			collision.AddCollisionEnter(world, onCollisionEnter)
-			collision.AddCollisionExit(world, onCollisionExit)
+		OnEnter: func(ctx context.Context, world engine.World) error {
+			collision := world.Collision()
+			ecs := world.ECS()
+
+			collision.AddCollisionEnter(ecs, onCollisionEnter)
+			collision.AddCollisionExit(ecs, onCollisionExit)
 
 			if err := assets.Load(content.AssetsFS(), tilemapRef); err != nil {
 				return fmt.Errorf("failed to load level asset: %w", err)
 			}
 
-			lvlEntry := tiled.CreateTiledEntity(world, content.AssetsLevelsGym01)
+			lvlEntry := tiled.CreateTiledEntity(ecs, content.AssetsLevelsGym01)
 			level = lvlEntry.Entity()
 
 			tilemap, exists := tiled.GetTilemap(assets, tilemapRef)
@@ -58,10 +60,10 @@ func New(
 				return fmt.Errorf("tmx asset not found for tilemap: %s", tilemapRef)
 			}
 
-			buildStaticCollision(world, collision, tmx)
+			buildStaticCollision(ecs, collision, tmx)
 
-			camera.SetPosition(world, tilemap.Bounds().Center())
-			camera.SetZoom(world, 0.2)
+			camera.SetPosition(ecs, tilemap.Bounds().Center())
+			camera.SetZoom(ecs, 0.2)
 
 			img, exists := images.GetImageAssets(assets, content.EmbeddedImg10x10White)
 			if !exists {
@@ -76,7 +78,7 @@ func New(
 				Max: geom.Vec2{X: hWidth, Y: hHeight},
 			}
 
-			entry := images.CreateImageEntity(world, content.EmbeddedImg10x10White)
+			entry := images.CreateImageEntity(ecs, content.EmbeddedImg10x10White)
 			colliders.AddCollider(entry,
 				colliders.WithAABB(aabb),
 			)
@@ -96,13 +98,19 @@ func New(
 
 			return nil
 		},
-		OnExit: func(ctx context.Context, world donburi.World) error {
-			collision.RemoveCollisionEnter(world, onCollisionEnter)
-			collision.RemoveCollisionExit(world, onCollisionExit)
+		OnExit: func(ctx context.Context, world engine.World) error {
+			collision := world.Collision()
+			ecs := world.ECS()
+
+			collision.RemoveCollisionEnter(ecs, onCollisionEnter)
+			collision.RemoveCollisionExit(ecs, onCollisionExit)
 			return nil
 		},
-		OnUpdate: func(ctx context.Context, world donburi.World) (engine.SceneExitCode, error) {
-			entry := world.Entry(player)
+		OnUpdate: func(ctx context.Context, world engine.World) (engine.SceneExitCode, error) {
+			collision := world.Collision()
+			ecs := world.ECS()
+
+			entry := ecs.Entry(player)
 			position := transform.GetPosition(entry)
 
 			if ebiten.IsKeyPressed(ebiten.KeyW) {
@@ -118,14 +126,14 @@ func New(
 				position.X += 100 * time.DeltaTime()
 			}
 			if ebiten.IsKeyPressed(ebiten.KeyUp) {
-				zoom := camera.Zoom(world)
+				zoom := camera.Zoom(ecs)
 				zoom *= 1 + (0.5 * time.DeltaTime())
-				camera.SetZoom(world, zoom)
+				camera.SetZoom(ecs, zoom)
 			}
 			if ebiten.IsKeyPressed(ebiten.KeyDown) {
-				zoom := camera.Zoom(world)
+				zoom := camera.Zoom(ecs)
 				zoom /= 1 + (0.5 * time.DeltaTime())
-				camera.SetZoom(world, zoom)
+				camera.SetZoom(ecs, zoom)
 			}
 
 			if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
@@ -143,31 +151,34 @@ func New(
 			}
 			if inpututil.IsKeyJustPressed(ebiten.Key3) {
 				debugVisibilityToggle = !debugVisibilityToggle
-				rendering.SetVisible(world.Entry(level), debugVisibilityToggle)
-				rendering.SetVisible(world.Entry(player), debugVisibilityToggle)
+				rendering.SetVisible(ecs.Entry(level), debugVisibilityToggle)
+				rendering.SetVisible(ecs.Entry(player), debugVisibilityToggle)
 			}
 
 			transform.SetPosition(entry, position)
 			collision.Update(entry, colliders.GetAABB(entry).Translate(position))
 
-			camera.SetPosition(world, position)
+			camera.SetPosition(ecs, position)
 
 			return engine.SceneExitNone, nil
 		},
-		OnRender: func(ctx context.Context, world donburi.World, img *ebiten.Image, viewMatrix ebiten.GeoM) error {
-			min := camera.ToWorld(world, screen, screen.SafeArea().Min)
-			max := camera.ToWorld(world, screen, screen.SafeArea().Max)
+		OnRender: func(ctx context.Context, world engine.World, img *ebiten.Image, viewMatrix ebiten.GeoM) error {
+			ecs := world.ECS()
+			collision := world.Collision()
+
+			min := camera.ToWorld(ecs, screen, screen.SafeArea().Min)
+			max := camera.ToWorld(ecs, screen, screen.SafeArea().Max)
 			queryRegion := geom.AABB{Min: min, Max: max}
 
 			count := 0
 			collision.QueryAll(queryRegion, func(entity donburi.Entity) {
 				count++
-				entry := world.Entry(entity)
+				entry := ecs.Entry(entity)
 
 				position := transform.GetPosition(entry)
 				aabb := colliders.GetAABB(entry).Translate(position)
 
-				center := camera.ToScreen(world, screen, aabb.Center())
+				center := camera.ToScreen(ecs, screen, aabb.Center())
 
 				vector.FillRect(
 					img,
@@ -188,7 +199,7 @@ func New(
 	}
 }
 
-func buildStaticCollision(world donburi.World, collision engine.Collision, tmx *tiled.Tmx) {
+func buildStaticCollision(ecs donburi.World, collision engine.Collision, tmx *tiled.Tmx) {
 	tmx.ObjectGroups.EachInGroup("collision_static", func(object *tiled.TmxObject) {
 		aabb := geom.AABB{
 			Max: geom.Vec2{
@@ -200,7 +211,7 @@ func buildStaticCollision(world donburi.World, collision engine.Collision, tmx *
 			X: object.X,
 			Y: object.Y,
 		}
-		entry := colliders.NewCollider(world,
+		entry := colliders.NewCollider(ecs,
 			colliders.AsStatic(),
 			colliders.WithAABB(aabb),
 		)
@@ -209,10 +220,10 @@ func buildStaticCollision(world donburi.World, collision engine.Collision, tmx *
 	})
 }
 
-func onCollisionEnter(world donburi.World, event engine.CollisionEvent) {
+func onCollisionEnter(ecs donburi.World, event engine.CollisionEvent) {
 	fmt.Printf("Collision Enter: %d <-> %d\n", event.EntityA, event.EntityB)
 }
 
-func onCollisionExit(world donburi.World, event engine.CollisionEvent) {
+func onCollisionExit(ecs donburi.World, event engine.CollisionEvent) {
 	fmt.Printf("Collision Exit: %d <-> %d\n", event.EntityA, event.EntityB)
 }
