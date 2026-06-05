@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -140,8 +141,17 @@ func (g *game) Draw(screen *ebiten.Image) {
 	default:
 		g.screen.buffer.Fill(g.screen.backgroundColor)
 
-		viewMatrix := g.camera.view(g.scenes.world.ecs, g.screen)
-		if err := g.scenes.render(g.ctx, g.screen.buffer, viewMatrix); err != nil {
+		min := g.screen.SafeArea().Min
+		max := g.screen.SafeArea().Max
+
+		region := geom.AABB{
+			Min: g.camera.ToWorld(g.screen, min),
+			Max: g.camera.ToWorld(g.screen, max),
+		}
+		_ = region
+
+		viewMatrix := g.camera.view(min, max)
+		if err := g.scenes.render(g.ctx, region, g.screen.buffer, viewMatrix); err != nil {
 			g.logger.Error("scene render pipeline: %v", err)
 			return
 		}

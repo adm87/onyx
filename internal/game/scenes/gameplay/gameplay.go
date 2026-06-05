@@ -60,10 +60,10 @@ func New(
 				return fmt.Errorf("tmx asset not found for tilemap: %s", tilemapRef)
 			}
 
-			buildStaticCollision(ecs, collision, tmx)
+			buildStaticCollision(world, tmx)
 
-			camera.SetPosition(ecs, tilemap.Bounds().Center())
-			camera.SetZoom(ecs, 0.2)
+			camera.SetPosition(tilemap.Bounds().Center())
+			camera.SetZoom(0.2)
 
 			img, exists := images.GetImageAssets(assets, content.EmbeddedImg10x10White)
 			if !exists {
@@ -93,9 +93,9 @@ func New(
 			pos := tilemap.Bounds().Center()
 			transform.SetPosition(entry, pos)
 
-			collision.Add(entry, aabb.Translate(pos))
 			player = entry.Entity()
 
+			world.Add(entry)
 			return nil
 		},
 		OnExit: func(ctx context.Context, world engine.World) error {
@@ -107,7 +107,6 @@ func New(
 			return nil
 		},
 		OnUpdate: func(ctx context.Context, world engine.World) (engine.SceneExitCode, error) {
-			collision := world.Collision()
 			ecs := world.ECS()
 
 			entry := ecs.Entry(player)
@@ -126,14 +125,14 @@ func New(
 				position.X += 100 * time.DeltaTime()
 			}
 			if ebiten.IsKeyPressed(ebiten.KeyUp) {
-				zoom := camera.Zoom(ecs)
+				zoom := camera.Zoom()
 				zoom *= 1 + (0.5 * time.DeltaTime())
-				camera.SetZoom(ecs, zoom)
+				camera.SetZoom(zoom)
 			}
 			if ebiten.IsKeyPressed(ebiten.KeyDown) {
-				zoom := camera.Zoom(ecs)
+				zoom := camera.Zoom()
 				zoom /= 1 + (0.5 * time.DeltaTime())
-				camera.SetZoom(ecs, zoom)
+				camera.SetZoom(zoom)
 			}
 
 			if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
@@ -156,18 +155,17 @@ func New(
 			}
 
 			transform.SetPosition(entry, position)
-			collision.Update(entry, colliders.GetAABB(entry).Translate(position))
+			camera.SetPosition(position)
 
-			camera.SetPosition(ecs, position)
-
+			world.Update(entry)
 			return engine.SceneExitNone, nil
 		},
 		OnRender: func(ctx context.Context, world engine.World, img *ebiten.Image, viewMatrix ebiten.GeoM) error {
 			ecs := world.ECS()
 			collision := world.Collision()
 
-			min := camera.ToWorld(ecs, screen, screen.SafeArea().Min)
-			max := camera.ToWorld(ecs, screen, screen.SafeArea().Max)
+			min := camera.ToWorld(screen, screen.SafeArea().Min)
+			max := camera.ToWorld(screen, screen.SafeArea().Max)
 			queryRegion := geom.AABB{Min: min, Max: max}
 
 			count := 0
@@ -178,7 +176,7 @@ func New(
 				position := transform.GetPosition(entry)
 				aabb := colliders.GetAABB(entry).Translate(position)
 
-				center := camera.ToScreen(ecs, screen, aabb.Center())
+				center := camera.ToScreen(screen, aabb.Center())
 
 				vector.FillRect(
 					img,
@@ -199,7 +197,9 @@ func New(
 	}
 }
 
-func buildStaticCollision(ecs donburi.World, collision engine.Collision, tmx *tiled.Tmx) {
+func buildStaticCollision(world engine.World, tmx *tiled.Tmx) {
+	ecs := world.ECS()
+
 	tmx.ObjectGroups.EachInGroup("collision_static", func(object *tiled.TmxObject) {
 		aabb := geom.AABB{
 			Max: geom.Vec2{
@@ -216,7 +216,7 @@ func buildStaticCollision(ecs donburi.World, collision engine.Collision, tmx *ti
 			colliders.WithAABB(aabb),
 		)
 		transform.SetPosition(entry, position)
-		collision.Add(entry, aabb.Translate(position))
+		world.Add(entry)
 	})
 }
 

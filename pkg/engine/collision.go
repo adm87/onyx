@@ -22,10 +22,6 @@ type CollisionEvent struct {
 // Static and dynamic colliders are indexed separately. Only dynamic colliders will initiate collision checks,
 // but will check against both static and dynamic colliders. This means static colliders can overlap without triggering events.
 type Collision interface {
-	Add(entry *donburi.Entry, aabb geom.AABB) bool    // Add tracks an entity for collision detection
-	Update(entry *donburi.Entry, aabb geom.AABB) bool // Update updates the collision indexing for an entity
-	Remove(entry *donburi.Entry) bool                 // Remove stops tracking an entity for collision detection
-
 	FlagLayers(a, b colliders.CollisionLayer)       // Flags two collision layers to allow interactions between them during collision checks.
 	UnflagLayers(a, b colliders.CollisionLayer)     // Unflags two collision layers to prevent interactions between them during collision checks.
 	CheckLayers(a, b colliders.CollisionLayer) bool // Checks if two collision layers are flagged to interact with each other.
@@ -105,7 +101,7 @@ func newCollision() *collision {
 	}
 }
 
-func (c *collision) Add(entry *donburi.Entry, aabb geom.AABB) bool {
+func (c *collision) add(entry *donburi.Entry, aabb geom.AABB) bool {
 	entity := entry.Entity()
 
 	if _, exists := c.indexing[entity]; exists {
@@ -128,7 +124,7 @@ func (c *collision) Add(entry *donburi.Entry, aabb geom.AABB) bool {
 	return ok
 }
 
-func (c *collision) Remove(entry *donburi.Entry) bool {
+func (c *collision) remove(entry *donburi.Entry) bool {
 	entity := entry.Entity()
 
 	index, exists := c.indexing[entity]
@@ -147,7 +143,7 @@ func (c *collision) Remove(entry *donburi.Entry) bool {
 	return true
 }
 
-func (c *collision) Update(entry *donburi.Entry, aabb geom.AABB) bool {
+func (c *collision) update(entry *donburi.Entry, aabb geom.AABB) bool {
 	entity := entry.Entity()
 
 	index, exists := c.indexing[entity]

@@ -69,8 +69,8 @@ func (a *TiledRenderingAdapter) GetRenderTasks(ecs donburi.World, viewMatrix ebi
 	a.renderingTasks = a.renderingTasks[:0]
 
 	// Transform screen corners to world coordinates for culling
-	worldMin := a.camera.ToWorld(ecs, a.screen, a.screen.SafeArea().Min)
-	worldMax := a.camera.ToWorld(ecs, a.screen, a.screen.SafeArea().Max)
+	worldMin := a.camera.ToWorld(a.screen, a.screen.SafeArea().Min)
+	worldMax := a.camera.ToWorld(a.screen, a.screen.SafeArea().Max)
 
 	clear(a.drawn)
 
