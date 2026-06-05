@@ -38,7 +38,9 @@ type Tilemap struct {
 }
 
 func (t *Tilemap) GetTileIndex(layer, x, y int) int {
-	return (layer * int(t.tileBounds.Width()*t.tileBounds.Height())) + (y * int(t.tileBounds.Width())) + x
+	width := int(t.tileBounds.Width())
+	height := int(t.tileBounds.Height())
+	return (layer * width * height) + (y * width) + x
 }
 
 func (t *Tilemap) GetTile(layer, x, y int) (Tile, bool) {

@@ -71,14 +71,14 @@ func New(
 			width, height := img.Bounds().Dx(), img.Bounds().Dy()
 			hWidth, hHeight := float64(width)/2, float64(height)/2
 
+			aabb := geom.AABB{
+				Min: geom.Vec2{X: -hWidth, Y: -hHeight},
+				Max: geom.Vec2{X: hWidth, Y: hHeight},
+			}
+
 			entry := images.CreateImageEntity(world, content.EmbeddedImg10x10White)
 			colliders.AddCollider(entry,
-				colliders.WithAABB(
-					geom.AABB{
-						Min: geom.Vec2{X: -hWidth, Y: -hHeight},
-						Max: geom.Vec2{X: hWidth, Y: hHeight},
-					},
-				),
+				colliders.WithAABB(aabb),
 			)
 			rendering.SetAnchor(entry,
 				geom.Vec2{
@@ -91,7 +91,7 @@ func New(
 			pos := tilemap.Bounds().Center()
 			transform.SetPosition(entry, pos)
 
-			collision.Add(entry)
+			collision.Add(entry, aabb.Translate(pos))
 			player = entry.Entity()
 
 			return nil
@@ -148,7 +148,7 @@ func New(
 			}
 
 			transform.SetPosition(entry, position)
-			collision.Update(entry)
+			collision.Update(entry, colliders.GetAABB(entry).Translate(position))
 
 			camera.SetPosition(world, position)
 
@@ -190,17 +190,22 @@ func New(
 
 func buildStaticCollision(world donburi.World, collision engine.Collision, tmx *tiled.Tmx) {
 	tmx.ObjectGroups.EachInGroup("collision_static", func(object *tiled.TmxObject) {
+		aabb := geom.AABB{
+			Max: geom.Vec2{
+				X: object.Width,
+				Y: object.Height,
+			},
+		}
+		position := geom.Vec2{
+			X: object.X,
+			Y: object.Y,
+		}
 		entry := colliders.NewCollider(world,
 			colliders.AsStatic(),
-			colliders.WithAABB(
-				geom.AABB{
-					Min: geom.Vec2{X: 0, Y: 0},
-					Max: geom.Vec2{X: object.Width, Y: object.Height},
-				},
-			),
+			colliders.WithAABB(aabb),
 		)
-		transform.SetPosition(entry, geom.Vec2{X: object.X, Y: object.Y})
-		collision.Add(entry)
+		transform.SetPosition(entry, position)
+		collision.Add(entry, aabb.Translate(position))
 	})
 }
 

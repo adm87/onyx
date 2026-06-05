@@ -22,9 +22,9 @@ type CollisionEvent struct {
 // Static and dynamic colliders are indexed separately. Only dynamic colliders will initiate collision checks,
 // but will check against both static and dynamic colliders. This means static colliders can overlap without triggering events.
 type Collision interface {
-	Add(entry *donburi.Entry) bool    // Add tracks an entity for collision detection
-	Remove(entry *donburi.Entry) bool // Remove stops tracking an entity for collision detection
-	Update(entry *donburi.Entry) bool // Update updates the collision indexing for an entity
+	Add(entry *donburi.Entry, aabb geom.AABB) bool    // Add tracks an entity for collision detection
+	Update(entry *donburi.Entry, aabb geom.AABB) bool // Update updates the collision indexing for an entity
+	Remove(entry *donburi.Entry) bool                 // Remove stops tracking an entity for collision detection
 
 	FlagLayers(a, b colliders.CollisionLayer)       // Flags two collision layers to allow interactions between them during collision checks.
 	UnflagLayers(a, b colliders.CollisionLayer)     // Unflags two collision layers to prevent interactions between them during collision checks.
@@ -105,15 +105,12 @@ func newCollision() *collision {
 	}
 }
 
-func (c *collision) Add(entry *donburi.Entry) bool {
+func (c *collision) Add(entry *donburi.Entry, aabb geom.AABB) bool {
 	entity := entry.Entity()
 
 	if _, exists := c.indexing[entity]; exists {
 		return false // Entity is already indexed, cannot add again
 	}
-
-	position := transform.GetPosition(entry)
-	aabb := colliders.GetAABB(entry).Translate(position)
 
 	var index spatialhash.SpatialIndex
 	var ok bool
@@ -150,16 +147,13 @@ func (c *collision) Remove(entry *donburi.Entry) bool {
 	return true
 }
 
-func (c *collision) Update(entry *donburi.Entry) bool {
+func (c *collision) Update(entry *donburi.Entry, aabb geom.AABB) bool {
 	entity := entry.Entity()
 
 	index, exists := c.indexing[entity]
 	if !exists {
 		return false // Entity is not indexed, cannot update
 	}
-
-	position := transform.GetPosition(entry)
-	aabb := colliders.GetAABB(entry).Translate(position)
 
 	if colliders.IsStatic(entry) {
 		return c.static.Reinsert(index, aabb)
