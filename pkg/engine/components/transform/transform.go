@@ -112,9 +112,9 @@ func AddTransform(entry *donburi.Entry, options ...Option) *donburi.Entry {
 		option(&opts)
 	}
 
-	SetPosition(entry, &opts.Position)
-	SetScale(entry, &opts.Scale)
-	SetRotation(entry, &opts.Rotation)
+	SetPosition(entry, opts.Position)
+	SetScale(entry, opts.Scale)
+	SetRotation(entry, opts.Rotation)
 
 	m := defaultMatrix
 	donburi.Add(entry, matrix, &m)
@@ -138,8 +138,8 @@ func GetPosition(entry *donburi.Entry) geom.Vec2 {
 }
 
 // SetPosition sets the position component for an entity, adding it if it does not already exist.
-func SetPosition(entry *donburi.Entry, pos *geom.Vec2) {
-	donburi.Add(entry, Position, pos)
+func SetPosition(entry *donburi.Entry, pos geom.Vec2) {
+	donburi.Add(entry, Position, &pos)
 	markDirty(entry)
 }
 
@@ -152,8 +152,8 @@ func GetScale(entry *donburi.Entry) geom.Vec2 {
 }
 
 // SetScale sets the scale component for an entity, adding it if it does not already exist.
-func SetScale(entry *donburi.Entry, scale *geom.Vec2) {
-	donburi.Add(entry, Scale, scale)
+func SetScale(entry *donburi.Entry, scale geom.Vec2) {
+	donburi.Add(entry, Scale, &scale)
 	markDirty(entry)
 }
 
@@ -166,8 +166,8 @@ func GetRotation(entry *donburi.Entry) float64 {
 }
 
 // SetRotation sets the rotation component for an entity, adding it if it does not already exist.
-func SetRotation(entry *donburi.Entry, rotation *float64) {
-	donburi.Add(entry, Rotation, rotation)
+func SetRotation(entry *donburi.Entry, rotation float64) {
+	donburi.Add(entry, Rotation, &rotation)
 	markDirty(entry)
 }
 

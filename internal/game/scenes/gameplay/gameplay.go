@@ -17,6 +17,10 @@ import (
 	"github.com/yohamta/donburi"
 )
 
+const (
+	defaultCollisionLayer colliders.CollisionLayer = 1 << iota
+)
+
 func New(
 	assets engine.Assets,
 	camera engine.Camera,
@@ -70,12 +74,6 @@ func New(
 			hWidth, hHeight := float64(width)/2, float64(height)/2
 
 			entry := images.CreateImageEntity(world, content.EmbeddedImg10x10White)
-			rendering.SetLayer(entry, 1)
-			rendering.SetAnchor(entry, geom.Vec2{X: 0.5, Y: 0.5})
-
-			pos := tilemap.Bounds().Center()
-			transform.SetPosition(entry, &pos)
-
 			colliders.AddBoxCollider(entry,
 				colliders.WithBox(
 					geom.AABB{
@@ -83,7 +81,18 @@ func New(
 						Max: geom.Vec2{X: hWidth, Y: hHeight},
 					},
 				),
+				colliders.WithLayer(defaultCollisionLayer),
 			)
+			rendering.SetAnchor(entry,
+				geom.Vec2{
+					X: 0.5,
+					Y: 0.5,
+				},
+			)
+			rendering.SetLayer(entry, 1)
+
+			pos := tilemap.Bounds().Center()
+			transform.SetPosition(entry, pos)
 
 			for i := range corners {
 				aX, aY := 0.0, 0.0
@@ -99,7 +108,7 @@ func New(
 				}
 
 				cornerEntry := images.CreateImageEntity(world, content.EmbeddedImg10x10White)
-				rendering.SetLayer(cornerEntry, 1)
+				rendering.SetZIndex(cornerEntry, 1)
 				rendering.SetAnchor(cornerEntry, geom.Vec2{X: aX, Y: aY})
 
 				corners[i] = cornerEntry.Entity()
@@ -162,7 +171,7 @@ func New(
 			}
 
 			camera.SetPosition(world, position)
-			transform.SetPosition(entry, &position)
+			transform.SetPosition(entry, position)
 
 			min := camera.ToWorld(world, screen, screen.SafeArea().Min)
 			max := camera.ToWorld(world, screen, screen.SafeArea().Max)
@@ -171,13 +180,13 @@ func New(
 				entry := world.Entry(corners[i])
 				switch i {
 				case 0:
-					transform.SetPosition(entry, &min)
+					transform.SetPosition(entry, min)
 				case 1:
-					transform.SetPosition(entry, &geom.Vec2{X: max.X, Y: min.Y})
+					transform.SetPosition(entry, geom.Vec2{X: max.X, Y: min.Y})
 				case 2:
-					transform.SetPosition(entry, &max)
+					transform.SetPosition(entry, max)
 				case 3:
-					transform.SetPosition(entry, &geom.Vec2{X: min.X, Y: max.Y})
+					transform.SetPosition(entry, geom.Vec2{X: min.X, Y: max.Y})
 				}
 			}
 
@@ -200,7 +209,7 @@ func buildStaticCollision(world donburi.World, collision engine.Collision, tmx *
 				},
 			),
 		)
-		transform.SetPosition(entry, &geom.Vec2{X: object.X, Y: object.Y})
+		transform.SetPosition(entry, geom.Vec2{X: object.X, Y: object.Y})
 		collision.Add(entry)
 	})
 }

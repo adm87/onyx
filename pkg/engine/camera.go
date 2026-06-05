@@ -35,7 +35,7 @@ func (c *camera) Position(world donburi.World) geom.Vec2 {
 
 func (c *camera) SetPosition(world donburi.World, pos geom.Vec2) {
 	entry := world.Entry(c.Entity)
-	transform.SetPosition(entry, &pos)
+	transform.SetPosition(entry, pos)
 }
 
 func (c *camera) Zoom(world donburi.World) float64 {
@@ -46,7 +46,7 @@ func (c *camera) Zoom(world donburi.World) float64 {
 
 func (c *camera) SetZoom(world donburi.World, zoom float64) {
 	entry := world.Entry(c.Entity)
-	transform.SetScale(entry, &geom.Vec2{X: zoom, Y: zoom})
+	transform.SetScale(entry, geom.Vec2{X: zoom, Y: zoom})
 }
 
 func (c *camera) view(world donburi.World, screen Screen) ebiten.GeoM {

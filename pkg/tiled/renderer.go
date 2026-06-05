@@ -60,6 +60,7 @@ func (a *TiledRenderingAdapter) getBuffer(ref file.FilePath) *ebiten.Image {
 		int(screenSize.X),
 		int(screenSize.Y),
 	)
+
 	a.buffers[ref] = buffer
 	return buffer
 }
@@ -73,17 +74,29 @@ func (a *TiledRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix e
 
 	clear(a.drawn)
 
-	rendering.QueryVisibleWith(world, TiledQuery,
+	rendering.QueryWith(world, TiledQuery,
 		func(entry *donburi.Entry, anchor geom.Vec2, color color.RGBA, filter ebiten.Filter, visible bool, layer, zIndex int) {
+			// TODO - apply color tint, anchor, and filter to tilemap rendering (currently ignored)
+
 			ref := asset.GetAssetReference(entry)
 			if ref == asset.UnknownRef {
 				return // Don't enqueue render tasks for entities without a tilemap reference
 			}
 
+			// Clear the buffer and mark it as drawn for this frame.
+			// Buffers that are not marked as drawn after processing all visible tilemaps will be deallocated to free up memory.
 			buffer := a.getBuffer(ref)
 			buffer.Clear()
 
+			// To avoid reallocating buffers every frame for invisible tilemaps,
+			// we still need to mark them as drawn even if they are not visible.
+			// This way, they will be reused when they become visible again instead of being deallocated and reallocated.
+			// Only when a tilemap entity is removed or no longer references the same tilemap will its buffer be deallocated.
 			a.drawn[ref] = struct{}{}
+
+			if !visible {
+				return // Skip invisible tilemaps
+			}
 
 			tilemap, exists := a.tiledAssetAdapter.tilemaps[ref]
 			if !exists {
