@@ -4,10 +4,23 @@ import (
 	"fmt"
 
 	"github.com/adm87/onyx/pkg/engine"
+	"github.com/adm87/onyx/pkg/engine/components/asset"
+	"github.com/adm87/onyx/pkg/engine/components/rendering"
+	"github.com/adm87/onyx/pkg/engine/components/transform"
+	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/images"
+	"github.com/yohamta/donburi"
+	"github.com/yohamta/donburi/filter"
 )
 
 const AdapterID engine.AdapterID = "tiled_adapter"
+
+var (
+	Tiled      = donburi.NewTag()
+	TiledQuery = donburi.NewQuery(
+		filter.Contains(Tiled),
+	)
+)
 
 func RegisterPackage(assets engine.Assets, renderer engine.Renderer, camera engine.Camera, screen engine.Screen) error {
 	imageAssetAdapter, exists := images.GetAssetAdapter(assets)
@@ -32,7 +45,7 @@ func RegisterPackage(assets engine.Assets, renderer engine.Renderer, camera engi
 	return nil
 }
 
-func GetTmx(assets engine.Assets, path engine.FilePath) (*Tmx, bool) {
+func GetTmx(assets engine.Assets, path file.FilePath) (*Tmx, bool) {
 	adapter, found := GetAssetAdapter(assets)
 	if !found {
 		return nil, false
@@ -42,7 +55,7 @@ func GetTmx(assets engine.Assets, path engine.FilePath) (*Tmx, bool) {
 	return tmx, exists
 }
 
-func GetTsx(assets engine.Assets, path engine.FilePath) (*Tsx, bool) {
+func GetTsx(assets engine.Assets, path file.FilePath) (*Tsx, bool) {
 	adapter, found := GetAssetAdapter(assets)
 	if !found {
 		return nil, false
@@ -52,7 +65,7 @@ func GetTsx(assets engine.Assets, path engine.FilePath) (*Tsx, bool) {
 	return tsx, exists
 }
 
-func GetTilemap(assets engine.Assets, path engine.FilePath) (*Tilemap, bool) {
+func GetTilemap(assets engine.Assets, path file.FilePath) (*Tilemap, bool) {
 	adapter, found := GetAssetAdapter(assets)
 	if !found {
 		return nil, false
@@ -80,4 +93,14 @@ func GetRenderingAdapter(renderer engine.Renderer) (*TiledRenderingAdapter, bool
 
 	tiledRenderer, ok := adapter.(*TiledRenderingAdapter)
 	return tiledRenderer, ok
+}
+
+func CreateTiledEntity(world donburi.World, ref file.FilePath) *donburi.Entry {
+	entry := asset.NewAssetReference(world, ref)
+	entry.AddComponent(Tiled)
+
+	transform.AddTransform(entry)
+	rendering.AddRenderer(entry)
+
+	return entry
 }

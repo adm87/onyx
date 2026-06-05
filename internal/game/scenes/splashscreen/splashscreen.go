@@ -3,7 +3,6 @@ package splashscreen
 import (
 	"context"
 	"fmt"
-	"image/color"
 
 	"github.com/adm87/onyx/content"
 	"github.com/adm87/onyx/pkg/engine"
@@ -25,18 +24,14 @@ func New(assets engine.Assets, time engine.Time, screen engine.Screen) engine.Sc
 				return err
 			}
 
-			img, exists := images.GetImage(assets, content.EmbeddedSplash1920x1080Black)
+			img, exists := images.GetImageAssets(assets, content.EmbeddedSplash1920x1080Black)
 			if !exists {
 				return fmt.Errorf("failed to get image asset '%s'", content.EmbeddedSplash1920x1080Black)
 			}
 
 			screen.ResizeBuffer(img.Bounds().Dx(), img.Bounds().Dy())
 
-			entry = images.CreateImageEntity(world,
-				images.WithRef(content.EmbeddedSplash1920x1080Black),
-				images.WithAnchor(0.5, 0.5),
-				images.WithColor(color.RGBA{R: 255, G: 255, B: 255, A: 0}),
-			)
+			entry = images.CreateImageEntity(world, content.EmbeddedSplash1920x1080Black)
 
 			sequence = gween.NewSequence(
 				gween.New(0, 0, 0.5, ease.Linear),

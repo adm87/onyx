@@ -1,18 +1,22 @@
 package engine
 
-import "io/fs"
+import (
+	"io/fs"
+
+	"github.com/adm87/onyx/pkg/engine/file"
+)
 
 type AdapterID string
 
 type AssetAdapter interface {
-	ImportAsset(fileSystem fs.FS, path FilePath, raw []byte) error
-	DeleteAsset(path FilePath) bool
-	SupportedExtensions() []FileExt
+	ImportAsset(fileSystem fs.FS, path file.FilePath, raw []byte) error
+	DeleteAsset(path file.FilePath) bool
+	SupportedExtensions() []file.FileExt
 }
 
 type Assets interface {
-	Load(fileSystem fs.FS, paths ...FilePath) error
-	Unload(paths ...FilePath)
+	Load(fileSystem fs.FS, paths ...file.FilePath) error
+	Unload(paths ...file.FilePath)
 
 	AddAssetAdapter(id AdapterID, adapter AssetAdapter)
 	GetAdapter(id AdapterID) (AssetAdapter, bool)
@@ -22,18 +26,18 @@ type assets struct {
 	logger *logger
 
 	adaptersByID  map[AdapterID]AssetAdapter
-	adaptersByExt map[FileExt]AssetAdapter
+	adaptersByExt map[file.FileExt]AssetAdapter
 }
 
 func newAssets(logger *logger) *assets {
 	return &assets{
 		logger:        logger,
 		adaptersByID:  make(map[AdapterID]AssetAdapter),
-		adaptersByExt: make(map[FileExt]AssetAdapter),
+		adaptersByExt: make(map[file.FileExt]AssetAdapter),
 	}
 }
 
-func (a *assets) Load(fileSystem fs.FS, paths ...FilePath) error {
+func (a *assets) Load(fileSystem fs.FS, paths ...file.FilePath) error {
 	for _, path := range paths {
 		ext := path.Ext()
 
@@ -59,7 +63,7 @@ func (a *assets) Load(fileSystem fs.FS, paths ...FilePath) error {
 	return nil
 }
 
-func (a *assets) Unload(paths ...FilePath) {
+func (a *assets) Unload(paths ...file.FilePath) {
 	for _, path := range paths {
 		ext := path.Ext()
 

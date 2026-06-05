@@ -1,9 +1,13 @@
 package images
 
 import (
+	"image/color"
+
 	"github.com/adm87/onyx/pkg/engine"
+	"github.com/adm87/onyx/pkg/engine/components/asset"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
+	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
@@ -23,57 +27,48 @@ func NewImageRenderingAdapter(assetAdapter *ImageAssetAdapter) *ImageRenderingAd
 func (a *ImageRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix ebiten.GeoM) []engine.RenderTask {
 	a.renderingTasks = a.renderingTasks[:0]
 
-	ImageQuery.Each(world, func(e *donburi.Entry) {
-		ref := GetImageRef(e)
-		if ref == "" {
-			return // Don't enqueue render tasks for entities without an image
-		}
+	rendering.QueryVisibleWith(world, ImageQuery,
+		func(entry *donburi.Entry, anchor geom.Vec2, color color.RGBA, filter ebiten.Filter, visible bool, layer, zIndex int) {
+			ref := asset.GetAssetReference(entry)
+			if ref == asset.UnknownRef {
+				return // Don't enqueue render tasks for entities without an image reference
+			}
 
-		img, exists := a.assetAdapter.GetImage(ref)
-		if !exists {
-			return // Don't enqueue render tasks for entities with an invalid image reference
-		}
+			img, exists := a.assetAdapter.GetImage(ref)
+			if !exists {
+				return // Don't enqueue render tasks for entities with an invalid image reference
+			}
 
-		vis := rendering.IsVisible(e)
-		if !vis {
-			return // Don't enqueue render tasks for invisible entities
-		}
+			matrix := transform.GetMatrix(entry)
 
-		layer := rendering.GetLayer(e)
-		zIndex := rendering.GetZIndex(e)
-		anchor := rendering.GetAnchor(e)
-		filter := rendering.GetFilter(e)
-		col := rendering.GetColor(e)
+			aX := anchor.X * float64(img.Bounds().Dx())
+			aY := anchor.Y * float64(img.Bounds().Dy())
 
-		matrix := transform.GetMatrix(e)
+			opts := ebiten.DrawImageOptions{
+				Filter: filter,
+			}
 
-		aX := anchor.X * float64(img.Bounds().Dx())
-		aY := anchor.Y * float64(img.Bounds().Dy())
+			alpha := float32(color.A) / 255
 
-		opts := ebiten.DrawImageOptions{
-			Filter: filter,
-		}
+			a.renderingTasks = append(a.renderingTasks, engine.RenderTask{
+				Render: func(screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
+					opts.GeoM.Reset()
+					opts.GeoM.Translate(-aX, -aY)
+					opts.GeoM.Concat(matrix)
+					opts.GeoM.Concat(viewMatrix)
 
-		alpah := float32(col.A) / 255
+					// NOTE: Just using ScaleWithColor doesn't work as expected, it seems to ignore the alpha component of the color.
+					opts.ColorScale.ScaleWithColor(color)
+					opts.ColorScale.ScaleAlpha(alpha)
 
-		a.renderingTasks = append(a.renderingTasks, engine.RenderTask{
-			Render: func(screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
-				opts.GeoM.Reset()
-				opts.GeoM.Translate(-aX, -aY)
-				opts.GeoM.Concat(matrix)
-				opts.GeoM.Concat(viewMatrix)
-
-				// NOTE: Just using ScaleWithColor doesn't work as expected, it seems to ignore the alpha component of the color.
-				opts.ColorScale.ScaleWithColor(col)
-				opts.ColorScale.ScaleAlpha(alpah)
-
-				screen.DrawImage(img, &opts)
-				return nil
-			},
-			Layer:  layer,
-			ZIndex: zIndex,
-		})
-	})
+					screen.DrawImage(img, &opts)
+					return nil
+				},
+				Layer:  layer,
+				ZIndex: zIndex,
+			})
+		},
+	)
 
 	return a.renderingTasks
 }

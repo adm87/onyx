@@ -4,108 +4,192 @@ import (
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
+	"github.com/yohamta/donburi/filter"
 )
 
-type MatrixData struct {
-	GeoM    ebiten.GeoM
-	IsDirty bool
+type transformMatrix struct {
+	dirty bool
+	geom  ebiten.GeoM
 }
 
-var (
-	Position = donburi.NewComponentType[geom.Vec2]()
-	Scale    = donburi.NewComponentType[geom.Vec2](geom.Vec2{X: 1, Y: 1})
-	Rotation = donburi.NewComponentType[float64]()
-	Matrix   = donburi.NewComponentType[MatrixData](MatrixData{IsDirty: true})
+type (
+	Options struct {
+		Position geom.Vec2
+		Scale    geom.Vec2
+		Rotation float64
+	}
+	Option func(*Options)
 )
 
+type QueryCallback func(*donburi.Entry, geom.Vec2, geom.Vec2, float64)
+
+var (
+	defaultPosition = geom.Vec2{X: 0, Y: 0}
+	defaultScale    = geom.Vec2{X: 1, Y: 1}
+	defaultRotation = 0.0
+	defaultMatrix   = transformMatrix{dirty: true}
+)
+
+var (
+	Position = donburi.NewComponentType[geom.Vec2](defaultPosition)
+	Scale    = donburi.NewComponentType[geom.Vec2](defaultScale)
+	Rotation = donburi.NewComponentType[float64](defaultRotation)
+	matrix   = donburi.NewComponentType[transformMatrix](defaultMatrix)
+)
+
+var query = donburi.NewQuery(
+	filter.Contains(
+		Position,
+		Scale,
+		Rotation,
+		matrix,
+	),
+)
+
+func defaultOptions() Options {
+	return Options{
+		Position: defaultPosition,
+		Scale:    defaultScale,
+		Rotation: defaultRotation,
+	}
+}
+
+func WithPosition(x, y float64) Option {
+	return func(opts *Options) {
+		opts.Position = geom.Vec2{X: x, Y: y}
+	}
+}
+
+func WithScale(x, y float64) Option {
+	return func(opts *Options) {
+		opts.Scale = geom.Vec2{X: x, Y: y}
+	}
+}
+
+func WithRotation(rotation float64) Option {
+	return func(opts *Options) {
+		opts.Rotation = rotation
+	}
+}
+
+// Query iterates over all entities with the necessary components for transformation and applies the provided function to each entry.
+func Query(world donburi.World, fn QueryCallback) {
+	query.Each(world, func(entry *donburi.Entry) {
+		position := GetPosition(entry)
+		scale := GetScale(entry)
+		rotation := GetRotation(entry)
+		fn(entry, position, scale, rotation)
+	})
+}
+
+// QueryWith allows you to specify a custom query to iterate over entities with the necessary components for transformation
+// and applies the provided function to each entry.
+func QueryWith(world donburi.World, q *donburi.Query, fn QueryCallback) {
+	q.Each(world, func(entry *donburi.Entry) {
+		position := GetPosition(entry)
+		scale := GetScale(entry)
+		rotation := GetRotation(entry)
+		fn(entry, position, scale, rotation)
+	})
+}
+
+// NewTransform creates a new entity with the necessary components for position, scale, rotation, and transformation matrix.
+func NewTransform(world donburi.World, options ...Option) *donburi.Entry {
+	return AddTransform(world.Entry(
+		world.Create(
+			Position,
+			Scale,
+			Rotation,
+			matrix,
+		),
+	), options...)
+}
+
+// AddTransform adds the necessary components for position, scale, rotation, and transformation matrix to an existing entity.
+func AddTransform(entry *donburi.Entry, options ...Option) *donburi.Entry {
+	opts := defaultOptions()
+	for _, option := range options {
+		option(&opts)
+	}
+
+	SetPosition(entry, &opts.Position)
+	SetScale(entry, &opts.Scale)
+	SetRotation(entry, &opts.Rotation)
+
+	m := defaultMatrix
+	donburi.Add(entry, matrix, &m)
+
+	return entry
+}
+
+func markDirty(entry *donburi.Entry) {
+	if entry.HasComponent(matrix) {
+		m := matrix.Get(entry)
+		m.dirty = true
+	}
+}
+
+// GetPosition retrieves the position component from an entity, returning a default value if it does not exist.
 func GetPosition(entry *donburi.Entry) geom.Vec2 {
 	if !entry.HasComponent(Position) {
-		return geom.Vec2{X: 0, Y: 0}
+		return defaultPosition
 	}
 	return *Position.Get(entry)
 }
 
-func SetPosition(entry *donburi.Entry, pos geom.Vec2) {
-	if !entry.HasComponent(Position) {
-		entry.AddComponent(Position)
-	}
-	donburi.SetValue(entry, Position, pos)
-	MarkDirty(entry)
+// SetPosition sets the position component for an entity, adding it if it does not already exist.
+func SetPosition(entry *donburi.Entry, pos *geom.Vec2) {
+	donburi.Add(entry, Position, pos)
+	markDirty(entry)
 }
 
+// GetScale retrieves the scale component from an entity, returning a default value if it does not exist.
 func GetScale(entry *donburi.Entry) geom.Vec2 {
 	if !entry.HasComponent(Scale) {
-		return geom.Vec2{X: 1, Y: 1}
+		return defaultScale
 	}
 	return *Scale.Get(entry)
 }
 
-func SetScale(entry *donburi.Entry, scale geom.Vec2) {
-	if !entry.HasComponent(Scale) {
-		entry.AddComponent(Scale)
-	}
-	donburi.SetValue(entry, Scale, scale)
-	MarkDirty(entry)
+// SetScale sets the scale component for an entity, adding it if it does not already exist.
+func SetScale(entry *donburi.Entry, scale *geom.Vec2) {
+	donburi.Add(entry, Scale, scale)
+	markDirty(entry)
 }
 
+// GetRotation retrieves the rotation component from an entity, returning a default value if it does not exist.
 func GetRotation(entry *donburi.Entry) float64 {
 	if !entry.HasComponent(Rotation) {
-		return 0
+		return defaultRotation
 	}
 	return *Rotation.Get(entry)
 }
 
-func SetRotation(entry *donburi.Entry, rot float64) {
-	if !entry.HasComponent(Rotation) {
-		entry.AddComponent(Rotation)
-	}
-	donburi.SetValue(entry, Rotation, rot)
-	MarkDirty(entry)
+// SetRotation sets the rotation component for an entity, adding it if it does not already exist.
+func SetRotation(entry *donburi.Entry, rotation *float64) {
+	donburi.Add(entry, Rotation, rotation)
+	markDirty(entry)
 }
 
-func Rotate(entry *donburi.Entry, delta float64) float64 {
-	current := GetRotation(entry)
-	newRot := current + delta
-	if newRot >= 360 {
-		newRot -= 360
-	} else if newRot < 0 {
-		newRot += 360
-	}
-	SetRotation(entry, newRot)
-	return newRot
-}
-
+// GetMatrix retrieves the transformation matrix for an entity,
+// calculating it if necessary based on the position, scale, and rotation components.
 func GetMatrix(entry *donburi.Entry) ebiten.GeoM {
-	if !entry.HasComponent(Matrix) {
+	if !entry.HasComponent(matrix) {
 		return ebiten.GeoM{}
 	}
 
-	matrix := Matrix.Get(entry)
-	if matrix.IsDirty {
-		pos := GetPosition(entry)
+	m := matrix.Get(entry)
+	if m.dirty {
+		position := GetPosition(entry)
 		scale := GetScale(entry)
-		rot := GetRotation(entry)
+		rotation := GetRotation(entry)
 
-		matrix.GeoM.Reset()
-		matrix.GeoM.Scale(scale.X, scale.Y)
-		matrix.GeoM.Rotate(rot * 0.0174533) // Convert degrees to radians
-		matrix.GeoM.Translate(pos.X, pos.Y)
+		m.geom.Reset()
+		m.geom.Scale(scale.X, scale.Y)
+		m.geom.Rotate(rotation)
+		m.geom.Translate(position.X, position.Y)
 
-		matrix.IsDirty = false
+		m.dirty = false
 	}
-	return matrix.GeoM
-}
-
-func IsDirty(entry *donburi.Entry) bool {
-	if !entry.HasComponent(Matrix) {
-		return false
-	}
-	return Matrix.Get(entry).IsDirty
-}
-
-func MarkDirty(entry *donburi.Entry) {
-	if !entry.HasComponent(Matrix) {
-		entry.AddComponent(Matrix)
-	}
-	donburi.SetValue(entry, Matrix, MatrixData{IsDirty: true})
+	return m.geom
 }

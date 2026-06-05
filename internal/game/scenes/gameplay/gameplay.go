@@ -36,13 +36,14 @@ func New(
 
 	return engine.SceneState{
 		OnEnter: func(ctx context.Context, world donburi.World) error {
+			// engine.StaticCollision.OnEnter.Subscribe(world, onCollisionEnter)
+			// engine.StaticCollision.OnExit.Subscribe(world, onCollisionExit)
+
 			if err := assets.Load(content.AssetsFS(), tilemapRef); err != nil {
 				return fmt.Errorf("failed to load level asset: %w", err)
 			}
 
-			lvlEntry := tiled.CreateTilemap(world,
-				tiled.WithTilemapRef(tilemapRef),
-			)
+			lvlEntry := tiled.CreateTiledEntity(world, content.AssetsLevelsGym01)
 			level = lvlEntry.Entity()
 
 			tilemap, exists := tiled.GetTilemap(assets, tilemapRef)
@@ -60,7 +61,7 @@ func New(
 			camera.SetPosition(world, tilemap.Bounds().Center())
 			camera.SetZoom(world, 0.2)
 
-			img, exists := images.GetImage(assets, content.EmbeddedImg10x10White)
+			img, exists := images.GetImageAssets(assets, content.EmbeddedImg10x10White)
 			if !exists {
 				return fmt.Errorf("failed to load embedded image: %s", content.EmbeddedImg10x10White)
 			}
@@ -68,18 +69,21 @@ func New(
 			width, height := img.Bounds().Dx(), img.Bounds().Dy()
 			hWidth, hHeight := float64(width)/2, float64(height)/2
 
-			entry := images.CreateImageEntity(world,
-				images.WithRef(content.EmbeddedImg10x10White),
-				images.WithLayer(1),
-				images.WithPosition(tilemap.Bounds().Center().XY()),
-				images.WithAnchor(0.5, 0.5),
-			)
-			entry.AddComponent(colliders.DynamicColliderType)
+			entry := images.CreateImageEntity(world, content.EmbeddedImg10x10White)
+			rendering.SetLayer(entry, 1)
+			rendering.SetAnchor(entry, geom.Vec2{X: 0.5, Y: 0.5})
 
-			colliders.SetBoxCollider(entry, geom.AABB{
-				Min: geom.Vec2{X: -hWidth, Y: -hHeight},
-				Max: geom.Vec2{X: hWidth, Y: hHeight},
-			})
+			pos := tilemap.Bounds().Center()
+			transform.SetPosition(entry, &pos)
+
+			colliders.AddBoxCollider(entry,
+				colliders.WithBox(
+					geom.AABB{
+						Min: geom.Vec2{X: -hWidth, Y: -hHeight},
+						Max: geom.Vec2{X: hWidth, Y: hHeight},
+					},
+				),
+			)
 
 			for i := range corners {
 				aX, aY := 0.0, 0.0
@@ -93,15 +97,22 @@ func New(
 				case 3:
 					aX, aY = 0, 1
 				}
-				cornerEntry := images.CreateImageEntity(world,
-					images.WithRef(content.EmbeddedImg10x10White),
-					images.WithLayer(1),
-					images.WithAnchor(aX, aY),
-				)
+
+				cornerEntry := images.CreateImageEntity(world, content.EmbeddedImg10x10White)
+				rendering.SetLayer(cornerEntry, 1)
+				rendering.SetAnchor(cornerEntry, geom.Vec2{X: aX, Y: aY})
+
 				corners[i] = cornerEntry.Entity()
 			}
 
+			collision.Add(entry)
 			player = entry.Entity()
+
+			return nil
+		},
+		OnExit: func(ctx context.Context, world donburi.World) error {
+			// engine.StaticCollision.OnEnter.Unsubscribe(world, onCollisionEnter)
+			// engine.StaticCollision.OnExit.Unsubscribe(world, onCollisionExit)
 			return nil
 		},
 		OnUpdate: func(ctx context.Context, world donburi.World) (engine.SceneExitCode, error) {
@@ -151,7 +162,7 @@ func New(
 			}
 
 			camera.SetPosition(world, position)
-			transform.SetPosition(entry, position)
+			transform.SetPosition(entry, &position)
 
 			min := camera.ToWorld(world, screen, screen.SafeArea().Min)
 			max := camera.ToWorld(world, screen, screen.SafeArea().Max)
@@ -160,13 +171,13 @@ func New(
 				entry := world.Entry(corners[i])
 				switch i {
 				case 0:
-					transform.SetPosition(entry, min)
+					transform.SetPosition(entry, &min)
 				case 1:
-					transform.SetPosition(entry, geom.Vec2{X: max.X, Y: min.Y})
+					transform.SetPosition(entry, &geom.Vec2{X: max.X, Y: min.Y})
 				case 2:
-					transform.SetPosition(entry, max)
+					transform.SetPosition(entry, &max)
 				case 3:
-					transform.SetPosition(entry, geom.Vec2{X: min.X, Y: max.Y})
+					transform.SetPosition(entry, &geom.Vec2{X: min.X, Y: max.Y})
 				}
 			}
 
@@ -180,18 +191,26 @@ func New(
 
 func buildStaticCollision(world donburi.World, collision engine.Collision, tmx *tiled.Tmx) {
 	tmx.ObjectGroups.EachInGroup("collision_static", func(object *tiled.TmxObject) {
-		entry := world.Entry(world.Create(
-			colliders.StaticColliderType,
-			colliders.BoxCollider,
-			transform.Position,
-		))
-		colliders.SetBoxCollider(entry, geom.AABB{
-			Min: geom.Vec2{X: 0, Y: 0},
-			Max: geom.Vec2{X: object.Width, Y: object.Height},
-		})
-		transform.SetPosition(entry, geom.Vec2{
-			X: object.X,
-			Y: object.Y,
-		})
+		entry := colliders.NewBoxCollider(world,
+			colliders.AsStatic(),
+			colliders.WithBox(
+				geom.AABB{
+					Min: geom.Vec2{X: 0, Y: 0},
+					Max: geom.Vec2{X: object.Width, Y: object.Height},
+				},
+			),
+		)
+		transform.SetPosition(entry, &geom.Vec2{X: object.X, Y: object.Y})
+		collision.Add(entry)
 	})
 }
+
+// func onCollisionEnter(world donburi.World, event engine.CollisionEvent) {
+// 	now := time.Now()
+// 	println("Collision Enter:", event.EntityA, "with", event.EntityB, "at", now.Format("15:04:05.000"))
+// }
+
+// func onCollisionExit(world donburi.World, event engine.CollisionEvent) {
+// 	now := time.Now()
+// 	println("Collision Exit:", event.EntityA, "with", event.EntityB, "at", now.Format("15:04:05.000"))
+// }

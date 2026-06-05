@@ -185,7 +185,7 @@ func (s *scenes) fixedUpdateCurrent(ctx context.Context, currentState SceneState
 				return err
 			}
 		}
-		if err := s.collision.checkCollisions(s.world); err != nil {
+		if err := s.collision.checkCollision(s.world); err != nil {
 			return err
 		}
 	}

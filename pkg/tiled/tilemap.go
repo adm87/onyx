@@ -1,9 +1,7 @@
 package tiled
 
 import (
-	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/geom"
-	"github.com/yohamta/donburi"
 )
 
 type Tile uint64
@@ -181,38 +179,4 @@ func findLayerSize(layer TmxLayer) (minX, minY, maxX, maxY int) {
 	}
 
 	return minX, minY, maxX, maxY
-}
-
-type TilemapOptions struct {
-	TilemapRef engine.FilePath
-}
-
-type TilemapOption func(*TilemapOptions)
-
-func defaultTilemapOptions() *TilemapOptions {
-	return &TilemapOptions{
-		TilemapRef: "",
-	}
-}
-
-func CreateTilemap(world donburi.World, opts ...TilemapOption) *donburi.Entry {
-	entity := world.Create(
-		TilemapComponent,
-	)
-	entry := world.Entry(entity)
-
-	options := defaultTilemapOptions()
-	for _, opt := range opts {
-		opt(options)
-	}
-
-	SetTilemapRef(entry, options.TilemapRef)
-
-	return entry
-}
-
-func WithTilemapRef(ref engine.FilePath) TilemapOption {
-	return func(opts *TilemapOptions) {
-		opts.TilemapRef = ref
-	}
 }

@@ -6,14 +6,14 @@ import (
 	"io/fs"
 	"path/filepath"
 
-	"github.com/adm87/onyx/pkg/engine"
+	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/images"
 )
 
 type TiledAssetAdapter struct {
-	tmxCache map[engine.FilePath]*Tmx
-	tsxCache map[engine.FilePath]*Tsx
-	tilemaps map[engine.FilePath]*Tilemap
+	tmxCache map[file.FilePath]*Tmx
+	tsxCache map[file.FilePath]*Tsx
+	tilemaps map[file.FilePath]*Tilemap
 
 	images *images.ImageAssetAdapter
 }
@@ -21,13 +21,13 @@ type TiledAssetAdapter struct {
 func NewTiledAssetAdapter(images *images.ImageAssetAdapter) *TiledAssetAdapter {
 	return &TiledAssetAdapter{
 		images:   images,
-		tmxCache: make(map[engine.FilePath]*Tmx),
-		tsxCache: make(map[engine.FilePath]*Tsx),
-		tilemaps: make(map[engine.FilePath]*Tilemap),
+		tmxCache: make(map[file.FilePath]*Tmx),
+		tsxCache: make(map[file.FilePath]*Tsx),
+		tilemaps: make(map[file.FilePath]*Tilemap),
 	}
 }
 
-func (a *TiledAssetAdapter) ImportAsset(fileSystem fs.FS, path engine.FilePath, raw []byte) error {
+func (a *TiledAssetAdapter) ImportAsset(fileSystem fs.FS, path file.FilePath, raw []byte) error {
 	switch path.Ext() {
 	case ".tmx":
 		return a.importTmx(fileSystem, path, raw)
@@ -38,18 +38,18 @@ func (a *TiledAssetAdapter) ImportAsset(fileSystem fs.FS, path engine.FilePath, 
 	}
 }
 
-func (a *TiledAssetAdapter) DeleteAsset(path engine.FilePath) bool {
+func (a *TiledAssetAdapter) DeleteAsset(path file.FilePath) bool {
 	delete(a.tmxCache, path)
 	delete(a.tsxCache, path)
 	delete(a.tilemaps, path)
 	return true
 }
 
-func (a *TiledAssetAdapter) SupportedExtensions() []engine.FileExt {
-	return []engine.FileExt{".tmx", ".tsx"}
+func (a *TiledAssetAdapter) SupportedExtensions() []file.FileExt {
+	return []file.FileExt{".tmx", ".tsx"}
 }
 
-func (a *TiledAssetAdapter) importTmx(fileSystem fs.FS, path engine.FilePath, raw []byte) error {
+func (a *TiledAssetAdapter) importTmx(fileSystem fs.FS, path file.FilePath, raw []byte) error {
 	if _, exists := a.tmxCache[path]; exists {
 		return nil
 	}
@@ -62,7 +62,7 @@ func (a *TiledAssetAdapter) importTmx(fileSystem fs.FS, path engine.FilePath, ra
 
 	tmxDir := filepath.Dir(path.String())
 
-	tsxPaths := make([]engine.FilePath, 0, len(tmx.Tilesets))
+	tsxPaths := make([]file.FilePath, 0, len(tmx.Tilesets))
 	for i, tileset := range tmx.Tilesets {
 		if tileset.Source == "" {
 			continue
@@ -91,7 +91,7 @@ func (a *TiledAssetAdapter) importTmx(fileSystem fs.FS, path engine.FilePath, ra
 	return nil
 }
 
-func (a *TiledAssetAdapter) loadTsx(fileSystem fs.FS, path engine.FilePath) error {
+func (a *TiledAssetAdapter) loadTsx(fileSystem fs.FS, path file.FilePath) error {
 	if _, exists := a.tsxCache[path]; exists {
 		return nil
 	}
@@ -105,7 +105,7 @@ func (a *TiledAssetAdapter) loadTsx(fileSystem fs.FS, path engine.FilePath) erro
 	return a.importTsx(fileSystem, path, raw)
 }
 
-func (a *TiledAssetAdapter) importTsx(fileSystem fs.FS, path engine.FilePath, raw []byte) error {
+func (a *TiledAssetAdapter) importTsx(fileSystem fs.FS, path file.FilePath, raw []byte) error {
 	if _, exists := a.tsxCache[path]; exists {
 		return nil
 	}
@@ -129,7 +129,7 @@ func (a *TiledAssetAdapter) importTsx(fileSystem fs.FS, path engine.FilePath, ra
 	return nil
 }
 
-func (a *TiledAssetAdapter) loadTilesetImage(fileSystem fs.FS, path engine.FilePath) error {
+func (a *TiledAssetAdapter) loadTilesetImage(fileSystem fs.FS, path file.FilePath) error {
 	if a.images.HasImage(path) {
 		return nil
 	}
@@ -142,7 +142,7 @@ func (a *TiledAssetAdapter) loadTilesetImage(fileSystem fs.FS, path engine.FileP
 	return a.images.ImportAsset(fileSystem, path, raw)
 }
 
-func (a *TiledAssetAdapter) resolvedPath(directory, relativePath string) engine.FilePath {
+func (a *TiledAssetAdapter) resolvedPath(directory, relativePath string) file.FilePath {
 	resolved := filepath.Join(directory, relativePath)
-	return engine.FilePath(filepath.Clean(resolved))
+	return file.FilePath(filepath.Clean(resolved))
 }

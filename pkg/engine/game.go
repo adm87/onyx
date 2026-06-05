@@ -56,9 +56,7 @@ func NewGame(opts ...Option) Game {
 		cfg.BackgroundColor,
 		logger,
 	)
-	collision := newCollision(
-		logger,
-	)
+	collision := newCollision()
 	renderer := newRenderer(
 		logger,
 	)

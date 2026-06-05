@@ -2,10 +2,14 @@ package tiled
 
 import (
 	"image"
+	"image/color"
 	"math"
 
 	"github.com/adm87/onyx/pkg/engine"
+	"github.com/adm87/onyx/pkg/engine/components/asset"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
+	"github.com/adm87/onyx/pkg/engine/file"
+	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/images"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
@@ -20,8 +24,8 @@ type TiledRenderingAdapter struct {
 
 	renderingTasks []engine.RenderTask
 
-	buffers map[engine.FilePath]*ebiten.Image
-	drawn   map[engine.FilePath]struct{}
+	buffers map[file.FilePath]*ebiten.Image
+	drawn   map[file.FilePath]struct{}
 }
 
 func NewTiledRenderingAdapter(
@@ -35,12 +39,12 @@ func NewTiledRenderingAdapter(
 		camera:            camera,
 		screen:            screen,
 		renderingTasks:    make([]engine.RenderTask, 0, 10),
-		buffers:           make(map[engine.FilePath]*ebiten.Image),
-		drawn:             make(map[engine.FilePath]struct{}),
+		buffers:           make(map[file.FilePath]*ebiten.Image),
+		drawn:             make(map[file.FilePath]struct{}),
 	}
 }
 
-func (a *TiledRenderingAdapter) getBuffer(ref engine.FilePath) *ebiten.Image {
+func (a *TiledRenderingAdapter) getBuffer(ref file.FilePath) *ebiten.Image {
 	screenSize := a.screen.Size()
 	buffer, exists := a.buffers[ref]
 
@@ -69,69 +73,61 @@ func (a *TiledRenderingAdapter) GetRenderTasks(world donburi.World, viewMatrix e
 
 	clear(a.drawn)
 
-	// Iterate over all entities with a Tilemap component and enqueue render tasks for visible tiles
-	TilemapQuery.Each(world, func(entry *donburi.Entry) {
-		ref := GetTilemapRef(entry)
-
-		visible := rendering.IsVisible(entry)
-		if !visible {
-			return // Skip invisible tilemaps
-		}
-
-		filter := rendering.GetFilter(entry)
-		layer := rendering.GetLayer(entry)
-		zIndex := rendering.GetZIndex(entry)
-
-		// Get the tilemap buffer and clear it, this will ensure we don't have artifacts from previous frames when rendering the tilemap
-		buffer := a.getBuffer(ref)
-		buffer.Clear()
-
-		// Mark the tilemap as drawn before desiding if it's visible.
-		// We do this to ensure the buffer for a valid tilemap doesn't get deallocated in case it becomes viable in the next frame.
-		a.drawn[ref] = struct{}{}
-
-		tilemap, exists := a.tiledAssetAdapter.tilemaps[ref]
-		if !exists {
-			return // Don't enqueue render tasks for entities with an invalid tilemap reference
-		}
-
-		tmx, exists := a.tiledAssetAdapter.tmxCache[ref]
-		if !exists {
-			return // Don't enqueue render tasks for entities with an invalid tilemap reference
-		}
-
-		minTileX := int(math.Floor(worldMin.X / float64(tmx.TileWidth)))
-		maxTileX := int(math.Floor(worldMax.X / float64(tmx.TileWidth)))
-		minTileY := int(math.Floor(worldMin.Y / float64(tmx.TileHeight)))
-		maxTileY := int(math.Floor(worldMax.Y / float64(tmx.TileHeight)))
-
-		for i := range tilemap.layers {
-			if !tmx.Layers[i].Visible {
-				continue // Skip invisible layers
+	rendering.QueryVisibleWith(world, TiledQuery,
+		func(entry *donburi.Entry, anchor geom.Vec2, color color.RGBA, filter ebiten.Filter, visible bool, layer, zIndex int) {
+			ref := asset.GetAssetReference(entry)
+			if ref == asset.UnknownRef {
+				return // Don't enqueue render tasks for entities without a tilemap reference
 			}
-			a.drawLayerToBuffer(
-				buffer,
-				tilemap,
-				tmx.Tilesets,
-				i,
-				tmx.TileWidth, tmx.TileHeight,
-				minTileX, maxTileX,
-				minTileY, maxTileY,
-				viewMatrix,
-			)
-		}
 
-		a.renderingTasks = append(a.renderingTasks, engine.RenderTask{
-			Render: func(screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
-				screen.DrawImage(buffer, &ebiten.DrawImageOptions{
-					Filter: filter,
-				})
-				return nil
-			},
-			Layer:  layer,
-			ZIndex: zIndex,
-		})
-	})
+			buffer := a.getBuffer(ref)
+			buffer.Clear()
+
+			a.drawn[ref] = struct{}{}
+
+			tilemap, exists := a.tiledAssetAdapter.tilemaps[ref]
+			if !exists {
+				return // Don't enqueue render tasks for entities with an invalid tilemap reference
+			}
+
+			tmx, exists := a.tiledAssetAdapter.tmxCache[ref]
+			if !exists {
+				return // Don't enqueue render tasks for entities with an invalid tilemap reference
+			}
+
+			minTileX := int(math.Floor(worldMin.X / float64(tmx.TileWidth)))
+			maxTileX := int(math.Floor(worldMax.X / float64(tmx.TileWidth)))
+			minTileY := int(math.Floor(worldMin.Y / float64(tmx.TileHeight)))
+			maxTileY := int(math.Floor(worldMax.Y / float64(tmx.TileHeight)))
+
+			for i := range tilemap.layers {
+				if !tmx.Layers[i].Visible {
+					continue // Skip invisible layers
+				}
+				a.drawLayerToBuffer(
+					buffer,
+					tilemap,
+					tmx.Tilesets,
+					i,
+					tmx.TileWidth, tmx.TileHeight,
+					minTileX, maxTileX,
+					minTileY, maxTileY,
+					viewMatrix,
+				)
+			}
+
+			a.renderingTasks = append(a.renderingTasks, engine.RenderTask{
+				Render: func(screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
+					screen.DrawImage(buffer, &ebiten.DrawImageOptions{
+						Filter: filter,
+					})
+					return nil
+				},
+				Layer:  layer,
+				ZIndex: zIndex,
+			})
+		},
+	)
 
 	// Deallocate buffers that were detected to be no longer viable.
 	for ref, buffer := range a.buffers {
@@ -168,14 +164,14 @@ func (a *TiledRenderingAdapter) drawLayerToBuffer(
 			}
 
 			tileset := NearestTileset(tilesets, tile.ID())
-			tsxPath := engine.FilePath(tileset.Source)
+			tsxPath := file.FilePath(tileset.Source)
 
 			tsx, exists := a.tiledAssetAdapter.tsxCache[tsxPath]
 			if !exists {
 				continue // Skip tiles that reference a tileset without tsx data
 			}
 
-			tilesetImg, exists := a.imageAssetAdapter.GetImage(engine.FilePath(tsx.Image.Source))
+			tilesetImg, exists := a.imageAssetAdapter.GetImage(file.FilePath(tsx.Image.Source))
 			if !exists {
 				continue // Skip tiles that reference a missing tileset image
 			}

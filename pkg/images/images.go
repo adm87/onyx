@@ -2,10 +2,23 @@ package images
 
 import (
 	"github.com/adm87/onyx/pkg/engine"
+	"github.com/adm87/onyx/pkg/engine/components/asset"
+	"github.com/adm87/onyx/pkg/engine/components/rendering"
+	"github.com/adm87/onyx/pkg/engine/components/transform"
+	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/yohamta/donburi"
+	"github.com/yohamta/donburi/filter"
 )
 
 const AdapterID engine.AdapterID = "image_adapter"
+
+var (
+	Image      = donburi.NewTag()
+	ImageQuery = donburi.NewQuery(
+		filter.Contains(Image),
+	)
+)
 
 func RegisterPackage(assets engine.Assets, renderer engine.Renderer) error {
 	assetAdapter := NewAdapter()
@@ -42,7 +55,7 @@ func GetRenderingAdapter(renderer engine.Renderer) (*ImageRenderingAdapter, bool
 	return imageRenderer, ok
 }
 
-func GetImage(assets engine.Assets, path engine.FilePath) (*ebiten.Image, bool) {
+func GetImageAssets(assets engine.Assets, path file.FilePath) (*ebiten.Image, bool) {
 	adapter, found := GetAssetAdapter(assets)
 	if !found {
 		return nil, false
@@ -50,4 +63,14 @@ func GetImage(assets engine.Assets, path engine.FilePath) (*ebiten.Image, bool) 
 
 	img, exists := adapter.cache[path]
 	return img, exists
+}
+
+func CreateImageEntity(world donburi.World, ref file.FilePath) *donburi.Entry {
+	entry := asset.NewAssetReference(world, ref)
+	entry.AddComponent(Image)
+
+	transform.AddTransform(entry)
+	rendering.AddRenderer(entry)
+
+	return entry
 }
