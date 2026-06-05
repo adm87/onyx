@@ -74,8 +74,8 @@ func New(
 			hWidth, hHeight := float64(width)/2, float64(height)/2
 
 			entry := images.CreateImageEntity(world, content.EmbeddedImg10x10White)
-			colliders.AddBoxCollider(entry,
-				colliders.WithBox(
+			colliders.AddCollider(entry,
+				colliders.WithAABB(
 					geom.AABB{
 						Min: geom.Vec2{X: -hWidth, Y: -hHeight},
 						Max: geom.Vec2{X: hWidth, Y: hHeight},
@@ -200,9 +200,9 @@ func New(
 
 func buildStaticCollision(world donburi.World, collision engine.Collision, tmx *tiled.Tmx) {
 	tmx.ObjectGroups.EachInGroup("collision_static", func(object *tiled.TmxObject) {
-		entry := colliders.NewBoxCollider(world,
+		entry := colliders.NewCollider(world,
 			colliders.AsStatic(),
-			colliders.WithBox(
+			colliders.WithAABB(
 				geom.AABB{
 					Min: geom.Vec2{X: 0, Y: 0},
 					Max: geom.Vec2{X: object.Width, Y: object.Height},

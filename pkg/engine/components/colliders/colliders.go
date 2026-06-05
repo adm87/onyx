@@ -17,9 +17,9 @@ type collisionInfo struct {
 
 type (
 	Options struct {
-		IsStatic bool
+		AsStatic bool
 		Layer    CollisionLayer
-		Box      geom.AABB
+		AABB     geom.AABB
 	}
 	Option func(*Options)
 )
@@ -31,7 +31,7 @@ var (
 		Enabled: true,
 		Layer:   0,
 	}
-	defaultBox geom.AABB = geom.AABB{
+	defaultAABB geom.AABB = geom.AABB{
 		Min: geom.Vec2{X: 0, Y: 0},
 		Max: geom.Vec2{X: 1, Y: 1},
 	}
@@ -44,7 +44,7 @@ var (
 
 var (
 	Collision = donburi.NewComponentType[collisionInfo](defaultCollisionInfo)
-	Box       = donburi.NewComponentType[geom.AABB](defaultBox)
+	AABB      = donburi.NewComponentType[geom.AABB](defaultAABB)
 )
 
 var (
@@ -64,15 +64,15 @@ var (
 
 func defaultOptions() Options {
 	return Options{
-		IsStatic: false,
+		AsStatic: false,
 		Layer:    0,
-		Box:      defaultBox,
+		AABB:     defaultAABB,
 	}
 }
 
 func AsStatic() Option {
 	return func(opts *Options) {
-		opts.IsStatic = true
+		opts.AsStatic = true
 	}
 }
 
@@ -82,9 +82,9 @@ func WithLayer(layer CollisionLayer) Option {
 	}
 }
 
-func WithBox(box geom.AABB) Option {
+func WithAABB(aabb geom.AABB) Option {
 	return func(opts *Options) {
-		opts.Box = box
+		opts.AABB = aabb
 	}
 }
 
@@ -92,8 +92,8 @@ func WithBox(box geom.AABB) Option {
 func QueryStatic(world donburi.World, fn QueryCallback) {
 	staticQuery.Each(world, func(entry *donburi.Entry) {
 		layer := GetCollisionLayer(entry)
-		box := GetBox(entry)
-		fn(entry, layer, box)
+		aabb := GetAABB(entry)
+		fn(entry, layer, aabb)
 	})
 }
 
@@ -101,8 +101,8 @@ func QueryStatic(world donburi.World, fn QueryCallback) {
 func QueryDynamic(world donburi.World, fn QueryCallback) {
 	dynamicQuery.Each(world, func(entry *donburi.Entry) {
 		layer := GetCollisionLayer(entry)
-		box := GetBox(entry)
-		fn(entry, layer, box)
+		aabb := GetAABB(entry)
+		fn(entry, layer, aabb)
 	})
 }
 
@@ -116,32 +116,50 @@ func Query(world donburi.World, fn QueryCallback) {
 func QueryWith(world donburi.World, q *donburi.Query, fn QueryCallback) {
 	q.Each(world, func(entry *donburi.Entry) {
 		layer := GetCollisionLayer(entry)
-		box := GetBox(entry)
-		fn(entry, layer, box)
+		aabb := GetAABB(entry)
+		fn(entry, layer, aabb)
 	})
 }
 
-// NewBoxCollider creates a new entity with a box collider component, applying the provided options for configuration.
-func NewBoxCollider(world donburi.World, options ...Option) *donburi.Entry {
-	return AddBoxCollider(world.Entry(
+// QueryEnabled iterates over all colliders in the world that have collision enabled, invoking the provided callback for each one.
+func QueryEnabled(world donburi.World, fn QueryCallback) {
+	Query(world, func(entry *donburi.Entry, layer CollisionLayer, aabb geom.AABB) {
+		if IsCollisionEnabled(entry) {
+			fn(entry, layer, aabb)
+		}
+	})
+}
+
+// QueryEnabledWith allows querying colliders using a custom query and invokes the provided callback for each matching entry that has collision enabled.
+func QueryEnabledWith(world donburi.World, q *donburi.Query, fn QueryCallback) {
+	QueryWith(world, q, func(entry *donburi.Entry, layer CollisionLayer, aabb geom.AABB) {
+		if IsCollisionEnabled(entry) {
+			fn(entry, layer, aabb)
+		}
+	})
+}
+
+// NewCollider creates a new entity with a collider component, applying the provided options for configuration.
+func NewCollider(world donburi.World, options ...Option) *donburi.Entry {
+	return AddCollider(world.Entry(
 		world.Create(
 			Collision,
-			Box,
+			AABB,
 		),
 	), options...)
 }
 
-// AddBoxCollider adds a box collider component to an existing entity, applying the provided options for configuration.
-func AddBoxCollider(entry *donburi.Entry, options ...Option) *donburi.Entry {
+// AddCollider adds a collider component to an existing entity, applying the provided options for configuration.
+func AddCollider(entry *donburi.Entry, options ...Option) *donburi.Entry {
 	opts := defaultOptions()
 	for _, opt := range options {
 		opt(&opts)
 	}
 
 	SetCollisionLayer(entry, opts.Layer)
-	SetBox(entry, opts.Box)
+	SetAABB(entry, opts.AABB)
 
-	if opts.IsStatic {
+	if opts.AsStatic {
 		entry.AddComponent(StaticType)
 	} else {
 		entry.AddComponent(DynamicType)
@@ -201,15 +219,15 @@ func SetCollisionEnabled(entry *donburi.Entry, enabled bool) {
 	collision.Enabled = enabled
 }
 
-// GetBox retrieves the box collider component from an entity, returning a default value if it does not exist.
-func GetBox(entry *donburi.Entry) geom.AABB {
-	if !entry.HasComponent(Box) {
-		return defaultBox
+// GetAABB retrieves the AABB collider component from an entity, returning a default value if it does not exist.
+func GetAABB(entry *donburi.Entry) geom.AABB {
+	if !entry.HasComponent(AABB) {
+		return defaultAABB
 	}
-	return *Box.Get(entry)
+	return *AABB.Get(entry)
 }
 
-// SetBox sets the box collider component for an entity, adding it if it does not already exist.
-func SetBox(entry *donburi.Entry, box geom.AABB) {
-	donburi.Add(entry, Box, &box)
+// SetAABB sets the AABB collider component for an entity, adding it if it does not already exist.
+func SetAABB(entry *donburi.Entry, aabb geom.AABB) {
+	donburi.Add(entry, AABB, &aabb)
 }
