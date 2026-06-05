@@ -214,8 +214,14 @@ func (c *collision) checkCollision(world donburi.World) error {
 	// Broad phase: Collect potential collision pairs based on spatial hashing
 	colliders.QueryEnabledDynamic(world, func(entry *donburi.Entry, cl colliders.CollisionLayer, aabb geom.AABB) {
 		aabb = aabb.Translate(transform.GetPosition(entry))
-		c.static.QueryAll(aabb, c.validatePair(world, entry.Entity(), aabb, cl))
-		c.dynamic.QueryAll(aabb, c.validatePair(world, entry.Entity(), aabb, cl))
+		entity := entry.Entity()
+
+		c.static.QueryAll(aabb, func(otherEntity donburi.Entity) bool {
+			return c.validatePair(world, entity, otherEntity, aabb, cl)
+		})
+		c.dynamic.QueryAll(aabb, func(otherEntity donburi.Entity) bool {
+			return c.validatePair(world, entity, otherEntity, aabb, cl)
+		})
 	})
 
 	var event CollisionEvent
@@ -243,31 +249,29 @@ func (c *collision) checkCollision(world donburi.World) error {
 	return nil
 }
 
-func (c *collision) validatePair(world donburi.World, entityA donburi.Entity, boxA geom.AABB, layerA colliders.CollisionLayer) func(entityB donburi.Entity) bool {
-	return func(entityB donburi.Entity) bool {
-		if entityA == entityB {
-			return true // Skip self-collision
-		}
-		otherEntry := world.Entry(entityB)
-
-		if !colliders.IsCollisionEnabled(otherEntry) {
-			return true // Collision is not enabled for this entity, skip
-		}
-
-		otherCL := colliders.GetCollisionLayer(otherEntry)
-		otherAABB := colliders.GetAABB(otherEntry).Translate(transform.GetPosition(otherEntry))
-
-		if !c.CheckLayers(layerA, otherCL) {
-			return true // Layers are not flagged to interact, skip
-		}
-
-		if !boxA.Intersects(otherAABB) {
-			return true // AABBs do not intersect, skip
-		}
-
-		pair := newCollisionPair(entityA, entityB)
-		c.currentPairs[pair] = struct{}{}
-
-		return true
+func (c *collision) validatePair(world donburi.World, entityA, entityB donburi.Entity, boxA geom.AABB, layerA colliders.CollisionLayer) bool {
+	if entityA == entityB {
+		return true // Skip self-collision
 	}
+	otherEntry := world.Entry(entityB)
+
+	if !colliders.IsCollisionEnabled(otherEntry) {
+		return true // Collision is not enabled for this entity, skip
+	}
+
+	otherCL := colliders.GetCollisionLayer(otherEntry)
+	otherAABB := colliders.GetAABB(otherEntry).Translate(transform.GetPosition(otherEntry))
+
+	if !c.CheckLayers(layerA, otherCL) {
+		return true // Layers are not flagged to interact, skip
+	}
+
+	if !boxA.Intersects(otherAABB) {
+		return true // AABBs do not intersect, skip
+	}
+
+	pair := newCollisionPair(entityA, entityB)
+	c.currentPairs[pair] = struct{}{}
+
+	return true
 }

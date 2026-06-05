@@ -160,17 +160,6 @@ func New(
 				center := camera.ToScreen(world, screen, aabb.Center())
 
 				if screen.SafeArea().Contains(center) {
-					min := camera.ToScreen(world, screen, aabb.Min)
-					max := camera.ToScreen(world, screen, aabb.Max)
-					vector.FillRect(
-						img,
-						float32(min.X),
-						float32(min.Y),
-						float32(max.X-min.X),
-						float32(max.Y-min.Y),
-						color.RGBA{G: 255, A: 255},
-						false,
-					)
 					vector.FillRect(
 						img,
 						float32(center.X)-2,
