@@ -3,6 +3,7 @@ package gameplay
 import (
 	"context"
 	"fmt"
+	"image/color"
 
 	"github.com/adm87/onyx/content"
 	"github.com/adm87/onyx/pkg/engine"
@@ -13,12 +14,10 @@ import (
 	"github.com/adm87/onyx/pkg/images"
 	"github.com/adm87/onyx/pkg/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/yohamta/donburi"
-)
-
-const (
-	defaultCollisionLayer colliders.CollisionLayer = 1 << iota
 )
 
 func New(
@@ -32,7 +31,6 @@ func New(
 
 	var player donburi.Entity
 	var level donburi.Entity
-	var corners [4]donburi.Entity
 
 	debugDrawColliders := false
 	debugDrawPartitions := false
@@ -40,8 +38,8 @@ func New(
 
 	return engine.SceneState{
 		OnEnter: func(ctx context.Context, world donburi.World) error {
-			// engine.StaticCollision.OnEnter.Subscribe(world, onCollisionEnter)
-			// engine.StaticCollision.OnExit.Subscribe(world, onCollisionExit)
+			collision.AddCollisionEnter(world, onCollisionEnter)
+			collision.AddCollisionExit(world, onCollisionExit)
 
 			if err := assets.Load(content.AssetsFS(), tilemapRef); err != nil {
 				return fmt.Errorf("failed to load level asset: %w", err)
@@ -81,7 +79,6 @@ func New(
 						Max: geom.Vec2{X: hWidth, Y: hHeight},
 					},
 				),
-				colliders.WithLayer(defaultCollisionLayer),
 			)
 			rendering.SetAnchor(entry,
 				geom.Vec2{
@@ -94,34 +91,14 @@ func New(
 			pos := tilemap.Bounds().Center()
 			transform.SetPosition(entry, pos)
 
-			for i := range corners {
-				aX, aY := 0.0, 0.0
-				switch i {
-				case 0:
-					aX, aY = 0, 0
-				case 1:
-					aX, aY = 1, 0
-				case 2:
-					aX, aY = 1, 1
-				case 3:
-					aX, aY = 0, 1
-				}
-
-				cornerEntry := images.CreateImageEntity(world, content.EmbeddedImg10x10White)
-				rendering.SetZIndex(cornerEntry, 1)
-				rendering.SetAnchor(cornerEntry, geom.Vec2{X: aX, Y: aY})
-
-				corners[i] = cornerEntry.Entity()
-			}
-
 			collision.Add(entry)
 			player = entry.Entity()
 
 			return nil
 		},
 		OnExit: func(ctx context.Context, world donburi.World) error {
-			// engine.StaticCollision.OnEnter.Unsubscribe(world, onCollisionEnter)
-			// engine.StaticCollision.OnExit.Unsubscribe(world, onCollisionExit)
+			collision.RemoveCollisionEnter(world, onCollisionEnter)
+			collision.RemoveCollisionExit(world, onCollisionExit)
 			return nil
 		},
 		OnUpdate: func(ctx context.Context, world donburi.World) (engine.SceneExitCode, error) {
@@ -170,29 +147,42 @@ func New(
 				rendering.SetVisible(world.Entry(player), debugVisibilityToggle)
 			}
 
-			camera.SetPosition(world, position)
 			transform.SetPosition(entry, position)
+			collision.Update(entry)
 
-			min := camera.ToWorld(world, screen, screen.SafeArea().Min)
-			max := camera.ToWorld(world, screen, screen.SafeArea().Max)
-
-			for i := range corners {
-				entry := world.Entry(corners[i])
-				switch i {
-				case 0:
-					transform.SetPosition(entry, min)
-				case 1:
-					transform.SetPosition(entry, geom.Vec2{X: max.X, Y: min.Y})
-				case 2:
-					transform.SetPosition(entry, max)
-				case 3:
-					transform.SetPosition(entry, geom.Vec2{X: min.X, Y: max.Y})
-				}
-			}
+			camera.SetPosition(world, position)
 
 			return engine.SceneExitNone, nil
 		},
 		OnRender: func(ctx context.Context, world donburi.World, img *ebiten.Image, viewMatrix ebiten.GeoM) error {
+			colliders.Query(world, func(entry *donburi.Entry, layer colliders.CollisionLayer, aabb geom.AABB) {
+				aabb = aabb.Translate(transform.GetPosition(entry))
+				center := camera.ToScreen(world, screen, aabb.Center())
+
+				if screen.SafeArea().Contains(center) {
+					min := camera.ToScreen(world, screen, aabb.Min)
+					max := camera.ToScreen(world, screen, aabb.Max)
+					vector.FillRect(
+						img,
+						float32(min.X),
+						float32(min.Y),
+						float32(max.X-min.X),
+						float32(max.Y-min.Y),
+						color.RGBA{G: 255, A: 255},
+						false,
+					)
+					vector.FillRect(
+						img,
+						float32(center.X)-2,
+						float32(center.Y)-2,
+						4,
+						4,
+						color.RGBA{R: 255, A: 255},
+						false,
+					)
+					ebitenutil.DebugPrintAt(img, fmt.Sprintf("%d", entry.Entity()), int(center.X), int(center.Y))
+				}
+			})
 			return nil
 		},
 	}
@@ -214,12 +204,10 @@ func buildStaticCollision(world donburi.World, collision engine.Collision, tmx *
 	})
 }
 
-// func onCollisionEnter(world donburi.World, event engine.CollisionEvent) {
-// 	now := time.Now()
-// 	println("Collision Enter:", event.EntityA, "with", event.EntityB, "at", now.Format("15:04:05.000"))
-// }
+func onCollisionEnter(world donburi.World, event engine.CollisionEvent) {
+	fmt.Printf("Collision Enter: %d <-> %d\n", event.EntityA, event.EntityB)
+}
 
-// func onCollisionExit(world donburi.World, event engine.CollisionEvent) {
-// 	now := time.Now()
-// 	println("Collision Exit:", event.EntityA, "with", event.EntityB, "at", now.Format("15:04:05.000"))
-// }
+func onCollisionExit(world donburi.World, event engine.CollisionEvent) {
+	fmt.Printf("Collision Exit: %d <-> %d\n", event.EntityA, event.EntityB)
+}

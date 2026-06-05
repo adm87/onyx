@@ -8,24 +8,24 @@
             "scale": 2.82,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 136.17021276595744,
-                "y": 95.74468085106383
+                "x": 150.53191489361706,
+                "y": 116.66666666666669
             }
         },
         "content/assets/levels/gym02.tmx": {
-            "scale": 1.9304487179487178,
+            "scale": 2,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 234.14245392661465,
-                "y": 135.201726714262
+                "x": 229.25,
+                "y": 135.5
             }
         },
         "content/assets/levels/gym03.tmx": {
             "scale": 1.78,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 234.26966292134836,
-                "y": 134.8314606741573
+                "x": 234.55056179775278,
+                "y": 134.83146067415734
             }
         },
         "content/assets/levels/tileset-characters.tsx": {

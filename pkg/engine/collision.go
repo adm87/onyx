@@ -2,64 +2,272 @@ package engine
 
 import (
 	"github.com/adm87/onyx/pkg/engine/components/colliders"
+	"github.com/adm87/onyx/pkg/engine/components/transform"
+	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/engine/partitioning/spatialhash"
 	"github.com/yohamta/donburi"
+	"github.com/yohamta/donburi/features/events"
 )
 
-type Collision interface {
-	Add(entry *donburi.Entry) bool
-	Remove(entry *donburi.Entry) bool
+type CollisionEvent struct {
+	EntityA donburi.Entity
+	EntityB donburi.Entity
+}
 
-	EnableCollision(a, b colliders.CollisionLayer)
-	DisableCollision(a, b colliders.CollisionLayer)
-	CanCollide(a, b colliders.CollisionLayer) bool
+// Collision defines the interface for managing collision detection and events within the game engine.
+//
+// This system is a glorified overlap detector, and does not resolve collisions between entities.
+// Instead, it tracks the state of any overlap between entities and provides events for when overlaps begin, end, or persist.
+//
+// Static and dynamic colliders are indexed separately. Only dynamic colliders will initiate collision checks,
+// but will check against both static and dynamic colliders. This means static colliders can overlap without triggering events.
+type Collision interface {
+	Add(entry *donburi.Entry) bool    // Add tracks an entity for collision detection
+	Remove(entry *donburi.Entry) bool // Remove stops tracking an entity for collision detection
+	Update(entry *donburi.Entry) bool // Update updates the collision indexing for an entity
+
+	FlagLayers(a, b colliders.CollisionLayer)       // Flags two collision layers to allow interactions between them during collision checks.
+	UnflagLayers(a, b colliders.CollisionLayer)     // Unflags two collision layers to prevent interactions between them during collision checks.
+	CheckLayers(a, b colliders.CollisionLayer) bool // Checks if two collision layers are flagged to interact with each other.
+
+	AddCollisionEnter(world donburi.World, callback func(world donburi.World, event CollisionEvent))
+	RemoveCollisionEnter(world donburi.World, callback func(world donburi.World, event CollisionEvent))
+
+	AddCollisionExit(world donburi.World, callback func(world donburi.World, event CollisionEvent))
+	RemoveCollisionExit(world donburi.World, callback func(world donburi.World, event CollisionEvent))
+
+	AddCollisionStay(world donburi.World, callback func(world donburi.World, event CollisionEvent))
+	RemoveCollisionStay(world donburi.World, callback func(world donburi.World, event CollisionEvent))
 }
 
 type (
 	collisionIndexing map[donburi.Entity]spatialhash.SpatialIndex
 	collisionMask     map[colliders.CollisionLayer]colliders.CollisionLayer
+	collisionPairing  map[collisionPair]struct{}
 )
+
+type collisionEvents struct {
+	enter *events.EventType[CollisionEvent]
+	exit  *events.EventType[CollisionEvent]
+	stay  *events.EventType[CollisionEvent]
+}
+
+type collisionPair [2]donburi.Entity
+
+func newCollisionPair(a, b donburi.Entity) collisionPair {
+	if a < b {
+		return collisionPair{a, b}
+	}
+	return collisionPair{b, a}
+}
+
+func (p collisionPair) Low() donburi.Entity {
+	return p[0]
+}
+
+func (p collisionPair) High() donburi.Entity {
+	return p[1]
+}
 
 type collision struct {
 	static  *spatialhash.SpatialHash[donburi.Entity]
 	dynamic *spatialhash.SpatialHash[donburi.Entity]
+	events  *collisionEvents
 
 	indexing collisionIndexing
 	masks    collisionMask
+
+	currentPairs  collisionPairing
+	previousPairs collisionPairing
 }
 
 func newCollision() *collision {
 	return &collision{
-		indexing: make(collisionIndexing),
-		masks:    make(collisionMask),
+		static: spatialhash.New[donburi.Entity](
+			spatialhash.WithResolutions(16),
+			spatialhash.WithCapacity(100),
+		),
+		dynamic: spatialhash.New[donburi.Entity](
+			spatialhash.WithResolutions(16),
+			spatialhash.WithCapacity(100),
+		),
+		events: &collisionEvents{
+			enter: events.NewEventType[CollisionEvent](),
+			exit:  events.NewEventType[CollisionEvent](),
+			stay:  events.NewEventType[CollisionEvent](),
+		},
+		indexing:      make(collisionIndexing),
+		masks:         make(collisionMask),
+		currentPairs:  make(collisionPairing, 100),
+		previousPairs: make(collisionPairing, 100),
 	}
 }
 
 func (c *collision) Add(entry *donburi.Entry) bool {
-	return true
+	entity := entry.Entity()
+
+	if _, exists := c.indexing[entity]; exists {
+		return false // Entity is already indexed, cannot add again
+	}
+
+	position := transform.GetPosition(entry)
+	aabb := colliders.GetAABB(entry).Translate(position)
+
+	var index spatialhash.SpatialIndex
+	var ok bool
+
+	if colliders.IsStatic(entry) {
+		index, ok = c.static.Insert(entity, aabb)
+	} else {
+		index, ok = c.dynamic.Insert(entity, aabb)
+	}
+
+	if ok {
+		c.indexing[entity] = index
+	}
+
+	return ok
 }
 
 func (c *collision) Remove(entry *donburi.Entry) bool {
+	entity := entry.Entity()
+
+	index, exists := c.indexing[entity]
+	if !exists {
+		return true // Entity is not indexed, consider it removed
+	}
+
+	delete(c.indexing, entity)
+
+	if colliders.IsStatic(entry) {
+		c.static.Remove(index)
+	} else {
+		c.dynamic.Remove(index)
+	}
+
 	return true
 }
 
-func (c *collision) EnableCollision(a, b colliders.CollisionLayer) {
+func (c *collision) Update(entry *donburi.Entry) bool {
+	entity := entry.Entity()
+
+	index, exists := c.indexing[entity]
+	if !exists {
+		return false // Entity is not indexed, cannot update
+	}
+
+	position := transform.GetPosition(entry)
+	aabb := colliders.GetAABB(entry).Translate(position)
+
+	if colliders.IsStatic(entry) {
+		return c.static.Reinsert(index, aabb)
+	}
+
+	return c.dynamic.Reinsert(index, aabb)
+}
+
+func (c *collision) FlagLayers(a, b colliders.CollisionLayer) {
 	c.masks[a] |= b
 	c.masks[b] |= a
 }
 
-func (c *collision) DisableCollision(a, b colliders.CollisionLayer) {
+func (c *collision) UnflagLayers(a, b colliders.CollisionLayer) {
 	c.masks[a] &^= b
 	c.masks[b] &^= a
 }
 
-func (c *collision) CanCollide(a, b colliders.CollisionLayer) bool {
+func (c *collision) CheckLayers(a, b colliders.CollisionLayer) bool {
 	if a == b {
 		return true
 	}
 	return (c.masks[a] & b) != 0
 }
 
+func (c *collision) AddCollisionEnter(world donburi.World, callback func(world donburi.World, event CollisionEvent)) {
+	c.events.enter.Subscribe(world, callback)
+}
+
+func (c *collision) RemoveCollisionEnter(world donburi.World, callback func(world donburi.World, event CollisionEvent)) {
+	c.events.enter.Unsubscribe(world, callback)
+}
+
+func (c *collision) AddCollisionExit(world donburi.World, callback func(world donburi.World, event CollisionEvent)) {
+	c.events.exit.Subscribe(world, callback)
+}
+
+func (c *collision) RemoveCollisionExit(world donburi.World, callback func(world donburi.World, event CollisionEvent)) {
+	c.events.exit.Unsubscribe(world, callback)
+}
+
+func (c *collision) AddCollisionStay(world donburi.World, callback func(world donburi.World, event CollisionEvent)) {
+	c.events.stay.Subscribe(world, callback)
+}
+
+func (c *collision) RemoveCollisionStay(world donburi.World, callback func(world donburi.World, event CollisionEvent)) {
+	c.events.stay.Unsubscribe(world, callback)
+}
+
 func (c *collision) checkCollision(world donburi.World) error {
+	c.currentPairs, c.previousPairs = c.previousPairs, c.currentPairs
+	clear(c.currentPairs)
+
+	// Broad phase: Collect potential collision pairs based on spatial hashing
+	colliders.QueryEnabledDynamic(world, func(entry *donburi.Entry, cl colliders.CollisionLayer, aabb geom.AABB) {
+		aabb = aabb.Translate(transform.GetPosition(entry))
+		c.static.QueryAll(aabb, c.validatePair(world, entry.Entity(), aabb, cl))
+		c.dynamic.QueryAll(aabb, c.validatePair(world, entry.Entity(), aabb, cl))
+	})
+
+	var event CollisionEvent
+
+	// Narrow phase: Determine collision events based on current and previous pairs
+	for pair := range c.currentPairs {
+		event = CollisionEvent{EntityA: pair.Low(), EntityB: pair.High()}
+		if _, existed := c.previousPairs[pair]; existed {
+			c.events.stay.Publish(world, event)
+		} else {
+			c.events.enter.Publish(world, event)
+		}
+	}
+	for pair := range c.previousPairs {
+		if _, exists := c.currentPairs[pair]; !exists {
+			event = CollisionEvent{EntityA: pair.Low(), EntityB: pair.High()}
+			c.events.exit.Publish(world, event)
+		}
+	}
+
+	c.events.enter.ProcessEvents(world)
+	c.events.exit.ProcessEvents(world)
+	c.events.stay.ProcessEvents(world)
+
 	return nil
+}
+
+func (c *collision) validatePair(world donburi.World, entityA donburi.Entity, boxA geom.AABB, layerA colliders.CollisionLayer) func(entityB donburi.Entity) bool {
+	return func(entityB donburi.Entity) bool {
+		if entityA == entityB {
+			return true // Skip self-collision
+		}
+		otherEntry := world.Entry(entityB)
+
+		if !colliders.IsCollisionEnabled(otherEntry) {
+			return true // Collision is not enabled for this entity, skip
+		}
+
+		otherCL := colliders.GetCollisionLayer(otherEntry)
+		otherAABB := colliders.GetAABB(otherEntry).Translate(transform.GetPosition(otherEntry))
+
+		if !c.CheckLayers(layerA, otherCL) {
+			return true // Layers are not flagged to interact, skip
+		}
+
+		if !boxA.Intersects(otherAABB) {
+			return true // AABBs do not intersect, skip
+		}
+
+		pair := newCollisionPair(entityA, entityB)
+		c.currentPairs[pair] = struct{}{}
+
+		return true
+	}
 }
