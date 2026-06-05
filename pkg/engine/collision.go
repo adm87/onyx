@@ -31,13 +31,15 @@ type Collision interface {
 	CheckLayers(a, b colliders.CollisionLayer) bool // Checks if two collision layers are flagged to interact with each other.
 
 	AddCollisionEnter(world donburi.World, callback func(world donburi.World, event CollisionEvent))
-	RemoveCollisionEnter(world donburi.World, callback func(world donburi.World, event CollisionEvent))
-
 	AddCollisionExit(world donburi.World, callback func(world donburi.World, event CollisionEvent))
-	RemoveCollisionExit(world donburi.World, callback func(world donburi.World, event CollisionEvent))
-
 	AddCollisionStay(world donburi.World, callback func(world donburi.World, event CollisionEvent))
+	RemoveCollisionEnter(world donburi.World, callback func(world donburi.World, event CollisionEvent))
+	RemoveCollisionExit(world donburi.World, callback func(world donburi.World, event CollisionEvent))
 	RemoveCollisionStay(world donburi.World, callback func(world donburi.World, event CollisionEvent))
+
+	QueryAll(aabb geom.AABB, callback func(entity donburi.Entity))
+	QueryStatic(aabb geom.AABB, callback func(entity donburi.Entity))
+	QueryDynamic(aabb geom.AABB, callback func(entity donburi.Entity))
 }
 
 type (
@@ -187,24 +189,43 @@ func (c *collision) AddCollisionEnter(world donburi.World, callback func(world d
 	c.events.enter.Subscribe(world, callback)
 }
 
-func (c *collision) RemoveCollisionEnter(world donburi.World, callback func(world donburi.World, event CollisionEvent)) {
-	c.events.enter.Unsubscribe(world, callback)
-}
-
 func (c *collision) AddCollisionExit(world donburi.World, callback func(world donburi.World, event CollisionEvent)) {
 	c.events.exit.Subscribe(world, callback)
-}
-
-func (c *collision) RemoveCollisionExit(world donburi.World, callback func(world donburi.World, event CollisionEvent)) {
-	c.events.exit.Unsubscribe(world, callback)
 }
 
 func (c *collision) AddCollisionStay(world donburi.World, callback func(world donburi.World, event CollisionEvent)) {
 	c.events.stay.Subscribe(world, callback)
 }
 
+func (c *collision) RemoveCollisionEnter(world donburi.World, callback func(world donburi.World, event CollisionEvent)) {
+	c.events.enter.Unsubscribe(world, callback)
+}
+
+func (c *collision) RemoveCollisionExit(world donburi.World, callback func(world donburi.World, event CollisionEvent)) {
+	c.events.exit.Unsubscribe(world, callback)
+}
+
 func (c *collision) RemoveCollisionStay(world donburi.World, callback func(world donburi.World, event CollisionEvent)) {
 	c.events.stay.Unsubscribe(world, callback)
+}
+
+func (c *collision) QueryAll(aabb geom.AABB, callback func(entity donburi.Entity)) {
+	c.QueryStatic(aabb, callback)
+	c.QueryDynamic(aabb, callback)
+}
+
+func (c *collision) QueryStatic(aabb geom.AABB, callback func(entity donburi.Entity)) {
+	c.static.QueryAll(aabb, func(entity donburi.Entity) bool {
+		callback(entity)
+		return true
+	})
+}
+
+func (c *collision) QueryDynamic(aabb geom.AABB, callback func(entity donburi.Entity)) {
+	c.dynamic.QueryAll(aabb, func(entity donburi.Entity) bool {
+		callback(entity)
+		return true
+	})
 }
 
 func (c *collision) checkCollision(world donburi.World) error {

@@ -155,23 +155,34 @@ func New(
 			return engine.SceneExitNone, nil
 		},
 		OnRender: func(ctx context.Context, world donburi.World, img *ebiten.Image, viewMatrix ebiten.GeoM) error {
-			colliders.Query(world, func(entry *donburi.Entry, layer colliders.CollisionLayer, aabb geom.AABB) {
-				aabb = aabb.Translate(transform.GetPosition(entry))
+			min := camera.ToWorld(world, screen, screen.SafeArea().Min)
+			max := camera.ToWorld(world, screen, screen.SafeArea().Max)
+			queryRegion := geom.AABB{Min: min, Max: max}
+
+			count := 0
+			collision.QueryAll(queryRegion, func(entity donburi.Entity) {
+				count++
+				entry := world.Entry(entity)
+
+				position := transform.GetPosition(entry)
+				aabb := colliders.GetAABB(entry).Translate(position)
+
 				center := camera.ToScreen(world, screen, aabb.Center())
 
-				if screen.SafeArea().Contains(center) {
-					vector.FillRect(
-						img,
-						float32(center.X)-2,
-						float32(center.Y)-2,
-						4,
-						4,
-						color.RGBA{R: 255, A: 255},
-						false,
-					)
-					ebitenutil.DebugPrintAt(img, fmt.Sprintf("%d", entry.Entity()), int(center.X), int(center.Y))
-				}
+				vector.FillRect(
+					img,
+					float32(center.X)-2,
+					float32(center.Y)-2,
+					4,
+					4,
+					color.RGBA{R: 255, A: 255},
+					false,
+				)
+
+				ebitenutil.DebugPrintAt(img, fmt.Sprintf("%d", entity), int(center.X), int(center.Y))
 			})
+
+			ebitenutil.DebugPrintAt(img, fmt.Sprintf("Colliders in view: %d", count), 10, 10)
 			return nil
 		},
 	}
