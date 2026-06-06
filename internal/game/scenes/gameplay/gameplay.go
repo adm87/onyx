@@ -1,7 +1,6 @@
 package gameplay
 
 import (
-	"context"
 	"fmt"
 	"image/color"
 
@@ -24,7 +23,9 @@ import (
 func New(
 	assets engine.Assets,
 	camera engine.Camera,
+	collision engine.Collision,
 	screen engine.Screen,
+	world engine.World,
 	time engine.Time) engine.SceneState {
 
 	const tilemapRef = content.AssetsLevelsGym01
@@ -37,10 +38,7 @@ func New(
 	debugVisibilityToggle := true
 
 	return engine.SceneState{
-		OnEnter: func(ctx context.Context, world engine.World) error {
-			collision := world.Collision()
-			ecs := world.ECS()
-
+		OnEnter: func(ecs donburi.World) error {
 			if err := assets.Load(content.AssetsFS(), tilemapRef); err != nil {
 				return fmt.Errorf("failed to load level asset: %w", err)
 			}
@@ -75,7 +73,7 @@ func New(
 			)
 			rendering.SetLayer(levelEntry, 0)
 
-			buildStaticCollision(world, tmx)
+			buildStaticCollision(ecs, world, tmx)
 
 			camera.SetPosition(tilemap.Bounds().Center())
 			camera.SetZoom(0.2)
@@ -109,16 +107,12 @@ func New(
 			collision.AddCollisionExit(ecs, onCollisionExit)
 			return nil
 		},
-		OnExit: func(ctx context.Context, world engine.World) error {
-			collision := world.Collision()
-			ecs := world.ECS()
-
+		OnExit: func(ecs donburi.World) error {
 			collision.RemoveCollisionEnter(ecs, onCollisionEnter)
 			collision.RemoveCollisionExit(ecs, onCollisionExit)
 			return nil
 		},
-		OnUpdate: func(ctx context.Context, world engine.World) (engine.SceneExitCode, error) {
-			ecs := world.ECS()
+		OnUpdate: func(ecs donburi.World) (engine.SceneExitCode, error) {
 
 			entry := ecs.Entry(player)
 			position := transform.GetPosition(entry)
@@ -171,8 +165,7 @@ func New(
 			world.Update(entry)
 			return engine.SceneExitNone, nil
 		},
-		OnRender: func(ctx context.Context, world engine.World, img *ebiten.Image, viewMatrix ebiten.GeoM) error {
-			ecs := world.ECS()
+		OnRender: func(ecs donburi.World, img *ebiten.Image, viewMatrix ebiten.GeoM) error {
 
 			shapes.QueryAABB(ecs, func(entity donburi.Entity) {
 				entry := ecs.Entry(entity)
@@ -200,9 +193,7 @@ func New(
 	}
 }
 
-func buildStaticCollision(world engine.World, tmx *tiled.Tmx) {
-	ecs := world.ECS()
-
+func buildStaticCollision(ecs donburi.World, world engine.World, tmx *tiled.Tmx) {
 	tmx.ObjectGroups.EachInGroup("collision_static", func(object *tiled.TmxObject) {
 		position := geom.Vec2{
 			X: object.X,

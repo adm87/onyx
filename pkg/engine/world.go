@@ -13,9 +13,6 @@ type World interface {
 	Add(entry *donburi.Entry)
 	Remove(entry *donburi.Entry)
 	Update(entry *donburi.Entry)
-
-	Collision() Collision
-	ECS() donburi.World
 }
 
 type world struct {

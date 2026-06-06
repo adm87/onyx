@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/adm87/onyx/pkg/engine/components/transform"
-	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -150,7 +149,7 @@ func (g *game) Update() error {
 		return g.ctx.Err()
 	default:
 		g.time.tick()
-		return g.scenes.update(g.ctx, g.time.fixedSteps)
+		return g.scenes.update(g.time.fixedSteps)
 	}
 }
 
@@ -163,7 +162,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 
 		viewMatrix := g.camera.view()
 
-		if err := g.scenes.render(g.ctx, g.screen.buffer, geom.AABB{}, viewMatrix); err != nil {
+		if err := g.scenes.render(g.screen.buffer, viewMatrix); err != nil {
 			g.logger.Error("scene render pipeline: %v", err)
 			return
 		}

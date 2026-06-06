@@ -1,7 +1,6 @@
 package splashscreen
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/adm87/onyx/content"
@@ -19,9 +18,7 @@ func New(assets engine.Assets, time engine.Time, screen engine.Screen) engine.Sc
 	var entry *donburi.Entry
 	var sequence *gween.Sequence
 	return engine.SceneState{
-		OnEnter: func(ctx context.Context, world engine.World) error {
-			ecs := world.ECS()
-
+		OnEnter: func(ecs donburi.World) error {
 			if err := assets.Load(content.EmbeddedFS(), content.EmbeddedSplash1920x1080Black); err != nil {
 				return err
 			}
@@ -44,8 +41,7 @@ func New(assets engine.Assets, time engine.Time, screen engine.Screen) engine.Sc
 			)
 			return nil
 		},
-		OnExit: func(ctx context.Context, world engine.World) error {
-			ecs := world.ECS()
+		OnExit: func(ecs donburi.World) error {
 			ecs.Remove(entry.Entity())
 
 			assets.Unload(content.EmbeddedSplash1920x1080Black)
@@ -56,7 +52,7 @@ func New(assets engine.Assets, time engine.Time, screen engine.Screen) engine.Sc
 
 			return nil
 		},
-		OnUpdate: func(ctx context.Context, world engine.World) (engine.SceneExitCode, error) {
+		OnUpdate: func(ecs donburi.World) (engine.SceneExitCode, error) {
 			opacity, _, complete := sequence.Update(float32(time.DeltaTime()))
 
 			color := rendering.GetColor(entry)

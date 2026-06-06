@@ -1,11 +1,10 @@
 package engine
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/yohamta/donburi"
 )
 
 type (
@@ -19,12 +18,12 @@ type Scenes interface {
 }
 
 type SceneState struct {
-	OnEnter       func(ctx context.Context, world World) error
-	OnExit        func(ctx context.Context, world World) error
-	OnUpdate      func(ctx context.Context, world World) (SceneExitCode, error)
-	OnFixedUpdate func(ctx context.Context, world World) error
-	OnLateUpdate  func(ctx context.Context, world World) error
-	OnRender      func(ctx context.Context, world World, screen *ebiten.Image, viewMatrix ebiten.GeoM) error
+	OnEnter       func(ecs donburi.World) error
+	OnExit        func(ecs donburi.World) error
+	OnUpdate      func(ecs donburi.World) (SceneExitCode, error)
+	OnFixedUpdate func(ecs donburi.World) error
+	OnLateUpdate  func(ecs donburi.World) error
+	OnRender      func(ecs donburi.World, screen *ebiten.Image, viewMatrix ebiten.GeoM) error
 }
 
 type scenes struct {
@@ -68,12 +67,12 @@ func (s *scenes) AddScene(id SceneID, state SceneState, transitions SceneTransit
 	s.transitions[id] = transitions
 }
 
-func (s *scenes) update(ctx context.Context, steps int) error {
+func (s *scenes) update(steps int) error {
 	if s.currentScene == SceneIDNone && s.nextScene == SceneIDNone {
 		return nil
 	}
 	if s.nextScene != SceneIDNone {
-		return s.transitionToNext(ctx)
+		return s.transitionToNext()
 	}
 
 	currentState, ok := s.scenes[s.currentScene]
@@ -81,31 +80,31 @@ func (s *scenes) update(ctx context.Context, steps int) error {
 		return fmt.Errorf("scene with ID '%s' not found", s.currentScene)
 	}
 
-	exitCode, err := s.updateCurrent(ctx, currentState)
+	exitCode, err := s.updateCurrent(currentState)
 	if err != nil {
 		return err
 	}
 	if exitCode != SceneExitNone {
 		return s.setupNextTransition(exitCode)
 	}
-	if err := s.fixedUpdateCurrent(ctx, currentState, steps); err != nil {
+	if err := s.fixedUpdateCurrent(currentState, steps); err != nil {
 		return err
 	}
-	return s.lateUpdateCurrent(ctx, currentState)
+	return s.lateUpdateCurrent(currentState)
 }
 
-func (s *scenes) render(ctx context.Context, screen *ebiten.Image, region geom.AABB, viewMatrix ebiten.GeoM) error {
+func (s *scenes) render(screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
 	if err := s.world.render(screen, viewMatrix); err != nil {
 		return err
 	}
-	return s.renderCurrent(ctx, screen, viewMatrix)
+	return s.renderCurrent(screen, viewMatrix)
 }
 
-func (s *scenes) transitionToNext(ctx context.Context) error {
-	if err := s.exitCurrent(ctx); err != nil {
+func (s *scenes) transitionToNext() error {
+	if err := s.exitCurrent(); err != nil {
 		return err
 	}
-	if err := s.enterNext(ctx); err != nil {
+	if err := s.enterNext(); err != nil {
 		return err
 	}
 
@@ -130,7 +129,7 @@ func (s *scenes) setupNextTransition(exitCode SceneExitCode) error {
 	return nil
 }
 
-func (s *scenes) exitCurrent(ctx context.Context) error {
+func (s *scenes) exitCurrent() error {
 	if s.currentScene == SceneIDNone {
 		return nil
 	}
@@ -140,12 +139,12 @@ func (s *scenes) exitCurrent(ctx context.Context) error {
 		return fmt.Errorf("scene with ID '%s' not found", s.currentScene)
 	}
 	if currentState.OnExit != nil {
-		return currentState.OnExit(ctx, s.world)
+		return currentState.OnExit(s.world.ecs)
 	}
 	return nil
 }
 
-func (s *scenes) enterNext(ctx context.Context) error {
+func (s *scenes) enterNext() error {
 	if s.nextScene == SceneIDNone {
 		return nil
 	}
@@ -155,28 +154,28 @@ func (s *scenes) enterNext(ctx context.Context) error {
 		return fmt.Errorf("scene with ID '%s' not found", s.nextScene)
 	}
 	if nextState.OnEnter != nil {
-		return nextState.OnEnter(ctx, s.world)
+		return nextState.OnEnter(s.world.ecs)
 	}
 	return nil
 }
 
-func (s *scenes) updateCurrent(ctx context.Context, currentState SceneState) (SceneExitCode, error) {
+func (s *scenes) updateCurrent(currentState SceneState) (SceneExitCode, error) {
 	if s.currentScene == SceneIDNone {
 		return SceneExitNone, nil
 	}
 	if currentState.OnUpdate != nil {
-		return currentState.OnUpdate(ctx, s.world)
+		return currentState.OnUpdate(s.world.ecs)
 	}
 	return SceneExitNone, nil
 }
 
-func (s *scenes) fixedUpdateCurrent(ctx context.Context, currentState SceneState, steps int) error {
+func (s *scenes) fixedUpdateCurrent(currentState SceneState, steps int) error {
 	if s.currentScene == SceneIDNone {
 		return nil
 	}
 	for range steps {
 		if currentState.OnFixedUpdate != nil {
-			if err := currentState.OnFixedUpdate(ctx, s.world); err != nil {
+			if err := currentState.OnFixedUpdate(s.world.ecs); err != nil {
 				return err
 			}
 		}
@@ -187,17 +186,17 @@ func (s *scenes) fixedUpdateCurrent(ctx context.Context, currentState SceneState
 	return nil
 }
 
-func (s *scenes) lateUpdateCurrent(ctx context.Context, currentState SceneState) error {
+func (s *scenes) lateUpdateCurrent(currentState SceneState) error {
 	if s.currentScene == SceneIDNone {
 		return nil
 	}
 	if currentState.OnLateUpdate != nil {
-		return currentState.OnLateUpdate(ctx, s.world)
+		return currentState.OnLateUpdate(s.world.ecs)
 	}
 	return nil
 }
 
-func (s *scenes) renderCurrent(ctx context.Context, screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
+func (s *scenes) renderCurrent(screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
 	if s.currentScene == SceneIDNone {
 		return nil
 	}
@@ -207,7 +206,7 @@ func (s *scenes) renderCurrent(ctx context.Context, screen *ebiten.Image, viewMa
 		return fmt.Errorf("scene with ID '%s' not found", s.currentScene)
 	}
 	if currentState.OnRender != nil {
-		return currentState.OnRender(ctx, s.world, screen, viewMatrix)
+		return currentState.OnRender(s.world.ecs, screen, viewMatrix)
 	}
 	return nil
 }
