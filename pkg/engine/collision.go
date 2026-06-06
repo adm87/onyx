@@ -84,6 +84,7 @@ func newCollision() *collision {
 	return &collision{
 		static: spatialhash.New[donburi.Entity](
 			spatialhash.WithResolutions(16),
+			spatialhash.WithPadding(1, 1, 0, 0),
 			spatialhash.WithCapacity(100),
 		),
 		dynamic: spatialhash.New[donburi.Entity](

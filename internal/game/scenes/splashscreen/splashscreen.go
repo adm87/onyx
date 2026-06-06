@@ -15,7 +15,7 @@ import (
 
 const CompleteExitCode engine.SceneExitCode = iota + 1
 
-func New(assets engine.Assets, screen engine.Screen) engine.SceneState {
+func New(assets engine.Assets, screen engine.Screen, world engine.World) engine.SceneState {
 	var entry *donburi.Entry
 	var sequence *gween.Sequence
 	return engine.SceneState{
@@ -51,9 +51,12 @@ func New(assets engine.Assets, screen engine.Screen) engine.SceneState {
 				gween.New(1, 0, 1, ease.Linear),
 				gween.New(0, 0, 0.5, ease.Linear),
 			)
+
+			world.Add(entry)
 			return nil
 		},
 		OnExit: func(ecs donburi.World) error {
+			world.Remove(entry)
 			ecs.Remove(entry.Entity())
 
 			assets.Unload(content.EmbeddedSplash1920x1080Black)

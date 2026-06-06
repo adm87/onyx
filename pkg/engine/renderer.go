@@ -5,6 +5,8 @@ import (
 	"slices"
 
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
+	"github.com/adm87/onyx/pkg/engine/components/shapes"
+	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/engine/partitioning/spatialhash"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -47,7 +49,8 @@ func newRenderer(logger *logger) *renderer {
 		adapters:  make(map[AdapterID]RenderingAdapter),
 		renderers: make(map[rendering.RendererType]RenderingAdapter),
 		partitioning: spatialhash.New[donburi.Entity](
-			spatialhash.WithResolutions(16, 32),
+			spatialhash.WithResolutions(16, 32, 64, 128, 256, 512, 1024),
+			spatialhash.WithPadding(1, 1, 0, 0),
 			spatialhash.WithCapacity(100),
 		),
 		indexing: make(renderableIndexing),
@@ -105,6 +108,11 @@ func (r *renderer) render(ecs donburi.World, screen *ebiten.Image, viewport geom
 		visible := rendering.IsVisible(entry)
 		if !visible {
 			return true // Skip invisible entities
+		}
+
+		aabb := shapes.GetAABB(entry).Translate(transform.GetPosition(entry))
+		if !aabb.Intersects(viewport) {
+			return true // Skip entities outside the viewport
 		}
 
 		layer := rendering.GetLayer(entry)

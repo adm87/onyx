@@ -25,6 +25,7 @@ func AddScenes(onyx engine.Game) {
 		splashscreen.New(
 			assets,
 			screen,
+			world,
 		),
 		engine.SceneTransitions{
 			splashscreen.CompleteExitCode: GameplaySceneID,
