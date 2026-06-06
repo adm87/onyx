@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -14,23 +15,27 @@ type Game interface {
 
 	Assets() Assets
 	Camera() Camera
+	Collision() Collision
 	Logger() Logger
 	Renderer() Renderer
 	Scenes() Scenes
 	Screen() Screen
 	Time() Time
+	World() World
 }
 
 type game struct {
 	ctx context.Context
 
-	assets   *assets
-	camera   *camera
-	logger   *logger
-	renderer *renderer
-	scenes   *scenes
-	screen   *screen
-	time     *time
+	assets    *assets
+	camera    *camera
+	collision *collision
+	logger    *logger
+	renderer  *renderer
+	scenes    *scenes
+	screen    *screen
+	time      *time
+	world     *world
 }
 
 func setupWindow(title string, width, height int) {
@@ -59,28 +64,35 @@ func NewGame(opts ...Option) Game {
 	renderer := newRenderer(
 		logger,
 	)
-	scenes := newScenes(
-		cfg.InitialScene,
+	world := newWorld(
 		collision,
 		renderer,
+	)
+	scenes := newScenes(
+		cfg.InitialScene,
+		world,
 		logger,
 	)
 	time := newTime(
 		cfg.FPS,
 	)
 	camera := newCamera(
-		scenes.world.ecs,
+		world,
+		screen,
+		transform.NewTransform(world.ecs).Entity(),
 	)
 
 	return &game{
-		ctx:      context.Background(),
-		assets:   assets,
-		camera:   camera,
-		logger:   logger,
-		renderer: renderer,
-		screen:   screen,
-		scenes:   scenes,
-		time:     time,
+		ctx:       context.Background(),
+		assets:    assets,
+		camera:    camera,
+		logger:    logger,
+		renderer:  renderer,
+		collision: collision,
+		screen:    screen,
+		scenes:    scenes,
+		time:      time,
+		world:     world,
 	}
 }
 
@@ -90,6 +102,10 @@ func (g *game) Assets() Assets {
 
 func (g *game) Camera() Camera {
 	return g.camera
+}
+
+func (g *game) Collision() Collision {
+	return g.collision
 }
 
 func (g *game) Logger() Logger {
@@ -110,6 +126,10 @@ func (g *game) Screen() Screen {
 
 func (g *game) Time() Time {
 	return g.time
+}
+
+func (g *game) World() World {
+	return g.world
 }
 
 func (g *game) WithContext(ctx context.Context) Game {

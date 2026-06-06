@@ -31,11 +31,11 @@ type scenes struct {
 	world  *world
 	logger *logger
 
-	scenes      map[SceneID]SceneState
-	transitions map[SceneID]SceneTransitions
-
 	currentScene SceneID
 	nextScene    SceneID
+
+	scenes      map[SceneID]SceneState
+	transitions map[SceneID]SceneTransitions
 }
 
 const (
@@ -43,14 +43,14 @@ const (
 	SceneIDNone   SceneID       = ""
 )
 
-func newScenes(initialScene SceneID, collision *collision, renderer *renderer, logger *logger) *scenes {
+func newScenes(initialScene SceneID, world *world, logger *logger) *scenes {
 	return &scenes{
+		world:        world,
 		logger:       logger,
-		scenes:       make(map[SceneID]SceneState),
-		transitions:  make(map[SceneID]SceneTransitions),
 		currentScene: SceneIDNone,
 		nextScene:    initialScene,
-		world:        newWorld(collision, renderer),
+		scenes:       make(map[SceneID]SceneState),
+		transitions:  make(map[SceneID]SceneTransitions),
 	}
 }
 
