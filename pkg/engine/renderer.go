@@ -4,6 +4,8 @@ import (
 	"cmp"
 	"slices"
 
+	"github.com/adm87/onyx/pkg/engine/geom"
+	"github.com/adm87/onyx/pkg/engine/partitioning/spatialhash"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
@@ -23,10 +25,15 @@ type Renderer interface {
 	GetRenderingAdapter(adapterID AdapterID) (RenderingAdapter, bool)
 }
 
+type renderableIndexing map[donburi.Entity]spatialhash.SpatialIndex
+
 type renderer struct {
 	logger   *logger
 	queue    []RenderTask
 	adapters map[AdapterID]RenderingAdapter
+
+	partitioning *spatialhash.SpatialHash[donburi.Entity]
+	indexing     renderableIndexing
 }
 
 func newRenderer(logger *logger) *renderer {
@@ -34,7 +41,54 @@ func newRenderer(logger *logger) *renderer {
 		logger:   logger,
 		queue:    make([]RenderTask, 0, 100),
 		adapters: make(map[AdapterID]RenderingAdapter),
+		partitioning: spatialhash.New[donburi.Entity](
+			spatialhash.WithResolutions(16, 32, 64),
+			spatialhash.WithCapacity(100),
+		),
+		indexing: make(renderableIndexing),
 	}
+}
+
+func (r *renderer) addRenderable(entry *donburi.Entry, aabb geom.AABB) bool {
+	entity := entry.Entity()
+
+	if _, exists := r.indexing[entity]; exists {
+		return false // Entity is already indexed, cannot add again
+	}
+
+	index, ok := r.partitioning.Insert(entity, aabb)
+	if ok {
+		r.indexing[entity] = index
+	}
+
+	return ok
+}
+
+func (r *renderer) removeRenderable(entry *donburi.Entry) bool {
+	entity := entry.Entity()
+
+	index, exists := r.indexing[entity]
+	if !exists {
+		return false // Entity is not indexed, cannot remove
+	}
+
+	ok := r.partitioning.Remove(index)
+	if ok {
+		delete(r.indexing, entity)
+	}
+
+	return ok
+}
+
+func (r *renderer) updateRenderable(entry *donburi.Entry, aabb geom.AABB) bool {
+	entity := entry.Entity()
+
+	index, exists := r.indexing[entity]
+	if !exists {
+		return false // Entity is not indexed, cannot update
+	}
+
+	return r.partitioning.Reinsert(index, aabb)
 }
 
 func (r *renderer) render(ecs donburi.World, screen *ebiten.Image, viewMatrix ebiten.GeoM) error {

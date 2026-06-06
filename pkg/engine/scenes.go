@@ -28,9 +28,8 @@ type SceneState struct {
 }
 
 type scenes struct {
-	world    *world
-	renderer *renderer
-	logger   *logger
+	world  *world
+	logger *logger
 
 	scenes      map[SceneID]SceneState
 	transitions map[SceneID]SceneTransitions
@@ -46,13 +45,12 @@ const (
 
 func newScenes(initialScene SceneID, collision *collision, renderer *renderer, logger *logger) *scenes {
 	return &scenes{
-		renderer:     renderer,
 		logger:       logger,
 		scenes:       make(map[SceneID]SceneState),
 		transitions:  make(map[SceneID]SceneTransitions),
 		currentScene: SceneIDNone,
 		nextScene:    initialScene,
-		world:        newWorld(),
+		world:        newWorld(collision, renderer),
 	}
 }
 
@@ -97,7 +95,7 @@ func (s *scenes) update(ctx context.Context, steps int) error {
 }
 
 func (s *scenes) render(ctx context.Context, region geom.AABB, screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
-	if err := s.renderer.render(s.world.ecs, screen, viewMatrix); err != nil {
+	if err := s.world.render(screen, viewMatrix); err != nil {
 		return err
 	}
 	return s.renderCurrent(ctx, screen, viewMatrix)

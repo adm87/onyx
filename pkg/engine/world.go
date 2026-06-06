@@ -5,6 +5,7 @@ import (
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/components/shapes"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
+	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
 
@@ -20,15 +21,15 @@ type World interface {
 type world struct {
 	ecs donburi.World
 
-	collision   *collision
-	renderables *renderables
+	collision *collision
+	renderer  *renderer
 }
 
-func newWorld() *world {
+func newWorld(collision *collision, renderer *renderer) *world {
 	return &world{
-		ecs:         donburi.NewWorld(),
-		collision:   newCollision(),
-		renderables: newRenderables(),
+		ecs:       donburi.NewWorld(),
+		collision: collision,
+		renderer:  renderer,
 	}
 }
 
@@ -48,13 +49,13 @@ func (w *world) Add(entry *donburi.Entry) {
 		w.collision.add(entry, aabb)
 	}
 	if entry.HasComponent(rendering.Renderer) {
-		w.renderables.add(entry, aabb)
+		w.renderer.addRenderable(entry, aabb)
 	}
 }
 
 func (w *world) Remove(entry *donburi.Entry) {
 	w.collision.remove(entry)
-	w.renderables.remove(entry)
+	w.renderer.removeRenderable(entry)
 }
 
 func (w *world) Update(entry *donburi.Entry) {
@@ -62,5 +63,9 @@ func (w *world) Update(entry *donburi.Entry) {
 	aabb := shapes.GetAABB(entry).Translate(position)
 
 	w.collision.update(entry, aabb)
-	w.renderables.update(entry, aabb)
+	w.renderer.updateRenderable(entry, aabb)
+}
+
+func (w *world) render(screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
+	return w.renderer.render(w.ecs, screen, viewMatrix)
 }
