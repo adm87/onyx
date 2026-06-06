@@ -94,7 +94,7 @@ func (s *scenes) update(ctx context.Context, steps int) error {
 	return s.lateUpdateCurrent(ctx, currentState)
 }
 
-func (s *scenes) render(ctx context.Context, region geom.AABB, screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
+func (s *scenes) render(ctx context.Context, screen *ebiten.Image, region geom.AABB, viewMatrix ebiten.GeoM) error {
 	if err := s.world.render(screen, viewMatrix); err != nil {
 		return err
 	}

@@ -180,7 +180,7 @@ func New(
 				position := transform.GetPosition(entry)
 				aabb := shapes.GetAABB(entry).Translate(position)
 
-				center := camera.ToScreen(screen, aabb.Center())
+				center := camera.ToScreen(aabb.Center())
 
 				vector.FillRect(
 					img,

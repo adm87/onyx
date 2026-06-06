@@ -161,17 +161,9 @@ func (g *game) Draw(screen *ebiten.Image) {
 	default:
 		g.screen.buffer.Fill(g.screen.backgroundColor)
 
-		min := g.screen.SafeArea().Min
-		max := g.screen.SafeArea().Max
+		viewMatrix := g.camera.view()
 
-		region := geom.AABB{
-			Min: g.camera.ToWorld(g.screen, min),
-			Max: g.camera.ToWorld(g.screen, max),
-		}
-		_ = region
-
-		viewMatrix := g.camera.view(min, max)
-		if err := g.scenes.render(g.ctx, region, g.screen.buffer, viewMatrix); err != nil {
+		if err := g.scenes.render(g.ctx, g.screen.buffer, geom.AABB{}, viewMatrix); err != nil {
 			g.logger.Error("scene render pipeline: %v", err)
 			return
 		}

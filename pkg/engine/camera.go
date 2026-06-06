@@ -16,8 +16,8 @@ type Camera interface {
 	SetPosition(pos geom.Vec2)
 	Zoom() float64
 	SetZoom(zoom float64)
-	ToWorld(screen Screen, position geom.Vec2) geom.Vec2
-	ToScreen(screen Screen, position geom.Vec2) geom.Vec2
+	ToWorld(position geom.Vec2) geom.Vec2
+	ToScreen(position geom.Vec2) geom.Vec2
 }
 
 type camera struct {
@@ -56,39 +56,34 @@ func (c *camera) SetZoom(zoom float64) {
 	transform.SetScale(entry, geom.Vec2{X: zoom, Y: zoom})
 }
 
-func (c *camera) view(min, max geom.Vec2) ebiten.GeoM {
+func (c *camera) view() ebiten.GeoM {
 	entry := c.world.ecs.Entry(c.Entity)
 
 	matrix := transform.GetMatrix(entry)
 	matrix.Invert()
 
+	min := c.screen.SafeArea().Min
+	max := c.screen.SafeArea().Max
+
 	viewWidth := max.X - min.X
 	viewHeight := max.Y - min.Y
 
-	// Center and offset to safe area
-	matrix.Translate(
-		(viewWidth/2)+min.X,
-		(viewHeight/2)+min.Y,
-	)
+	x, y := (viewWidth*0.5)+min.X, (viewHeight*0.5)+min.Y
+	matrix.Translate(x, y)
+
 	return matrix
 }
 
-func (c *camera) ToWorld(screen Screen, screenPos geom.Vec2) geom.Vec2 {
-	invView := c.view(
-		screen.SafeArea().Min,
-		screen.SafeArea().Max,
-	)
+func (c *camera) ToWorld(screenPos geom.Vec2) geom.Vec2 {
+	invView := c.view()
 	invView.Invert()
 
 	worldX, worldY := invView.Apply(screenPos.X, screenPos.Y)
 	return geom.Vec2{X: worldX, Y: worldY}
 }
 
-func (c *camera) ToScreen(screen Screen, worldPos geom.Vec2) geom.Vec2 {
-	view := c.view(
-		screen.SafeArea().Min,
-		screen.SafeArea().Max,
-	)
+func (c *camera) ToScreen(worldPos geom.Vec2) geom.Vec2 {
+	view := c.view()
 	screenX, screenY := view.Apply(worldPos.X, worldPos.Y)
 	return geom.Vec2{X: screenX, Y: screenY}
 }
