@@ -25,8 +25,7 @@ func New(
 	camera engine.Camera,
 	collision engine.Collision,
 	screen engine.Screen,
-	world engine.World,
-	time engine.Time) engine.SceneState {
+	world engine.World) engine.SceneState {
 
 	const tilemapRef = content.AssetsLevelsGym01
 
@@ -112,31 +111,30 @@ func New(
 			collision.RemoveCollisionExit(ecs, onCollisionExit)
 			return nil
 		},
-		OnUpdate: func(ecs donburi.World) (engine.SceneExitCode, error) {
-
+		OnUpdate: func(ecs donburi.World, dt float64) (engine.SceneExitCode, error) {
 			entry := ecs.Entry(player)
 			position := transform.GetPosition(entry)
 
 			if ebiten.IsKeyPressed(ebiten.KeyW) {
-				position.Y -= 100 * time.DeltaTime()
+				position.Y -= 100 * dt
 			}
 			if ebiten.IsKeyPressed(ebiten.KeyS) {
-				position.Y += 100 * time.DeltaTime()
+				position.Y += 100 * dt
 			}
 			if ebiten.IsKeyPressed(ebiten.KeyA) {
-				position.X -= 100 * time.DeltaTime()
+				position.X -= 100 * dt
 			}
 			if ebiten.IsKeyPressed(ebiten.KeyD) {
-				position.X += 100 * time.DeltaTime()
+				position.X += 100 * dt
 			}
 			if ebiten.IsKeyPressed(ebiten.KeyUp) {
 				zoom := camera.Zoom()
-				zoom *= 1 + (0.5 * time.DeltaTime())
+				zoom *= 1 + (0.5 * dt)
 				camera.SetZoom(zoom)
 			}
 			if ebiten.IsKeyPressed(ebiten.KeyDown) {
 				zoom := camera.Zoom()
-				zoom /= 1 + (0.5 * time.DeltaTime())
+				zoom /= 1 + (0.5 * dt)
 				camera.SetZoom(zoom)
 			}
 
@@ -165,8 +163,7 @@ func New(
 			world.Update(entry)
 			return engine.SceneExitNone, nil
 		},
-		OnRender: func(ecs donburi.World, img *ebiten.Image, viewMatrix ebiten.GeoM) error {
-
+		OnRender: func(ecs donburi.World, img *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
 			shapes.QueryAABB(ecs, func(entity donburi.Entity) {
 				entry := ecs.Entry(entity)
 
@@ -184,10 +181,8 @@ func New(
 					color.RGBA{R: 255, A: 255},
 					false,
 				)
-
 				ebitenutil.DebugPrintAt(img, fmt.Sprintf("%d", entity), int(center.X), int(center.Y))
 			})
-
 			return nil
 		},
 	}

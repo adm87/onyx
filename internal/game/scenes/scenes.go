@@ -18,14 +18,12 @@ func AddScenes(onyx engine.Game) {
 	camera := onyx.Camera()
 	collision := onyx.Collision()
 	screen := onyx.Screen()
-	time := onyx.Time()
 	world := onyx.World()
 
 	s.AddScene(
 		SplashScreenSceneID,
 		splashscreen.New(
 			assets,
-			time,
 			screen,
 		),
 		engine.SceneTransitions{
@@ -41,7 +39,6 @@ func AddScenes(onyx engine.Game) {
 			collision,
 			screen,
 			world,
-			time,
 		),
 		engine.SceneTransitions{},
 	)

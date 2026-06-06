@@ -5,6 +5,7 @@ import (
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/components/shapes"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
+	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
@@ -78,6 +79,6 @@ func (w *world) UpdateMany(entries ...*donburi.Entry) {
 	}
 }
 
-func (w *world) render(screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
+func (w *world) render(screen *ebiten.Image, viewPort geom.AABB, viewMatrix ebiten.GeoM) error {
 	return w.renderer.render(w.ecs, screen, viewMatrix)
 }

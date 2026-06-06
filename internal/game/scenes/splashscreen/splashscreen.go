@@ -15,7 +15,7 @@ import (
 
 const CompleteExitCode engine.SceneExitCode = iota + 1
 
-func New(assets engine.Assets, time engine.Time, screen engine.Screen) engine.SceneState {
+func New(assets engine.Assets, screen engine.Screen) engine.SceneState {
 	var entry *donburi.Entry
 	var sequence *gween.Sequence
 	return engine.SceneState{
@@ -56,8 +56,8 @@ func New(assets engine.Assets, time engine.Time, screen engine.Screen) engine.Sc
 
 			return nil
 		},
-		OnUpdate: func(ecs donburi.World) (engine.SceneExitCode, error) {
-			opacity, _, complete := sequence.Update(float32(time.DeltaTime()))
+		OnUpdate: func(ecs donburi.World, dt float64) (engine.SceneExitCode, error) {
+			opacity, _, complete := sequence.Update(float32(dt))
 
 			color := rendering.GetColor(entry)
 			color.A = uint8(opacity * 255)

@@ -149,7 +149,11 @@ func (g *game) Update() error {
 		return g.ctx.Err()
 	default:
 		g.time.tick()
-		return g.scenes.update(g.time.fixedSteps)
+		return g.scenes.update(
+			g.time.fixedSteps,
+			g.time.deltaTime.Seconds(),
+			g.time.fixedDeltaTime.Seconds(),
+		)
 	}
 }
 
@@ -160,9 +164,10 @@ func (g *game) Draw(screen *ebiten.Image) {
 	default:
 		g.screen.buffer.Fill(g.screen.backgroundColor)
 
-		viewMatrix := g.camera.view()
+		viewMatrix := g.camera.View()
+		viewport := g.camera.Viewport()
 
-		if err := g.scenes.render(g.screen.buffer, viewMatrix); err != nil {
+		if err := g.scenes.render(g.screen.buffer, viewport, viewMatrix); err != nil {
 			g.logger.Error("scene render pipeline: %v", err)
 			return
 		}
