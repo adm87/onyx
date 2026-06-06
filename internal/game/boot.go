@@ -3,7 +3,6 @@ package game
 import (
 	"context"
 	"fmt"
-	"image/color"
 	"path/filepath"
 
 	"github.com/adm87/onyx/content"
@@ -31,7 +30,6 @@ func Boot() error {
 		engine.WithScreenScale(engine.ScreenScaleFill),
 		engine.WithInitialScene(scenes.GameplaySceneID),
 		engine.WithFilter(ebiten.FilterNearest),
-		engine.WithBackgroundColor(color.RGBA{}),
 	).WithContext(ctx)
 
 	if err := registerPackages(onyx); err != nil {
@@ -50,6 +48,7 @@ func Boot() error {
 	}
 
 	scenes.AddScenes(onyx)
+
 	return onyx.Start()
 }
 

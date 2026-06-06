@@ -11,8 +11,13 @@ import (
 
 type World interface {
 	Add(entry *donburi.Entry)
+	AddMany(entries ...*donburi.Entry)
+
 	Remove(entry *donburi.Entry)
+	RemoveMany(entries ...*donburi.Entry)
+
 	Update(entry *donburi.Entry)
+	UpdateMany(entries ...*donburi.Entry)
 }
 
 type world struct {
@@ -30,14 +35,6 @@ func newWorld(collision *collision, renderer *renderer) *world {
 	}
 }
 
-func (w *world) ECS() donburi.World {
-	return w.ecs
-}
-
-func (w *world) Collision() Collision {
-	return w.collision
-}
-
 func (w *world) Add(entry *donburi.Entry) {
 	position := transform.GetPosition(entry)
 	aabb := shapes.GetAABB(entry).Translate(position)
@@ -47,6 +44,18 @@ func (w *world) Add(entry *donburi.Entry) {
 	}
 	if entry.HasComponent(rendering.Renderer) {
 		w.renderer.addRenderable(entry, aabb)
+	}
+}
+
+func (w *world) AddMany(entries ...*donburi.Entry) {
+	for i := range entries {
+		w.Add(entries[i])
+	}
+}
+
+func (w *world) RemoveMany(entries ...*donburi.Entry) {
+	for i := range entries {
+		w.Remove(entries[i])
 	}
 }
 
@@ -61,6 +70,12 @@ func (w *world) Update(entry *donburi.Entry) {
 
 	w.collision.update(entry, aabb)
 	w.renderer.updateRenderable(entry, aabb)
+}
+
+func (w *world) UpdateMany(entries ...*donburi.Entry) {
+	for i := range entries {
+		w.Update(entries[i])
+	}
 }
 
 func (w *world) render(screen *ebiten.Image, viewMatrix ebiten.GeoM) error {

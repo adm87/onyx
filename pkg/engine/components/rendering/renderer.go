@@ -229,6 +229,12 @@ func SetColor(entry *donburi.Entry, color color.RGBA) {
 	donburi.Add(entry, Color, &color)
 }
 
+func SetAlpha(entry *donburi.Entry, alpha uint8) {
+	color := GetColor(entry)
+	color.A = alpha
+	SetColor(entry, color)
+}
+
 // GetLayer retrieves the layer information from an entity, returning a default value if it does not exist.
 func GetLayer(entry *donburi.Entry) int {
 	if !entry.HasComponent(Renderer) {

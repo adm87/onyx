@@ -6,6 +6,7 @@ import (
 	"github.com/adm87/onyx/content"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
+	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/images"
 	"github.com/tanema/gween"
 	"github.com/tanema/gween/ease"
@@ -31,6 +32,9 @@ func New(assets engine.Assets, time engine.Time, screen engine.Screen) engine.Sc
 			screen.ResizeBuffer(img.Bounds().Dx(), img.Bounds().Dy())
 
 			entry = images.CreateImageEntity(ecs, content.EmbeddedSplash1920x1080Black)
+
+			rendering.SetAnchor(entry, geom.Vec2{X: 0.5, Y: 0.5})
+			rendering.SetAlpha(entry, 0)
 
 			sequence = gween.NewSequence(
 				gween.New(0, 0, 0.5, ease.Linear),
