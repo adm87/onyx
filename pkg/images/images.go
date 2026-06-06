@@ -11,7 +11,10 @@ import (
 	"github.com/yohamta/donburi/filter"
 )
 
-const AdapterID engine.AdapterID = "image_adapter"
+const (
+	AdapterID         engine.AdapterID       = "image_adapter"
+	ImageRendererType rendering.RendererType = "image_renderer"
+)
 
 var (
 	Image      = donburi.NewTag()

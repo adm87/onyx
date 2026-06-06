@@ -9,10 +9,17 @@ import (
 	"github.com/yohamta/donburi/filter"
 )
 
+type RendererType string
+
+func (t RendererType) IsValid() bool {
+	return t != ""
+}
+
 type RendererInfo struct {
 	Visible bool
 	Layer   int
 	ZIndex  int
+	Type    RendererType
 }
 
 type (
@@ -20,6 +27,7 @@ type (
 		Visible bool
 		Layer   int
 		ZIndex  int
+		Type    RendererType
 		Anchor  geom.Vec2
 		Color   color.RGBA
 		Filter  ebiten.Filter
@@ -38,10 +46,11 @@ type QueryCallback func(
 )
 
 var (
-	defaultFilter   = ebiten.FilterNearest
-	defaultColor    = color.RGBA{R: 255, G: 255, B: 255, A: 255}
-	defaultAnchor   = geom.Vec2{X: 0, Y: 0}
-	defaultRenderer = RendererInfo{Visible: true}
+	defaultFilter       = ebiten.FilterNearest
+	defaultColor        = color.RGBA{R: 255, G: 255, B: 255, A: 255}
+	defaultAnchor       = geom.Vec2{X: 0, Y: 0}
+	defaultRendererType = RendererType("")
+	defaultRenderer     = RendererInfo{Visible: true}
 )
 
 var (
@@ -65,6 +74,8 @@ func defaultOptions() Options {
 		Visible: defaultRenderer.Visible,
 		Layer:   defaultRenderer.Layer,
 		ZIndex:  defaultRenderer.ZIndex,
+		Type:    defaultRendererType,
+		Anchor:  defaultAnchor,
 		Color:   defaultColor,
 		Filter:  defaultFilter,
 	}
@@ -103,6 +114,12 @@ func WithColor(color color.RGBA) Option {
 func WithFilter(filter ebiten.Filter) Option {
 	return func(opts *Options) {
 		opts.Filter = filter
+	}
+}
+
+func WithType(rendererType RendererType) Option {
+	return func(opts *Options) {
+		opts.Type = rendererType
 	}
 }
 
@@ -185,9 +202,18 @@ func AddRenderer(entry *donburi.Entry, options ...Option) *donburi.Entry {
 		Visible: opts.Visible,
 		Layer:   opts.Layer,
 		ZIndex:  opts.ZIndex,
+		Type:    opts.Type,
 	})
 
 	return entry
+}
+
+// GetRendererType retrieves the renderer type from an entity, returning a default value if it does not exist.
+func GetRendererType(entry *donburi.Entry) RendererType {
+	if !entry.HasComponent(Renderer) {
+		return defaultRendererType
+	}
+	return Renderer.Get(entry).Type
 }
 
 // GetFilter retrieves the filter component from an entity, returning a default value if it does not exist.

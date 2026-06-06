@@ -23,6 +23,7 @@ type TiledRenderingAdapter struct {
 	screen engine.Screen
 
 	renderingTasks []engine.RenderTask
+	rendererTypes  []rendering.RendererType
 
 	buffers map[file.FilePath]*ebiten.Image
 	drawn   map[file.FilePath]struct{}
@@ -41,6 +42,7 @@ func NewTiledRenderingAdapter(
 		renderingTasks:    make([]engine.RenderTask, 0, 10),
 		buffers:           make(map[file.FilePath]*ebiten.Image),
 		drawn:             make(map[file.FilePath]struct{}),
+		rendererTypes:     []rendering.RendererType{TiledRendererType},
 	}
 }
 
@@ -63,6 +65,10 @@ func (a *TiledRenderingAdapter) getBuffer(ref file.FilePath) *ebiten.Image {
 
 	a.buffers[ref] = buffer
 	return buffer
+}
+
+func (a *TiledRenderingAdapter) SupportedRendererTypes() []rendering.RendererType {
+	return a.rendererTypes
 }
 
 func (a *TiledRenderingAdapter) GetRenderTasks(ecs donburi.World, viewMatrix ebiten.GeoM) []engine.RenderTask {

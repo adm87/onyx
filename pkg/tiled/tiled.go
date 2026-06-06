@@ -13,7 +13,10 @@ import (
 	"github.com/yohamta/donburi/filter"
 )
 
-const AdapterID engine.AdapterID = "tiled_adapter"
+const (
+	AdapterID         engine.AdapterID       = "tiled_adapter"
+	TiledRendererType rendering.RendererType = "tiled_renderer"
+)
 
 var (
 	Tiled      = donburi.NewTag()

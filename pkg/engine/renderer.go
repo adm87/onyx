@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"slices"
 
+	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/engine/partitioning/spatialhash"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -12,6 +13,7 @@ import (
 
 type RenderingAdapter interface {
 	GetRenderTasks(ecs donburi.World, viewMatrix ebiten.GeoM) []RenderTask
+	SupportedRendererTypes() []rendering.RendererType
 }
 
 type RenderTask struct {

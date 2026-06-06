@@ -15,13 +15,19 @@ import (
 type ImageRenderingAdapter struct {
 	assetAdapter   *ImageAssetAdapter
 	renderingTasks []engine.RenderTask
+	rendererTypes  []rendering.RendererType
 }
 
 func NewImageRenderingAdapter(assetAdapter *ImageAssetAdapter) *ImageRenderingAdapter {
 	return &ImageRenderingAdapter{
 		assetAdapter:   assetAdapter,
 		renderingTasks: make([]engine.RenderTask, 0, 100),
+		rendererTypes:  []rendering.RendererType{ImageRendererType},
 	}
+}
+
+func (a *ImageRenderingAdapter) SupportedRendererTypes() []rendering.RendererType {
+	return a.rendererTypes
 }
 
 func (a *ImageRenderingAdapter) GetRenderTasks(ecs donburi.World, viewMatrix ebiten.GeoM) []engine.RenderTask {
