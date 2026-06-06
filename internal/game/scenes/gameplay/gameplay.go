@@ -57,19 +57,9 @@ func New(
 				return fmt.Errorf("failed to load embedded image: %s", content.EmbeddedImg10x10White)
 			}
 
-			levelEntry := tiled.CreateTiledEntity(ecs, content.AssetsLevelsGym01)
+			levelEntry := tiled.CreateTiledEntity(ecs, content.AssetsLevelsGym01, tilemap.Bounds())
 			level = levelEntry.Entity()
 
-			shapes.AddAABB(levelEntry,
-				shapes.WithPosition(
-					tilemap.Bounds().Min.X,
-					tilemap.Bounds().Min.Y,
-				),
-				shapes.WithSize(
-					tilemap.Bounds().Width(),
-					tilemap.Bounds().Height(),
-				),
-			)
 			rendering.SetLayer(levelEntry, 0)
 
 			buildStaticCollision(ecs, world, tmx)
@@ -80,18 +70,15 @@ func New(
 			width, height := float64(img.Bounds().Dx()), float64(img.Bounds().Dy())
 			hWidth, hHeight := width/2, height/2
 
-			playerEntry := images.CreateImageEntity(ecs, content.EmbeddedImg10x10White)
+			playerBounds := geom.AABB{
+				Min: geom.Vec2{X: -hWidth, Y: -hHeight},
+				Max: geom.Vec2{X: hWidth, Y: hHeight},
+			}
+
+			playerEntry := images.CreateImageEntity(ecs, content.EmbeddedImg10x10White, playerBounds)
+
 			colliders.AddCollider(playerEntry)
-			shapes.AddAABB(playerEntry,
-				shapes.WithPosition(-hWidth, -hHeight),
-				shapes.WithSize(width, height),
-			)
-			rendering.SetAnchor(playerEntry,
-				geom.Vec2{
-					X: 0.5,
-					Y: 0.5,
-				},
-			)
+			rendering.SetAnchor(playerEntry, geom.Vec2{X: 0.5, Y: 0.5})
 			rendering.SetLayer(playerEntry, 1)
 
 			pos := tilemap.Bounds().Center()

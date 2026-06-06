@@ -80,5 +80,5 @@ func (w *world) UpdateMany(entries ...*donburi.Entry) {
 }
 
 func (w *world) render(screen *ebiten.Image, viewPort geom.AABB, viewMatrix ebiten.GeoM) error {
-	return w.renderer.render(w.ecs, screen, viewMatrix)
+	return w.renderer.render(w.ecs, screen, viewPort, viewMatrix)
 }

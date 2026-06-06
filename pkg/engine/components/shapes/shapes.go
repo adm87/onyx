@@ -44,6 +44,13 @@ func WithSize(width, height float64) Option {
 	}
 }
 
+func WithBounds(min, max geom.Vec2) Option {
+	return func(opts *Options) {
+		opts.Position = min
+		opts.Size = geom.Vec2{X: max.X - min.X, Y: max.Y - min.Y}
+	}
+}
+
 func QueryAABB(ecs donburi.World, callback func(donburi.Entity)) {
 	queryAABB.Each(ecs, func(entry *donburi.Entry) {
 		callback(entry.Entity())

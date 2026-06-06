@@ -6,8 +6,10 @@ import (
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/components/asset"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
+	"github.com/adm87/onyx/pkg/engine/components/shapes"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/file"
+	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/images"
 	"github.com/yohamta/donburi"
 	"github.com/yohamta/donburi/filter"
@@ -98,12 +100,20 @@ func GetRenderingAdapter(renderer engine.Renderer) (*TiledRenderingAdapter, bool
 	return tiledRenderer, ok
 }
 
-func CreateTiledEntity(ecs donburi.World, ref file.FilePath) *donburi.Entry {
+func CreateTiledEntity(ecs donburi.World, ref file.FilePath, bounds geom.AABB) *donburi.Entry {
 	entry := asset.NewAssetReference(ecs, ref)
 	entry.AddComponent(Tiled)
 
+	rendering.AddRenderer(entry,
+		rendering.WithType(TiledRendererType),
+	)
+	shapes.AddAABB(entry,
+		shapes.WithBounds(
+			bounds.Min,
+			bounds.Max,
+		),
+	)
 	transform.AddTransform(entry)
-	rendering.AddRenderer(entry)
 
 	return entry
 }

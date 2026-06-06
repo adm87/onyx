@@ -12,7 +12,7 @@ import (
 )
 
 type RenderingAdapter interface {
-	GetRenderTasks(ecs donburi.World, viewMatrix ebiten.GeoM) []RenderTask
+	GetRenderTasks(entry *donburi.Entry, layer int, zIndex int, viewMatrix ebiten.GeoM) []RenderTask
 	SupportedRendererTypes() []rendering.RendererType
 }
 
@@ -30,9 +30,11 @@ type Renderer interface {
 type renderableIndexing map[donburi.Entity]spatialhash.SpatialIndex
 
 type renderer struct {
-	logger   *logger
-	queue    []RenderTask
-	adapters map[AdapterID]RenderingAdapter
+	logger *logger
+	queue  []RenderTask
+
+	adapters  map[AdapterID]RenderingAdapter
+	renderers map[rendering.RendererType]RenderingAdapter
 
 	partitioning *spatialhash.SpatialHash[donburi.Entity]
 	indexing     renderableIndexing
@@ -40,11 +42,12 @@ type renderer struct {
 
 func newRenderer(logger *logger) *renderer {
 	return &renderer{
-		logger:   logger,
-		queue:    make([]RenderTask, 0, 100),
-		adapters: make(map[AdapterID]RenderingAdapter),
+		logger:    logger,
+		queue:     make([]RenderTask, 0, 100),
+		adapters:  make(map[AdapterID]RenderingAdapter),
+		renderers: make(map[rendering.RendererType]RenderingAdapter),
 		partitioning: spatialhash.New[donburi.Entity](
-			spatialhash.WithResolutions(16, 32, 64),
+			spatialhash.WithResolutions(16, 32),
 			spatialhash.WithCapacity(100),
 		),
 		indexing: make(renderableIndexing),
@@ -93,12 +96,33 @@ func (r *renderer) updateRenderable(entry *donburi.Entry, aabb geom.AABB) bool {
 	return r.partitioning.Reinsert(index, aabb)
 }
 
-func (r *renderer) render(ecs donburi.World, screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
+func (r *renderer) render(ecs donburi.World, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
 	r.queue = r.queue[:0]
 
-	for _, adapter := range r.adapters {
-		r.queue = append(r.queue, adapter.GetRenderTasks(ecs, viewMatrix)...)
-	}
+	r.partitioning.QueryAll(viewport, func(e donburi.Entity) bool {
+		entry := ecs.Entry(e)
+
+		visible := rendering.IsVisible(entry)
+		if !visible {
+			return true // Skip invisible entities
+		}
+
+		layer := rendering.GetLayer(entry)
+		zIndex := rendering.GetZIndex(entry)
+		rendererType := rendering.GetRendererType(entry)
+
+		adapter, exists := r.renderers[rendererType]
+		if !exists {
+			return true // No adapter for this renderer type, skip
+		}
+
+		tasks := adapter.GetRenderTasks(entry, layer, zIndex, viewMatrix)
+		r.queue = append(r.queue, tasks...)
+
+		return true
+	})
+
+	println("Render queue length:", len(r.queue))
 
 	slices.SortFunc(r.queue, func(a, b RenderTask) int {
 		if a.Layer != b.Layer {
@@ -120,6 +144,14 @@ func (r *renderer) AddRenderingAdapter(adapterID AdapterID, adapter RenderingAda
 	if _, exists := r.adapters[adapterID]; exists {
 		r.logger.Warn("Rendering adapter with ID '%s' already exists, skipping", adapterID)
 		return
+	}
+
+	for _, rendererType := range adapter.SupportedRendererTypes() {
+		if _, exists := r.renderers[rendererType]; exists {
+			r.logger.Warn("Renderer for type '%s' already exists, skipping", rendererType)
+			continue
+		}
+		r.renderers[rendererType] = adapter
 	}
 
 	r.adapters[adapterID] = adapter

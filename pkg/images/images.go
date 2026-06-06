@@ -4,8 +4,10 @@ import (
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/components/asset"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
+	"github.com/adm87/onyx/pkg/engine/components/shapes"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/file"
+	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 	"github.com/yohamta/donburi/filter"
@@ -68,12 +70,20 @@ func GetImageAssets(assets engine.Assets, path file.FilePath) (*ebiten.Image, bo
 	return img, exists
 }
 
-func CreateImageEntity(ecs donburi.World, ref file.FilePath) *donburi.Entry {
+func CreateImageEntity(ecs donburi.World, ref file.FilePath, bounds geom.AABB) *donburi.Entry {
 	entry := asset.NewAssetReference(ecs, ref)
 	entry.AddComponent(Image)
 
+	rendering.AddRenderer(entry,
+		rendering.WithType(ImageRendererType),
+	)
+	shapes.AddAABB(entry,
+		shapes.WithBounds(
+			bounds.Min,
+			bounds.Max,
+		),
+	)
 	transform.AddTransform(entry)
-	rendering.AddRenderer(entry)
 
 	return entry
 }

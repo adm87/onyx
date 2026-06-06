@@ -29,9 +29,17 @@ func New(assets engine.Assets, screen engine.Screen) engine.SceneState {
 				return fmt.Errorf("failed to get image asset '%s'", content.EmbeddedSplash1920x1080Black)
 			}
 
-			screen.ResizeBuffer(img.Bounds().Dx(), img.Bounds().Dy())
+			width, height := img.Bounds().Dx(), img.Bounds().Dy()
+			halfWidth, halfHeight := float64(width)/2, float64(height)/2
 
-			entry = images.CreateImageEntity(ecs, content.EmbeddedSplash1920x1080Black)
+			bounds := geom.AABB{
+				Min: geom.Vec2{X: -halfWidth, Y: -halfHeight},
+				Max: geom.Vec2{X: halfWidth, Y: halfHeight},
+			}
+
+			screen.ResizeBuffer(width, height)
+
+			entry = images.CreateImageEntity(ecs, content.EmbeddedSplash1920x1080Black, bounds)
 
 			rendering.SetAnchor(entry, geom.Vec2{X: 0.5, Y: 0.5})
 			rendering.SetAlpha(entry, 0)
