@@ -19,6 +19,8 @@ type World interface {
 
 	Update(entry *donburi.Entry)
 	UpdateMany(entries ...*donburi.Entry)
+
+	Query(aabb geom.AABB, callback func(donburi.Entity))
 }
 
 type world struct {
@@ -26,6 +28,8 @@ type world struct {
 
 	collision *collision
 	renderer  *renderer
+
+	seen map[donburi.Entity]struct{}
 }
 
 func newWorld(collision *collision, renderer *renderer) *world {
@@ -33,6 +37,7 @@ func newWorld(collision *collision, renderer *renderer) *world {
 		ecs:       donburi.NewWorld(),
 		collision: collision,
 		renderer:  renderer,
+		seen:      make(map[donburi.Entity]struct{}),
 	}
 }
 
@@ -77,6 +82,29 @@ func (w *world) UpdateMany(entries ...*donburi.Entry) {
 	for i := range entries {
 		w.Update(entries[i])
 	}
+}
+
+func (w *world) Query(aabb geom.AABB, callback func(donburi.Entity)) {
+	// NOTE: This is temporary until a strategy for world queries is implemented
+
+	clear(w.seen)
+	w.collision.QueryAll(aabb, func(e donburi.Entity) {
+		if _, exists := w.seen[e]; exists {
+			return // Skip already seen entities
+		}
+		w.seen[e] = struct{}{}
+
+		callback(e)
+	})
+	w.renderer.partitioning.QueryAll(aabb, func(e donburi.Entity) bool {
+		if _, exists := w.seen[e]; exists {
+			return true // Skip already seen entities
+		}
+		w.seen[e] = struct{}{}
+
+		callback(e)
+		return true
+	})
 }
 
 func (w *world) render(screen *ebiten.Image, viewPort geom.AABB, viewMatrix ebiten.GeoM) error {

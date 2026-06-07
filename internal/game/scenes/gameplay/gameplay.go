@@ -2,7 +2,6 @@ package gameplay
 
 import (
 	"fmt"
-	"image/color"
 
 	"github.com/adm87/onyx/content"
 	"github.com/adm87/onyx/pkg/engine"
@@ -16,7 +15,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/yohamta/donburi"
 )
 
@@ -94,13 +92,11 @@ func New(
 			world.Add(playerEntry)
 			world.Add(levelEntry)
 
-			collision.AddCollisionEnter(ecs, onCollisionEnter)
-			collision.AddCollisionExit(ecs, onCollisionExit)
 			return nil
 		},
 		OnExit: func(ecs donburi.World) error {
-			collision.RemoveCollisionEnter(ecs, onCollisionEnter)
-			collision.RemoveCollisionExit(ecs, onCollisionExit)
+			world.Remove(ecs.Entry(player))
+			world.Remove(ecs.Entry(level))
 			return nil
 		},
 		OnUpdate: func(ecs donburi.World, dt float64) (engine.SceneExitCode, error) {
@@ -191,29 +187,8 @@ func New(
 			return nil
 		},
 		OnRender: func(ecs donburi.World, img *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
-			shapes.QueryAABB(ecs, func(entity donburi.Entity) {
-				entry := ecs.Entry(entity)
 
-				position := transform.GetPosition(entry)
-				aabb := shapes.GetAABB(entry).Translate(position)
-
-				if !aabb.Intersects(viewport) {
-					return
-				}
-
-				center := camera.ToScreen(aabb.Center())
-
-				vector.FillRect(
-					img,
-					float32(center.X)-2,
-					float32(center.Y)-2,
-					4,
-					4,
-					color.RGBA{R: 255, A: 255},
-					false,
-				)
-				ebitenutil.DebugPrintAt(img, fmt.Sprintf("%d", entity), int(center.X), int(center.Y))
-			})
+			ebitenutil.DebugPrintAt(img, fmt.Sprintf("FPS: %.2f", ebiten.ActualFPS()), 10, 10)
 			return nil
 		},
 	}
@@ -234,12 +209,4 @@ func buildStaticCollision(ecs donburi.World, world engine.World, tmx *tiled.Tmx)
 		)
 		world.Add(entry)
 	})
-}
-
-func onCollisionEnter(ecs donburi.World, event engine.CollisionEvent) {
-	fmt.Printf("Collision Enter: %d <-> %d\n", event.EntityA, event.EntityB)
-}
-
-func onCollisionExit(ecs donburi.World, event engine.CollisionEvent) {
-	fmt.Printf("Collision Exit: %d <-> %d\n", event.EntityA, event.EntityB)
 }
