@@ -31,3 +31,11 @@ func (a *AsepriteAssetAdapter) DeleteAsset(path file.FilePath) bool {
 func (a *AsepriteAssetAdapter) SupportedExtensions() []file.FileExt {
 	return nil // This asset adapter doesn't handle importing raw data.
 }
+
+func (a *AsepriteAssetAdapter) ImportAnimations(jsonPaths ...file.FilePath) error {
+	return nil
+}
+
+func (a *AsepriteAssetAdapter) DeleteAnimations(jsonPaths ...file.FilePath) {
+
+}

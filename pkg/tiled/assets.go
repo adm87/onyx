@@ -6,11 +6,14 @@ import (
 	"io/fs"
 	"path/filepath"
 
+	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/images"
 )
 
 type TiledAssetAdapter struct {
+	logger engine.Logger
+
 	tmxCache map[file.FilePath]*Tmx
 	tsxCache map[file.FilePath]*Tsx
 	tilemaps map[file.FilePath]*Tilemap
@@ -18,9 +21,10 @@ type TiledAssetAdapter struct {
 	images *images.ImageAssetAdapter
 }
 
-func NewTiledAssetAdapter(images *images.ImageAssetAdapter) *TiledAssetAdapter {
+func NewTiledAssetAdapter(images *images.ImageAssetAdapter, logger engine.Logger) *TiledAssetAdapter {
 	return &TiledAssetAdapter{
 		images:   images,
+		logger:   logger,
 		tmxCache: make(map[file.FilePath]*Tmx),
 		tsxCache: make(map[file.FilePath]*Tsx),
 		tilemaps: make(map[file.FilePath]*Tilemap),
@@ -75,6 +79,7 @@ func (a *TiledAssetAdapter) importTmx(fileSystem fs.FS, path file.FilePath, raw 
 	}
 
 	for _, tsxPath := range tsxPaths {
+		a.logger.Debug("Loading tsx file '%s' referenced by tmx file '%s'", tsxPath, path)
 		if err := a.loadTsx(fileSystem, tsxPath); err != nil {
 			return fmt.Errorf("failed to load tsx file '%s' referenced by tmx file '%s': %w", tsxPath, path, err)
 		}
@@ -121,6 +126,7 @@ func (a *TiledAssetAdapter) importTsx(fileSystem fs.FS, path file.FilePath, raw 
 	srcPath := a.resolvedPath(tsxDir, tsx.Image.Source)
 	tsx.Image.Source = srcPath.String()
 
+	a.logger.Debug("Loading tileset image '%s' referenced by tsx file '%s'", srcPath, path)
 	if err := a.loadTilesetImage(fileSystem, srcPath); err != nil {
 		return fmt.Errorf("failed to load tileset image '%s' referenced by tsx file '%s': %w", srcPath, path, err)
 	}

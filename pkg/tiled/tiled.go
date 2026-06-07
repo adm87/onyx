@@ -30,8 +30,9 @@ func RegisterPackage(
 	assets engine.Assets,
 	renderer engine.Renderer,
 	camera engine.Camera,
-	screen engine.Screen) error {
-	tiledAssetAdapter := NewTiledAssetAdapter(imageAssetAdapter)
+	screen engine.Screen,
+	logger engine.Logger) error {
+	tiledAssetAdapter := NewTiledAssetAdapter(imageAssetAdapter, logger)
 	assets.AddAssetAdapter(
 		AdapterID,
 		tiledAssetAdapter,

@@ -58,6 +58,7 @@ func registerPackages(onyx engine.Game) error {
 	camera := onyx.Camera()
 	screen := onyx.Screen()
 	renderer := onyx.Renderer()
+	logger := onyx.Logger()
 
 	// NOTE: The order of package registration matters, as some packages may depend on others being registered first.
 
@@ -70,7 +71,7 @@ func registerPackages(onyx engine.Game) error {
 		return fmt.Errorf("image asset adapter not found")
 	}
 
-	if err := tiled.RegisterPackage(imageAssetAdapter, assets, renderer, camera, screen); err != nil {
+	if err := tiled.RegisterPackage(imageAssetAdapter, assets, renderer, camera, screen, logger); err != nil {
 		return fmt.Errorf("failed to register tiled package: %w", err)
 	}
 	if err := aseprite.RegisterPackage(imageAssetAdapter, assets, renderer); err != nil {

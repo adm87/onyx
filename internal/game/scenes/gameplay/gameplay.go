@@ -2,6 +2,7 @@ package gameplay
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/adm87/onyx/content"
 	"github.com/adm87/onyx/pkg/aseprite"
@@ -40,6 +41,9 @@ func New(
 		content.AssetsAsepriteCaptainImg,
 		content.AssetsTiledGym01,
 	}
+	var animations = []file.FilePath{
+		content.AssetsAsepriteCaptainJson,
+	}
 
 	debugDrawColliders := false
 	debugDrawPartitions := false
@@ -48,26 +52,34 @@ func New(
 	return engine.SceneState{
 		OnEnter: func(ecs donburi.World) error {
 			var err error
+			var found bool
 
 			if err = assets.Load(content.AssetsFS(), manifest...); err != nil {
 				return fmt.Errorf("failed to load assets: %v", err)
 			}
 
-			adapter, found := aseprite.GetAssetAdapter(assets)
+			asepriteAdapter, found = aseprite.GetAssetAdapter(assets)
 			if !found {
 				return fmt.Errorf("aseprite asset adapter not found")
 			}
-			asepriteAdapter = adapter
 
-			_ = asepriteAdapter // TODO - use this when we add animations
+			if err = asepriteAdapter.ImportAnimations(animations...); err != nil {
+				return fmt.Errorf("failed to import aseprite animations: %w", err)
+			}
 
 			tilemapEntry, tilemap, err = buildTiledLevel(ecs, assets, world)
 			if err != nil {
 				return fmt.Errorf("failed to build tiled level: %w", err)
 			}
 
+			viewport := camera.Viewport()
+
+			scaleX := tilemap.Bounds().Width() / viewport.Width()
+			scaleY := tilemap.Bounds().Height() / viewport.Height()
+			zoom := min(scaleX, scaleY)
+
 			camera.SetPosition(tilemap.Bounds().Center())
-			camera.SetZoom(0.2)
+			camera.SetZoom(zoom)
 
 			playerEntry, err = buildPlayer(ecs, assets, tilemap.Bounds().Center())
 			if err != nil {
@@ -76,13 +88,7 @@ func New(
 
 			world.Add(playerEntry)
 			world.Add(tilemapEntry)
-			return nil
-		},
-		OnExit: func(ecs donburi.World) error {
-			world.Remove(playerEntry)
-			world.Remove(tilemapEntry)
 
-			assets.Unload(manifest...)
 			return nil
 		},
 		OnUpdate: func(ecs donburi.World, dt float64) (engine.SceneExitCode, error) {
@@ -127,10 +133,8 @@ func New(
 			return engine.SceneExitNone, nil
 		},
 		OnFixedUpdate: func(ecs donburi.World, dt float64) error {
+			position := transform.GetPosition(playerEntry)
 			if moveDir.X != 0 || moveDir.Y != 0 {
-				entry := playerEntry
-
-				position := transform.GetPosition(entry)
 
 				position.X += moveDir.X * 100 * dt
 				position.Y += moveDir.Y * 100 * dt
@@ -140,7 +144,7 @@ func New(
 				position.X = engine.Clamp(position.X, viewport.Min.X, viewport.Max.X)
 				position.Y = engine.Clamp(position.Y, viewport.Min.Y, viewport.Max.Y)
 
-				transform.SetPosition(entry, position)
+				transform.SetPosition(playerEntry, position)
 
 				moveDir = geom.Vec2{}
 			}
@@ -151,7 +155,8 @@ func New(
 			return nil
 		},
 		OnLateUpdate: func(ecs donburi.World, dt float64) error {
-			position := transform.GetPosition(playerEntry)
+			playerPosition := transform.GetPosition(playerEntry)
+			cameraPosition := camera.Position()
 
 			min := tilemap.Bounds().Min
 			max := tilemap.Bounds().Max
@@ -160,10 +165,20 @@ func New(
 			width := viewport.Width()
 			height := viewport.Height()
 
-			position.X = engine.Clamp(position.X, min.X+(width/2), max.X-(width/2))
-			position.Y = engine.Clamp(position.Y, min.Y+(height/2), max.Y-(height/2))
+			cameraPosition.X = engine.SmoothStep(cameraPosition.X, playerPosition.X, dt*10)
+			cameraPosition.Y = engine.SmoothStep(cameraPosition.Y, playerPosition.Y, dt*10)
 
-			camera.SetPosition(position)
+			if math.Abs(cameraPosition.X-playerPosition.X) < 0.1 {
+				cameraPosition.X = playerPosition.X
+			}
+			if math.Abs(cameraPosition.Y-playerPosition.Y) < 0.1 {
+				cameraPosition.Y = playerPosition.Y
+			}
+
+			cameraPosition.X = engine.Clamp(cameraPosition.X, min.X+(width/2), max.X-(width/2))
+			cameraPosition.Y = engine.Clamp(cameraPosition.Y, min.Y+(height/2), max.Y-(height/2))
+
+			camera.SetPosition(cameraPosition)
 
 			world.Update(playerEntry)
 			return nil

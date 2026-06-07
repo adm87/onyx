@@ -57,7 +57,6 @@ func New(assets engine.Assets, screen engine.Screen, world engine.World) engine.
 		},
 		OnExit: func(ecs donburi.World) error {
 			world.Remove(entry)
-			ecs.Remove(entry.Entity())
 
 			assets.Unload(content.EmbeddedSplash1920x1080Black)
 			screen.RestoreBuffer()

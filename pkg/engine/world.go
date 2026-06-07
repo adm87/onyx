@@ -68,6 +68,7 @@ func (w *world) RemoveMany(entries ...*donburi.Entry) {
 func (w *world) Remove(entry *donburi.Entry) {
 	w.collision.remove(entry)
 	w.renderer.removeRenderable(entry)
+	w.ecs.Remove(entry.Entity())
 }
 
 func (w *world) Update(entry *donburi.Entry) {
