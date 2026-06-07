@@ -4,11 +4,13 @@ import (
 	"fmt"
 
 	"github.com/adm87/onyx/content"
+	"github.com/adm87/onyx/pkg/aseprite"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/components/colliders"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/components/shapes"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
+	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/images"
 	"github.com/adm87/onyx/pkg/tiled"
@@ -25,13 +27,19 @@ func New(
 	screen engine.Screen,
 	world engine.World) engine.SceneState {
 
-	const tilemapRef = content.AssetsLevelsGym01
-
-	var player donburi.Entity
-	var level donburi.Entity
+	var asepriteAdapter *aseprite.AsepriteAssetAdapter
 	var tilemap *tiled.Tilemap
+	var tilemapEntry *donburi.Entry
+	var playerEntry *donburi.Entry
+
 	var moveDir geom.Vec2
 	var zoomDir int
+
+	var manifest = []file.FilePath{
+		content.AssetsAsepriteCaptainJson,
+		content.AssetsAsepriteCaptainImg,
+		content.AssetsTiledGym01,
+	}
 
 	debugDrawColliders := false
 	debugDrawPartitions := false
@@ -39,64 +47,42 @@ func New(
 
 	return engine.SceneState{
 		OnEnter: func(ecs donburi.World) error {
-			if err := assets.Load(content.AssetsFS(), tilemapRef); err != nil {
-				return fmt.Errorf("failed to load level asset: %w", err)
+			var err error
+
+			if err = assets.Load(content.AssetsFS(), manifest...); err != nil {
+				return fmt.Errorf("failed to load assets: %v", err)
 			}
 
-			tm, exists := tiled.GetTilemap(assets, tilemapRef)
-			if !exists {
-				return fmt.Errorf("tilemap asset not found: %s", tilemapRef)
+			adapter, found := aseprite.GetAssetAdapter(assets)
+			if !found {
+				return fmt.Errorf("aseprite asset adapter not found")
 			}
+			asepriteAdapter = adapter
 
-			tilemap = tm
+			_ = asepriteAdapter // TODO - use this when we add animations
 
-			tmx, exists := tiled.GetTmx(assets, tilemapRef)
-			if !exists {
-				return fmt.Errorf("tmx asset not found for tilemap: %s", tilemapRef)
+			tilemapEntry, tilemap, err = buildTiledLevel(ecs, assets, world)
+			if err != nil {
+				return fmt.Errorf("failed to build tiled level: %w", err)
 			}
-
-			img, exists := images.GetImageAssets(assets, content.EmbeddedImg10x10White)
-			if !exists {
-				return fmt.Errorf("failed to load embedded image: %s", content.EmbeddedImg10x10White)
-			}
-
-			levelEntry := tiled.CreateTiledEntity(ecs, content.AssetsLevelsGym01, tilemap.Bounds())
-			level = levelEntry.Entity()
-
-			rendering.SetLayer(levelEntry, 0)
-
-			buildStaticCollision(ecs, world, tmx)
 
 			camera.SetPosition(tilemap.Bounds().Center())
 			camera.SetZoom(0.2)
 
-			width, height := float64(img.Bounds().Dx()), float64(img.Bounds().Dy())
-			hWidth, hHeight := width/2, height/2
-
-			playerBounds := geom.AABB{
-				Min: geom.Vec2{X: -hWidth, Y: -hHeight},
-				Max: geom.Vec2{X: hWidth, Y: hHeight},
+			playerEntry, err = buildPlayer(ecs, assets, tilemap.Bounds().Center())
+			if err != nil {
+				return fmt.Errorf("failed to build player: %w", err)
 			}
 
-			playerEntry := images.CreateImageEntity(ecs, content.EmbeddedImg10x10White, playerBounds)
-
-			colliders.AddCollider(playerEntry)
-			rendering.SetAnchor(playerEntry, geom.Vec2{X: 0.5, Y: 0.5})
-			rendering.SetLayer(playerEntry, 1)
-
-			pos := tilemap.Bounds().Center()
-			transform.SetPosition(playerEntry, pos)
-
-			player = playerEntry.Entity()
-
 			world.Add(playerEntry)
-			world.Add(levelEntry)
-
+			world.Add(tilemapEntry)
 			return nil
 		},
 		OnExit: func(ecs donburi.World) error {
-			world.Remove(ecs.Entry(player))
-			world.Remove(ecs.Entry(level))
+			world.Remove(playerEntry)
+			world.Remove(tilemapEntry)
+
+			assets.Unload(manifest...)
 			return nil
 		},
 		OnUpdate: func(ecs donburi.World, dt float64) (engine.SceneExitCode, error) {
@@ -134,15 +120,15 @@ func New(
 			}
 			if inpututil.IsKeyJustPressed(ebiten.Key3) {
 				debugVisibilityToggle = !debugVisibilityToggle
-				rendering.SetVisible(ecs.Entry(level), debugVisibilityToggle)
-				rendering.SetVisible(ecs.Entry(player), debugVisibilityToggle)
+				rendering.SetVisible(tilemapEntry, debugVisibilityToggle)
+				rendering.SetVisible(playerEntry, debugVisibilityToggle)
 			}
 
 			return engine.SceneExitNone, nil
 		},
 		OnFixedUpdate: func(ecs donburi.World, dt float64) error {
 			if moveDir.X != 0 || moveDir.Y != 0 {
-				entry := ecs.Entry(player)
+				entry := playerEntry
 
 				position := transform.GetPosition(entry)
 
@@ -159,16 +145,12 @@ func New(
 				moveDir = geom.Vec2{}
 			}
 			if zoomDir != 0 {
-				zoom := camera.Zoom()
-				zoom *= 1 + (0.5 * float64(zoomDir) * dt)
-				camera.SetZoom(zoom)
+				applyAndClampZoom(camera, tilemap.Bounds(), float64(zoomDir)*0.1*dt)
 				zoomDir = 0
 			}
 			return nil
 		},
 		OnLateUpdate: func(ecs donburi.World, dt float64) error {
-			playerEntry := ecs.Entry(player)
-
 			position := transform.GetPosition(playerEntry)
 
 			min := tilemap.Bounds().Min
@@ -187,14 +169,70 @@ func New(
 			return nil
 		},
 		OnRender: func(ecs donburi.World, img *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
-
 			ebitenutil.DebugPrintAt(img, fmt.Sprintf("FPS: %.2f", ebiten.ActualFPS()), 10, 10)
 			return nil
 		},
 	}
 }
 
-func buildStaticCollision(ecs donburi.World, world engine.World, tmx *tiled.Tmx) {
+func applyAndClampZoom(camera engine.Camera, bounds geom.AABB, appliedZoom float64) {
+	zoom := engine.Clamp(camera.Zoom()+appliedZoom, 0.1, 10.0)
+	camera.SetZoom(zoom)
+
+	viewport := camera.Viewport()
+	if viewport.Width() > bounds.Width() {
+		camera.SetZoom(camera.Zoom() - appliedZoom)
+	}
+	if viewport.Height() > bounds.Height() {
+		camera.SetZoom(camera.Zoom() - appliedZoom)
+	}
+}
+
+func buildPlayer(ecs donburi.World, assets engine.Assets, spawnPosition geom.Vec2) (*donburi.Entry, error) {
+	img, exists := images.GetImageAssets(assets, content.EmbeddedImg10x10White)
+	if !exists {
+		return nil, fmt.Errorf("failed to load embedded image: %s", content.EmbeddedImg10x10White)
+	}
+
+	width, height := float64(img.Bounds().Dx()), float64(img.Bounds().Dy())
+	hWidth, hHeight := width/2, height/2
+
+	playerBounds := geom.AABB{
+		Min: geom.Vec2{X: -hWidth, Y: -hHeight},
+		Max: geom.Vec2{X: hWidth, Y: hHeight},
+	}
+
+	entry := images.CreateImageEntity(ecs, content.EmbeddedImg10x10White, playerBounds)
+
+	colliders.AddCollider(entry)
+
+	rendering.SetAnchor(entry, geom.Vec2{X: 0.5, Y: 0.5})
+	rendering.SetLayer(entry, 1)
+
+	transform.SetPosition(entry, spawnPosition)
+
+	return entry, nil
+}
+
+func buildTiledLevel(ecs donburi.World, assets engine.Assets, world engine.World) (*donburi.Entry, *tiled.Tilemap, error) {
+	tmx, exists := tiled.GetTmx(assets, content.AssetsTiledGym01)
+	if !exists {
+		return nil, nil, fmt.Errorf("tmx asset not found for tilemap: %s", content.AssetsTiledGym01)
+	}
+
+	tilemap, exists := tiled.GetTilemap(assets, content.AssetsTiledGym01)
+	if !exists {
+		return nil, nil, fmt.Errorf("tilemap asset not found: %s", content.AssetsTiledGym01)
+	}
+
+	levelEntry := tiled.CreateTiledEntity(ecs, content.AssetsTiledGym01, tilemap.Bounds())
+	rendering.SetLayer(levelEntry, 0)
+
+	buildStaticLevelCollision(ecs, world, tmx)
+	return levelEntry, tilemap, nil
+}
+
+func buildStaticLevelCollision(ecs donburi.World, world engine.World, tmx *tiled.Tmx) {
 	tmx.ObjectGroups.EachInGroup("collision_static", func(object *tiled.TmxObject) {
 		position := geom.Vec2{
 			X: object.X,

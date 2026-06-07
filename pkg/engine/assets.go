@@ -20,6 +20,8 @@ type Assets interface {
 
 	AddAssetAdapter(id AdapterID, adapter AssetAdapter)
 	GetAdapter(id AdapterID) (AssetAdapter, bool)
+
+	GetData(path file.FilePath) ([]byte, bool)
 }
 
 type assets struct {
@@ -27,6 +29,8 @@ type assets struct {
 
 	adaptersByID  map[AdapterID]AssetAdapter
 	adaptersByExt map[file.FileExt]AssetAdapter
+
+	data map[file.FilePath][]byte
 }
 
 func newAssets(logger *logger) *assets {
@@ -34,22 +38,21 @@ func newAssets(logger *logger) *assets {
 		logger:        logger,
 		adaptersByID:  make(map[AdapterID]AssetAdapter),
 		adaptersByExt: make(map[file.FileExt]AssetAdapter),
+		data:          make(map[file.FilePath][]byte),
 	}
 }
 
 func (a *assets) Load(fileSystem fs.FS, paths ...file.FilePath) error {
 	for _, path := range paths {
-		ext := path.Ext()
-
-		adapter, exists := a.adaptersByExt[ext]
-		if !exists {
-			a.logger.Warn("No asset adapter found for file extension '%s', skipping asset '%s'", ext, path)
-			continue
-		}
-
 		raw, err := fs.ReadFile(fileSystem, path.String())
 		if err != nil {
 			a.logger.Error("Failed to read asset file '%s': %v", path, err)
+			continue
+		}
+
+		adapter, exists := a.adaptersByExt[path.Ext()]
+		if !exists {
+			a.data[path] = raw
 			continue
 		}
 
@@ -102,4 +105,9 @@ func (a *assets) AddAssetAdapter(id AdapterID, adapter AssetAdapter) {
 func (a *assets) GetAdapter(id AdapterID) (AssetAdapter, bool) {
 	adapter, exists := a.adaptersByID[id]
 	return adapter, exists
+}
+
+func (a *assets) GetData(path file.FilePath) ([]byte, bool) {
+	data, exists := a.data[path]
+	return data, exists
 }

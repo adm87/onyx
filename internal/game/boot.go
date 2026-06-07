@@ -8,6 +8,7 @@ import (
 	"github.com/adm87/onyx/content"
 	"github.com/adm87/onyx/internal/game/cli"
 	"github.com/adm87/onyx/internal/game/scenes"
+	"github.com/adm87/onyx/pkg/aseprite"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/images"
 	"github.com/adm87/onyx/pkg/tiled"
@@ -63,8 +64,17 @@ func registerPackages(onyx engine.Game) error {
 	if err := images.RegisterPackage(assets, renderer); err != nil {
 		return fmt.Errorf("failed to register images package: %w", err)
 	}
-	if err := tiled.RegisterPackage(assets, renderer, camera, screen); err != nil {
+
+	imageAssetAdapter, found := images.GetAssetAdapter(assets)
+	if !found {
+		return fmt.Errorf("image asset adapter not found")
+	}
+
+	if err := tiled.RegisterPackage(imageAssetAdapter, assets, renderer, camera, screen); err != nil {
 		return fmt.Errorf("failed to register tiled package: %w", err)
+	}
+	if err := aseprite.RegisterPackage(imageAssetAdapter, assets, renderer); err != nil {
+		return fmt.Errorf("failed to register aseprite package: %w", err)
 	}
 
 	return nil

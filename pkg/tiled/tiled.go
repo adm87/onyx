@@ -1,8 +1,6 @@
 package tiled
 
 import (
-	"fmt"
-
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/components/asset"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
@@ -27,12 +25,12 @@ var (
 	)
 )
 
-func RegisterPackage(assets engine.Assets, renderer engine.Renderer, camera engine.Camera, screen engine.Screen) error {
-	imageAssetAdapter, exists := images.GetAssetAdapter(assets)
-	if !exists {
-		return fmt.Errorf("images asset adapter not found, tiled package requires images package to be registered first")
-	}
-
+func RegisterPackage(
+	imageAssetAdapter *images.ImageAssetAdapter,
+	assets engine.Assets,
+	renderer engine.Renderer,
+	camera engine.Camera,
+	screen engine.Screen) error {
 	tiledAssetAdapter := NewTiledAssetAdapter(imageAssetAdapter)
 	assets.AddAssetAdapter(
 		AdapterID,
