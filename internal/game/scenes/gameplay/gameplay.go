@@ -31,6 +31,9 @@ func New(
 
 	var player donburi.Entity
 	var level donburi.Entity
+	var tilemap *tiled.Tilemap
+	var moveDir geom.Vec2
+	var zoomDir int
 
 	debugDrawColliders := false
 	debugDrawPartitions := false
@@ -42,10 +45,12 @@ func New(
 				return fmt.Errorf("failed to load level asset: %w", err)
 			}
 
-			tilemap, exists := tiled.GetTilemap(assets, tilemapRef)
+			tm, exists := tiled.GetTilemap(assets, tilemapRef)
 			if !exists {
 				return fmt.Errorf("tilemap asset not found: %s", tilemapRef)
 			}
+
+			tilemap = tm
 
 			tmx, exists := tiled.GetTmx(assets, tilemapRef)
 			if !exists {
@@ -99,30 +104,23 @@ func New(
 			return nil
 		},
 		OnUpdate: func(ecs donburi.World, dt float64) (engine.SceneExitCode, error) {
-			entry := ecs.Entry(player)
-			position := transform.GetPosition(entry)
-
 			if ebiten.IsKeyPressed(ebiten.KeyW) {
-				position.Y -= 100 * dt
+				moveDir.Y = -1
 			}
 			if ebiten.IsKeyPressed(ebiten.KeyS) {
-				position.Y += 100 * dt
+				moveDir.Y = 1
 			}
 			if ebiten.IsKeyPressed(ebiten.KeyA) {
-				position.X -= 100 * dt
+				moveDir.X = -1
 			}
 			if ebiten.IsKeyPressed(ebiten.KeyD) {
-				position.X += 100 * dt
+				moveDir.X = 1
 			}
 			if ebiten.IsKeyPressed(ebiten.KeyUp) {
-				zoom := camera.Zoom()
-				zoom *= 1 + (0.5 * dt)
-				camera.SetZoom(zoom)
+				zoomDir = 1
 			}
 			if ebiten.IsKeyPressed(ebiten.KeyDown) {
-				zoom := camera.Zoom()
-				zoom /= 1 + (0.5 * dt)
-				camera.SetZoom(zoom)
+				zoomDir = -1
 			}
 
 			if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
@@ -144,11 +142,53 @@ func New(
 				rendering.SetVisible(ecs.Entry(player), debugVisibilityToggle)
 			}
 
-			transform.SetPosition(entry, position)
+			return engine.SceneExitNone, nil
+		},
+		OnFixedUpdate: func(ecs donburi.World, dt float64) error {
+			if moveDir.X != 0 || moveDir.Y != 0 {
+				entry := ecs.Entry(player)
+
+				position := transform.GetPosition(entry)
+
+				position.X += moveDir.X * 100 * dt
+				position.Y += moveDir.Y * 100 * dt
+
+				viewport := camera.Viewport()
+
+				position.X = engine.Clamp(position.X, viewport.Min.X, viewport.Max.X)
+				position.Y = engine.Clamp(position.Y, viewport.Min.Y, viewport.Max.Y)
+
+				transform.SetPosition(entry, position)
+
+				moveDir = geom.Vec2{}
+			}
+			if zoomDir != 0 {
+				zoom := camera.Zoom()
+				zoom *= 1 + (0.5 * float64(zoomDir) * dt)
+				camera.SetZoom(zoom)
+				zoomDir = 0
+			}
+			return nil
+		},
+		OnLateUpdate: func(ecs donburi.World, dt float64) error {
+			playerEntry := ecs.Entry(player)
+
+			position := transform.GetPosition(playerEntry)
+
+			min := tilemap.Bounds().Min
+			max := tilemap.Bounds().Max
+
+			viewport := camera.Viewport()
+			width := viewport.Width()
+			height := viewport.Height()
+
+			position.X = engine.Clamp(position.X, min.X+(width/2), max.X-(width/2))
+			position.Y = engine.Clamp(position.Y, min.Y+(height/2), max.Y-(height/2))
+
 			camera.SetPosition(position)
 
-			world.Update(entry)
-			return engine.SceneExitNone, nil
+			world.Update(playerEntry)
+			return nil
 		},
 		OnRender: func(ecs donburi.World, img *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
 			shapes.QueryAABB(ecs, func(entity donburi.Entity) {
@@ -156,6 +196,10 @@ func New(
 
 				position := transform.GetPosition(entry)
 				aabb := shapes.GetAABB(entry).Translate(position)
+
+				if !aabb.Intersects(viewport) {
+					return
+				}
 
 				center := camera.ToScreen(aabb.Center())
 

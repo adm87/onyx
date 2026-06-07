@@ -8,6 +8,7 @@ import (
 	"github.com/adm87/onyx/pkg/engine/components/asset"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/file"
+	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/images"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
@@ -69,12 +70,8 @@ func (a *TiledRenderingAdapter) SupportedRendererTypes() []rendering.RendererTyp
 
 // BIG TODO - buffers no longer have a way to self manage if entites are remove. This needs to be revisited when more tilemaps live in the world.
 
-func (a *TiledRenderingAdapter) GetRenderTasks(entry *donburi.Entry, layer int, zIndex int, viewMatrix ebiten.GeoM) []engine.RenderTask {
+func (a *TiledRenderingAdapter) GetRenderTasks(entry *donburi.Entry, layer int, zIndex int, viewport geom.AABB, viewMatrix ebiten.GeoM) []engine.RenderTask {
 	a.renderingTasks = a.renderingTasks[:0]
-
-	// Transform screen corners to world coordinates for culling
-	worldMin := a.camera.ToWorld(a.screen.SafeArea().Min)
-	worldMax := a.camera.ToWorld(a.screen.SafeArea().Max)
 
 	ref := asset.GetAssetReference(entry)
 	if ref == asset.UnknownRef {
@@ -94,10 +91,10 @@ func (a *TiledRenderingAdapter) GetRenderTasks(entry *donburi.Entry, layer int, 
 		return a.renderingTasks
 	}
 
-	minTileX := int(math.Floor(worldMin.X / float64(tmx.TileWidth)))
-	maxTileX := int(math.Floor(worldMax.X / float64(tmx.TileWidth)))
-	minTileY := int(math.Floor(worldMin.Y / float64(tmx.TileHeight)))
-	maxTileY := int(math.Floor(worldMax.Y / float64(tmx.TileHeight)))
+	minTileX := int(math.Floor(viewport.Min.X / float64(tmx.TileWidth)))
+	maxTileX := int(math.Floor(viewport.Max.X / float64(tmx.TileWidth)))
+	minTileY := int(math.Floor(viewport.Min.Y / float64(tmx.TileHeight)))
+	maxTileY := int(math.Floor(viewport.Max.Y / float64(tmx.TileHeight)))
 
 	for i := range tilemap.layers {
 		if !tmx.Layers[i].Visible {

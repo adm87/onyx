@@ -5,6 +5,7 @@ import (
 	"github.com/adm87/onyx/pkg/engine/components/asset"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
+	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
@@ -27,7 +28,7 @@ func (a *ImageRenderingAdapter) SupportedRendererTypes() []rendering.RendererTyp
 	return a.rendererTypes
 }
 
-func (a *ImageRenderingAdapter) GetRenderTasks(entry *donburi.Entry, layer int, zIndex int, viewMatrix ebiten.GeoM) []engine.RenderTask {
+func (a *ImageRenderingAdapter) GetRenderTasks(entry *donburi.Entry, layer int, zIndex int, viewport geom.AABB, viewMatrix ebiten.GeoM) []engine.RenderTask {
 	a.renderingTasks = a.renderingTasks[:0]
 
 	ref := asset.GetAssetReference(entry)

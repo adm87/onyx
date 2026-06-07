@@ -14,7 +14,7 @@ import (
 )
 
 type RenderingAdapter interface {
-	GetRenderTasks(entry *donburi.Entry, layer int, zIndex int, viewMatrix ebiten.GeoM) []RenderTask
+	GetRenderTasks(entry *donburi.Entry, layer int, zIndex int, viewport geom.AABB, viewMatrix ebiten.GeoM) []RenderTask
 	SupportedRendererTypes() []rendering.RendererType
 }
 
@@ -124,13 +124,11 @@ func (r *renderer) render(ecs donburi.World, screen *ebiten.Image, viewport geom
 			return true // No adapter for this renderer type, skip
 		}
 
-		tasks := adapter.GetRenderTasks(entry, layer, zIndex, viewMatrix)
+		tasks := adapter.GetRenderTasks(entry, layer, zIndex, viewport, viewMatrix)
 		r.queue = append(r.queue, tasks...)
 
 		return true
 	})
-
-	println("Render queue length:", len(r.queue))
 
 	slices.SortFunc(r.queue, func(a, b RenderTask) int {
 		if a.Layer != b.Layer {
