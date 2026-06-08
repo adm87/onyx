@@ -12,14 +12,14 @@ import (
 
 type ImageRenderingAdapter struct {
 	assetAdapter   *ImageAssetAdapter
-	renderingTasks []engine.RenderTask
+	renderingTasks []engine.RenderingTask
 	rendererTypes  []rendering.RendererType
 }
 
 func NewImageRenderingAdapter(assetAdapter *ImageAssetAdapter) *ImageRenderingAdapter {
 	return &ImageRenderingAdapter{
 		assetAdapter:   assetAdapter,
-		renderingTasks: make([]engine.RenderTask, 0, 100),
+		renderingTasks: make([]engine.RenderingTask, 0, 100),
 		rendererTypes:  []rendering.RendererType{ImageRendererType},
 	}
 }
@@ -28,7 +28,7 @@ func (a *ImageRenderingAdapter) SupportedRendererTypes() []rendering.RendererTyp
 	return a.rendererTypes
 }
 
-func (a *ImageRenderingAdapter) GetRenderTasks(entry *donburi.Entry, layer int, zIndex int, viewport geom.AABB, viewMatrix ebiten.GeoM) []engine.RenderTask {
+func (a *ImageRenderingAdapter) GetRenderingTasks(entry *donburi.Entry, viewport geom.AABB, viewMatrix ebiten.GeoM) []engine.RenderingTask {
 	a.renderingTasks = a.renderingTasks[:0]
 
 	ref := asset.GetAssetReference(entry)
@@ -45,9 +45,10 @@ func (a *ImageRenderingAdapter) GetRenderTasks(entry *donburi.Entry, layer int, 
 	anchor := rendering.GetAnchor(entry)
 	color := rendering.GetColor(entry)
 	filter := rendering.GetFilter(entry)
+	scale := transform.GetScale(entry)
 
-	aX := anchor.X * float64(img.Bounds().Dx())
-	aY := anchor.Y * float64(img.Bounds().Dy())
+	aX := anchor.X * float64(img.Bounds().Dx()) * scale.X
+	aY := anchor.Y * float64(img.Bounds().Dy()) * scale.Y
 
 	matrix.Translate(-aX, -aY)
 	matrix.Concat(viewMatrix)
@@ -58,7 +59,7 @@ func (a *ImageRenderingAdapter) GetRenderTasks(entry *donburi.Entry, layer int, 
 
 	alpha := float32(color.A) / 255
 
-	a.renderingTasks = append(a.renderingTasks, engine.RenderTask{
+	a.renderingTasks = append(a.renderingTasks, engine.RenderingTask{
 		Render: func(screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
 			opts.GeoM = matrix
 
@@ -69,8 +70,8 @@ func (a *ImageRenderingAdapter) GetRenderTasks(entry *donburi.Entry, layer int, 
 			screen.DrawImage(img, &opts)
 			return nil
 		},
-		Layer:  layer,
-		ZIndex: zIndex,
+		Layer:  rendering.GetLayer(entry),
+		ZIndex: rendering.GetZIndex(entry),
 	})
 
 	return a.renderingTasks

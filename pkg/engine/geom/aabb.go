@@ -18,6 +18,11 @@ func (a AABB) Translate(offset Vec2) AABB {
 	}
 }
 
+func (a AABB) Equals(other AABB) bool {
+	return a.Min.X == other.Min.X && a.Min.Y == other.Min.Y &&
+		a.Max.X == other.Max.X && a.Max.Y == other.Max.Y
+}
+
 func (a AABB) Width() float64 {
 	return a.Max.X - a.Min.X
 }

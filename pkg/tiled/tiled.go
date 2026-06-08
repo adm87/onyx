@@ -2,13 +2,7 @@ package tiled
 
 import (
 	"github.com/adm87/onyx/pkg/engine"
-	"github.com/adm87/onyx/pkg/engine/components/asset"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
-	"github.com/adm87/onyx/pkg/engine/components/shapes"
-	"github.com/adm87/onyx/pkg/engine/components/transform"
-	"github.com/adm87/onyx/pkg/engine/file"
-	"github.com/adm87/onyx/pkg/engine/geom"
-	"github.com/adm87/onyx/pkg/images"
 	"github.com/yohamta/donburi"
 	"github.com/yohamta/donburi/filter"
 )
@@ -25,94 +19,6 @@ var (
 	)
 )
 
-func RegisterPackage(
-	imageAssetAdapter *images.ImageAssetAdapter,
-	assets engine.Assets,
-	renderer engine.Renderer,
-	camera engine.Camera,
-	screen engine.Screen,
-	logger engine.Logger) error {
-	tiledAssetAdapter := NewTiledAssetAdapter(imageAssetAdapter, logger)
-	assets.AddAssetAdapter(
-		AdapterID,
-		tiledAssetAdapter,
-	)
-	renderer.AddRenderingAdapter(
-		AdapterID,
-		NewTiledRenderingAdapter(
-			tiledAssetAdapter,
-			imageAssetAdapter,
-			camera,
-			screen,
-		),
-	)
+func RegisterPackage() error {
 	return nil
-}
-
-func GetTmx(assets engine.Assets, path file.FilePath) (*Tmx, bool) {
-	adapter, found := GetAssetAdapter(assets)
-	if !found {
-		return nil, false
-	}
-
-	tmx, exists := adapter.tmxCache[path]
-	return tmx, exists
-}
-
-func GetTsx(assets engine.Assets, path file.FilePath) (*Tsx, bool) {
-	adapter, found := GetAssetAdapter(assets)
-	if !found {
-		return nil, false
-	}
-
-	tsx, exists := adapter.tsxCache[path]
-	return tsx, exists
-}
-
-func GetTilemap(assets engine.Assets, path file.FilePath) (*Tilemap, bool) {
-	adapter, found := GetAssetAdapter(assets)
-	if !found {
-		return nil, false
-	}
-
-	tilemap, exists := adapter.tilemaps[path]
-	return tilemap, exists
-}
-
-func GetAssetAdapter(assets engine.Assets) (*TiledAssetAdapter, bool) {
-	adapter, found := assets.GetAdapter(AdapterID)
-	if !found {
-		return nil, false
-	}
-
-	tiledAdapter, ok := adapter.(*TiledAssetAdapter)
-	return tiledAdapter, ok
-}
-
-func GetRenderingAdapter(renderer engine.Renderer) (*TiledRenderingAdapter, bool) {
-	adapter, found := renderer.GetRenderingAdapter(AdapterID)
-	if !found {
-		return nil, false
-	}
-
-	tiledRenderer, ok := adapter.(*TiledRenderingAdapter)
-	return tiledRenderer, ok
-}
-
-func CreateTiledMap(ecs donburi.World, ref file.FilePath, bounds geom.AABB) *donburi.Entry {
-	entry := asset.NewAssetReference(ecs, ref)
-	entry.AddComponent(Tiled)
-
-	rendering.AddRenderer(entry,
-		rendering.WithType(TiledRendererType),
-	)
-	shapes.AddAABB(entry,
-		shapes.WithBounds(
-			bounds.Min,
-			bounds.Max,
-		),
-	)
-	transform.AddTransform(entry)
-
-	return entry
 }

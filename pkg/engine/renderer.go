@@ -3,6 +3,7 @@ package engine
 import (
 	"cmp"
 	"slices"
+	"sync"
 
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/components/shapes"
@@ -13,15 +14,17 @@ import (
 	"github.com/yohamta/donburi"
 )
 
-type RenderingAdapter interface {
-	GetRenderTasks(entry *donburi.Entry, layer int, zIndex int, viewport geom.AABB, viewMatrix ebiten.GeoM) []RenderTask
-	SupportedRendererTypes() []rendering.RendererType
-}
+type RenderingJob func(screen *ebiten.Image, viewMatrix ebiten.GeoM) error
 
-type RenderTask struct {
-	Render func(screen *ebiten.Image, viewMatrix ebiten.GeoM) error
+type RenderingTask struct {
+	Render RenderingJob
 	Layer  int
 	ZIndex int
+}
+
+type RenderingAdapter interface {
+	SupportedRendererTypes() []rendering.RendererType
+	GetRenderingTasks(entry *donburi.Entry, viewport geom.AABB, viewMatrix ebiten.GeoM) []RenderingTask
 }
 
 type Renderer interface {
@@ -33,19 +36,21 @@ type renderableIndexing map[donburi.Entity]spatialhash.SpatialIndex
 
 type renderer struct {
 	logger *logger
-	queue  []RenderTask
+	queue  []RenderingTask
 
 	adapters  map[AdapterID]RenderingAdapter
 	renderers map[rendering.RendererType]RenderingAdapter
 
 	partitioning *spatialhash.SpatialHash[donburi.Entity]
 	indexing     renderableIndexing
+
+	pool sync.Pool
 }
 
 func newRenderer(logger *logger) *renderer {
 	return &renderer{
 		logger:    logger,
-		queue:     make([]RenderTask, 0, 100),
+		queue:     make([]RenderingTask, 0, 100),
 		adapters:  make(map[AdapterID]RenderingAdapter),
 		renderers: make(map[rendering.RendererType]RenderingAdapter),
 		partitioning: spatialhash.New[donburi.Entity](
@@ -115,8 +120,6 @@ func (r *renderer) render(ecs donburi.World, screen *ebiten.Image, viewport geom
 			return true // Skip entities outside the viewport
 		}
 
-		layer := rendering.GetLayer(entry)
-		zIndex := rendering.GetZIndex(entry)
 		rendererType := rendering.GetRendererType(entry)
 
 		adapter, exists := r.renderers[rendererType]
@@ -124,13 +127,13 @@ func (r *renderer) render(ecs donburi.World, screen *ebiten.Image, viewport geom
 			return true // No adapter for this renderer type, skip
 		}
 
-		tasks := adapter.GetRenderTasks(entry, layer, zIndex, viewport, viewMatrix)
+		tasks := adapter.GetRenderingTasks(entry, viewport, viewMatrix)
 		r.queue = append(r.queue, tasks...)
 
 		return true
 	})
 
-	slices.SortFunc(r.queue, func(a, b RenderTask) int {
+	slices.SortFunc(r.queue, func(a, b RenderingTask) int {
 		if a.Layer != b.Layer {
 			return cmp.Compare(a.Layer, b.Layer)
 		}
