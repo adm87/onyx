@@ -70,7 +70,7 @@ func GetImageAssets(assets engine.Assets, path file.FilePath) (*ebiten.Image, bo
 	return img, exists
 }
 
-func CreateImageEntity(ecs donburi.World, ref file.FilePath, bounds geom.AABB) *donburi.Entry {
+func CreateImage(ecs donburi.World, ref file.FilePath, bounds geom.AABB) *donburi.Entry {
 	entry := asset.NewAssetReference(ecs, ref)
 	entry.AddComponent(Image)
 

@@ -99,7 +99,7 @@ func GetRenderingAdapter(renderer engine.Renderer) (*TiledRenderingAdapter, bool
 	return tiledRenderer, ok
 }
 
-func CreateTiledEntity(ecs donburi.World, ref file.FilePath, bounds geom.AABB) *donburi.Entry {
+func CreateTiledMap(ecs donburi.World, ref file.FilePath, bounds geom.AABB) *donburi.Entry {
 	entry := asset.NewAssetReference(ecs, ref)
 	entry.AddComponent(Tiled)
 

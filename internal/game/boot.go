@@ -74,7 +74,7 @@ func registerPackages(onyx engine.Game) error {
 	if err := tiled.RegisterPackage(imageAssetAdapter, assets, renderer, camera, screen, logger); err != nil {
 		return fmt.Errorf("failed to register tiled package: %w", err)
 	}
-	if err := aseprite.RegisterPackage(imageAssetAdapter, assets, renderer); err != nil {
+	if err := aseprite.RegisterPackage(imageAssetAdapter, assets, logger, renderer); err != nil {
 		return fmt.Errorf("failed to register aseprite package: %w", err)
 	}
 

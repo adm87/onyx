@@ -72,7 +72,7 @@ func (a *TiledAssetAdapter) importTmx(fileSystem fs.FS, path file.FilePath, raw 
 			continue
 		}
 
-		srcPath := a.resolvedPath(tmxDir, tileset.Source)
+		srcPath := file.ResolvedPath(tmxDir, tileset.Source)
 		tmx.Tilesets[i].Source = srcPath.String()
 
 		tsxPaths = append(tsxPaths, srcPath)
@@ -123,7 +123,7 @@ func (a *TiledAssetAdapter) importTsx(fileSystem fs.FS, path file.FilePath, raw 
 
 	tsxDir := filepath.Dir(path.String())
 
-	srcPath := a.resolvedPath(tsxDir, tsx.Image.Source)
+	srcPath := file.ResolvedPath(tsxDir, tsx.Image.Source)
 	tsx.Image.Source = srcPath.String()
 
 	a.logger.Debug("Loading tileset image '%s' referenced by tsx file '%s'", srcPath, path)
@@ -146,9 +146,4 @@ func (a *TiledAssetAdapter) loadTilesetImage(fileSystem fs.FS, path file.FilePat
 	}
 
 	return a.images.ImportAsset(fileSystem, path, raw)
-}
-
-func (a *TiledAssetAdapter) resolvedPath(directory, relativePath string) file.FilePath {
-	resolved := filepath.Join(directory, relativePath)
-	return file.FilePath(filepath.Clean(resolved))
 }

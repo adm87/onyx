@@ -25,3 +25,8 @@ func (e FileExt) String() string {
 func (e FileExt) IsEmpty() bool {
 	return e == ""
 }
+
+func ResolvedPath(directory, relativePath string) FilePath {
+	resolved := filepath.Join(directory, relativePath)
+	return FilePath(filepath.Clean(resolved))
+}

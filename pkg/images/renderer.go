@@ -49,6 +49,9 @@ func (a *ImageRenderingAdapter) GetRenderTasks(entry *donburi.Entry, layer int, 
 	aX := anchor.X * float64(img.Bounds().Dx())
 	aY := anchor.Y * float64(img.Bounds().Dy())
 
+	matrix.Translate(-aX, -aY)
+	matrix.Concat(viewMatrix)
+
 	opts := ebiten.DrawImageOptions{
 		Filter: filter,
 	}
@@ -57,10 +60,7 @@ func (a *ImageRenderingAdapter) GetRenderTasks(entry *donburi.Entry, layer int, 
 
 	a.renderingTasks = append(a.renderingTasks, engine.RenderTask{
 		Render: func(screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
-			opts.GeoM.Reset()
-			opts.GeoM.Translate(-aX, -aY)
-			opts.GeoM.Concat(matrix)
-			opts.GeoM.Concat(viewMatrix)
+			opts.GeoM = matrix
 
 			// NOTE: Just using ScaleWithColor doesn't work as expected, it seems to ignore the alpha component of the color.
 			opts.ColorScale.ScaleWithColor(color)

@@ -139,6 +139,10 @@ func GetPosition(entry *donburi.Entry) geom.Vec2 {
 
 // SetPosition sets the position component for an entity, adding it if it does not already exist.
 func SetPosition(entry *donburi.Entry, pos geom.Vec2) {
+	p := GetPosition(entry)
+	if p == pos {
+		return
+	}
 	donburi.Add(entry, Position, &pos)
 	markDirty(entry)
 }
@@ -153,6 +157,10 @@ func GetScale(entry *donburi.Entry) geom.Vec2 {
 
 // SetScale sets the scale component for an entity, adding it if it does not already exist.
 func SetScale(entry *donburi.Entry, scale geom.Vec2) {
+	s := GetScale(entry)
+	if s == scale {
+		return
+	}
 	donburi.Add(entry, Scale, &scale)
 	markDirty(entry)
 }
@@ -167,6 +175,10 @@ func GetRotation(entry *donburi.Entry) float64 {
 
 // SetRotation sets the rotation component for an entity, adding it if it does not already exist.
 func SetRotation(entry *donburi.Entry, rotation float64) {
+	r := GetRotation(entry)
+	if r == rotation {
+		return
+	}
 	donburi.Add(entry, Rotation, &rotation)
 	markDirty(entry)
 }

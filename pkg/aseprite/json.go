@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"image/color"
+
+	"github.com/adm87/onyx/pkg/engine/file"
 )
 
 type Direction string
@@ -23,21 +25,21 @@ const (
 	BlendModeScreen   BlendMode = "screen"
 )
 
-type Json struct {
+type AsepriteJson struct {
 	Meta   Meta             `json:"meta"`
 	Frames []AnimationFrame `json:"frames"`
 }
 
 type Meta struct {
-	App       string     `json:"app"`
-	Version   string     `json:"version"`
-	Format    string     `json:"format"`
-	Image     string     `json:"image"`
-	Scale     string     `json:"scale"`
-	Size      Frame      `json:"size"`
-	FrameTags []FrameTag `json:"frameTags"`
-	Layers    []Layer    `json:"layers"`
-	Slices    []any      `json:"slices"` // TODO - add this when needed
+	App       string        `json:"app"`
+	Version   string        `json:"version"`
+	Format    string        `json:"format"`
+	Image     file.FilePath `json:"image"`
+	Scale     string        `json:"scale"`
+	Size      Frame         `json:"size"`
+	FrameTags []FrameTag    `json:"frameTags"`
+	Layers    []Layer       `json:"layers"`
+	Slices    []any         `json:"slices"` // TODO - add this when needed
 }
 
 type FrameTag struct {
@@ -95,6 +97,9 @@ func (ft *FrameTag) UnmarshalJSON(data []byte) error {
 
 func parseHexColor(s string) (color.RGBA, error) {
 	var c color.RGBA
-	_, err := fmt.Sscanf(s[1:], "#%02x%02x%02x%02x", &c.R, &c.G, &c.B, &c.A)
-	return c, err
+	_, err := fmt.Sscanf(s, "#%02x%02x%02x%02x", &c.R, &c.G, &c.B, &c.A)
+	if err != nil {
+		return c, fmt.Errorf("failed to parse hex color '%s': %v", s, err)
+	}
+	return c, nil
 }

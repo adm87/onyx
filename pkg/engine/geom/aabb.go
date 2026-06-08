@@ -60,3 +60,20 @@ func (a AABB) Union(other AABB) AABB {
 		},
 	}
 }
+
+func (a AABB) Scale(factor float64) AABB {
+	center := a.Center()
+	halfWidth := a.Width() * factor * 0.5
+	halfHeight := a.Height() * factor * 0.5
+
+	return AABB{
+		Min: Vec2{
+			X: center.X - halfWidth,
+			Y: center.Y - halfHeight,
+		},
+		Max: Vec2{
+			X: center.X + halfWidth,
+			Y: center.Y + halfHeight,
+		},
+	}
+}

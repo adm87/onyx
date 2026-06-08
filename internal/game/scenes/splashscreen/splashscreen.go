@@ -39,7 +39,7 @@ func New(assets engine.Assets, screen engine.Screen, world engine.World) engine.
 
 			screen.ResizeBuffer(width, height)
 
-			entry = images.CreateImageEntity(ecs, content.EmbeddedSplash1920x1080Black, bounds)
+			entry = images.CreateImage(ecs, content.EmbeddedSplash1920x1080Black, bounds)
 
 			rendering.SetAnchor(entry, geom.Vec2{X: 0.5, Y: 0.5})
 			rendering.SetAlpha(entry, 0)

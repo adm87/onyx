@@ -1,13 +1,29 @@
 {
-    "activeFile": "",
+    "activeFile": "content/assets/tiled/gym01.tmx",
     "expandedProjectPaths": [
     ],
     "file.lastUsedOpenFilter": "All Files (*)",
     "fileStates": {
+        "content/assets/tiled/gym01.tmx": {
+            "scale": 2.5709375,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 159.86386289048258,
+                "y": 96.07390300230946
+            }
+        },
+        "content/assets/tiled/tilesets/gym01.tsx": {
+            "scaleInDock": 1
+        }
     },
+    "last.imagePath": "/Users/adm87/Projects/Go/onyx/content/assets/tiled/images",
+    "map.lastUsedFormat": "tmx",
     "openFiles": [
+        "content/assets/tiled/gym01.tmx"
     ],
     "project": "onyx-tiled.tiled-project",
     "recentFiles": [
-    ]
+        "content/assets/tiled/gym01.tmx"
+    ],
+    "tileset.lastUsedFormat": "tsx"
 }
