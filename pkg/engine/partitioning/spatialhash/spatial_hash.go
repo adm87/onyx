@@ -4,211 +4,141 @@ import (
 	"math"
 
 	"github.com/adm87/onyx/pkg/engine/geom"
-	"github.com/adm87/onyx/pkg/engine/storage/slotmap.go"
+	"github.com/adm87/onyx/pkg/engine/storage/slotmap"
 )
 
-type (
-	SpatialIndex uint64
-	spatialCoord uint64
-)
-
-func encodeCoord(cellX, cellY int64) spatialCoord {
-	x := uint64(cellX) & 0xFFFFFFFF
-	y := uint64(cellY) & 0xFFFFFFFF
-	return spatialCoord(x | (y << 32))
+func encodeCell(cellX, cellY int) uint64 {
+	return uint64(uint32(cellX))<<32 | uint64(uint32(cellY))
 }
 
-type spatialEntry struct {
-	key   slotmap.SlotKey
-	cells []spatialCoord
-	grid  int
-}
-
-type spatialGrid struct {
-	cellSize float64
-	cells    map[spatialCoord][]SpatialIndex
+type Padding struct {
+	Left   int
+	Right  int
+	Top    int
+	Bottom int
 }
 
 type SpatialHash[T comparable] struct {
-	grids []spatialGrid
-	index map[SpatialIndex]spatialEntry
-
-	storage   *slotmap.SlotMap[T]
-	nextIndex SpatialIndex
-
-	cells []spatialCoord
-	seen  map[SpatialIndex]struct{}
-
-	padding [4]int
+	store      *slotmap.SlotMap[T]
+	cellCache  []uint64
+	grid       map[uint64][]uint64
+	cells      map[uint64][]uint64
+	querySeen  map[uint64]struct{}
+	resolution int
+	padding    Padding
 }
 
-func New[T comparable](opts ...Option) *SpatialHash[T] {
-	options := defaultOptions()
-	for _, opt := range opts {
-		opt(&options)
-	}
-	grids := make([]spatialGrid, len(options.Resolutions))
-	for i, res := range options.Resolutions {
-		grids[i] = spatialGrid{
-			cellSize: res,
-			cells:    make(map[spatialCoord][]SpatialIndex),
-		}
-	}
+func New[T comparable](resolution int, padding Padding) *SpatialHash[T] {
 	return &SpatialHash[T]{
-		grids:   grids,
-		index:   make(map[SpatialIndex]spatialEntry, options.Capacity),
-		seen:    make(map[SpatialIndex]struct{}, options.Capacity),
-		storage: slotmap.New[T](options.Capacity),
-		padding: options.Padding,
+		store:      slotmap.New[T](0),
+		cellCache:  make([]uint64, 0),
+		grid:       make(map[uint64][]uint64),
+		cells:      make(map[uint64][]uint64),
+		querySeen:  make(map[uint64]struct{}),
+		resolution: resolution,
+		padding:    padding,
 	}
 }
 
-func (h *SpatialHash[T]) Insert(value T, aabb geom.AABB) (SpatialIndex, bool) {
-	key, ok := h.storage.Insert(value)
-	if !ok {
-		return 0, false
+func (sh *SpatialHash[T]) Insert(item T, area geom.AABB) uint64 {
+	id := sh.store.Insert(item)
+
+	sh.cacheCells(area)
+	for _, cell := range sh.cellCache {
+		sh.grid[cell] = append(sh.grid[cell], id)
+		sh.cells[id] = append(sh.cells[id], cell)
 	}
 
-	index := h.nextIndex
-	h.nextIndex++
-
-	entry := spatialEntry{key: key}
-	h.addToGrid(index, &entry, aabb)
-
-	h.index[index] = entry
-	return index, true
+	return id
 }
 
-func (h *SpatialHash[T]) Remove(index SpatialIndex) bool {
-	entry, exists := h.index[index]
+func (sh *SpatialHash[T]) Remove(id uint64) {
+	_, exists := sh.store.Get(id)
 	if !exists {
-		return false
+		return
 	}
 
-	h.removeFromGrid(index, &entry)
-	delete(h.index, index)
-	return h.storage.Remove(entry.key)
-}
-
-func (h *SpatialHash[T]) Reinsert(index SpatialIndex, aabb geom.AABB) bool {
-	entry, exists := h.index[index]
+	cells, exists := sh.cells[id]
 	if !exists {
-		return false
+		return
 	}
 
-	h.removeFromGrid(index, &entry)
-	h.addToGrid(index, &entry, aabb)
-	h.index[index] = entry
-	return true
-}
-
-func (h *SpatialHash[T]) addToGrid(index SpatialIndex, entry *spatialEntry, aabb geom.AABB) {
-	width := aabb.Max.X - aabb.Min.X
-	height := aabb.Max.Y - aabb.Min.Y
-
-	idx := h.getNearestGrid(max(width, height))
-	grid := &h.grids[idx]
-	h.getCells(aabb, grid)
-
-	entry.grid = idx
-	entry.cells = entry.cells[:0]
-	for _, cell := range h.cells {
-		grid.cells[cell] = append(grid.cells[cell], index)
-		entry.cells = append(entry.cells, cell)
-	}
-}
-
-func (h *SpatialHash[T]) removeFromGrid(index SpatialIndex, entry *spatialEntry) {
-	grid := &h.grids[entry.grid]
-	for _, cell := range entry.cells {
-		indices := grid.cells[cell]
-		for i, idx := range indices {
-			if idx == index {
-				grid.cells[cell] = append(indices[:i], indices[i+1:]...)
+	for _, cell := range cells {
+		ids := sh.grid[cell]
+		for i, cellID := range ids {
+			if cellID == id {
+				sh.grid[cell] = append(sh.grid[cell][:i], sh.grid[cell][i+1:]...)
 				break
 			}
 		}
-		if len(grid.cells[cell]) == 0 {
-			delete(grid.cells, cell)
-		}
 	}
+
+	delete(sh.cells, id)
+	sh.store.Delete(id)
 }
 
-// QueryNearest returns all values on the same grid resolution as the provided AABB.
-// The query will stop if the provided function returns false.
-func (h *SpatialHash[T]) QueryNearest(aabb geom.AABB, fn func(T) bool) {
-	width := aabb.Max.X - aabb.Min.X
-	height := aabb.Max.Y - aabb.Min.Y
+func (sh *SpatialHash[T]) Update(id uint64, area geom.AABB) {
+	_, exists := sh.store.Get(id)
+	if !exists {
+		return
+	}
 
-	idx := h.getNearestGrid(max(width, height))
-	grid := &h.grids[idx]
-
-	h.getCells(aabb, grid)
-
-	clear(h.seen)
-	for _, cell := range h.cells {
-		for _, index := range grid.cells[cell] {
-			if _, ok := h.seen[index]; !ok {
-				h.seen[index] = struct{}{}
-				entry := h.index[index]
-				value, ok := h.storage.Get(entry.key)
-				if !ok {
-					continue
-				}
-				if !fn(value) {
-					return
-				}
+	for _, cell := range sh.cells[id] {
+		ids := sh.grid[cell]
+		for i, cellID := range ids {
+			if cellID == id {
+				sh.grid[cell] = append(sh.grid[cell][:i], sh.grid[cell][i+1:]...)
+				break
 			}
 		}
 	}
+
+	sh.cacheCells(area)
+	sh.cells[id] = sh.cells[id][:0]
+
+	for _, cell := range sh.cellCache {
+		sh.grid[cell] = append(sh.grid[cell], id)
+		sh.cells[id] = append(sh.cells[id], cell)
+	}
 }
 
-// QueryAll returns all values on all grid resolutions that intersect with the provided AABB.
-// The query will stop if the provided function returns false.
-func (h *SpatialHash[T]) QueryAll(aabb geom.AABB, fn func(T) bool) {
-	clear(h.seen)
-	for i := range h.grids {
-		grid := &h.grids[i]
-		h.getCells(aabb, grid)
-		for _, cell := range h.cells {
-			for _, index := range grid.cells[cell] {
-				if _, ok := h.seen[index]; !ok {
-					h.seen[index] = struct{}{}
-					entry := h.index[index]
-					value, ok := h.storage.Get(entry.key)
-					if !ok {
-						continue
-					}
-					if !fn(value) {
-						return
-					}
-				}
+func (sh *SpatialHash[T]) Query(area geom.AABB, fn func(item T)) {
+	sh.cacheCells(area)
+	clear(sh.querySeen)
+
+	for _, cell := range sh.cellCache {
+		ids, exists := sh.grid[cell]
+		if !exists {
+			continue
+		}
+
+		for _, id := range ids {
+			if _, alreadySeen := sh.querySeen[id]; alreadySeen {
+				continue
 			}
+			sh.querySeen[id] = struct{}{}
+
+			item, exists := sh.store.Get(id)
+			if !exists {
+				continue
+			}
+
+			fn(item)
 		}
 	}
 }
 
-func (h *SpatialHash[T]) getNearestGrid(size float64) int {
-	for i := range h.grids {
-		grid := &h.grids[i]
-		if size <= grid.cellSize {
-			return i
+func (sh *SpatialHash[T]) cacheCells(area geom.AABB) {
+	sh.cellCache = sh.cellCache[:0]
+
+	minX := math.Floor(area.Min.X/float64(sh.resolution)) - float64(sh.padding.Left)
+	minY := math.Floor(area.Min.Y/float64(sh.resolution)) - float64(sh.padding.Top)
+	maxX := math.Floor(area.Max.X/float64(sh.resolution)) + float64(sh.padding.Right)
+	maxY := math.Floor(area.Max.Y/float64(sh.resolution)) + float64(sh.padding.Bottom)
+
+	for x := int(minX); x <= int(maxX); x++ {
+		for y := int(minY); y <= int(maxY); y++ {
+			sh.cellCache = append(sh.cellCache, encodeCell(x, y))
 		}
 	}
-	return len(h.grids) - 1
-}
-
-func (h *SpatialHash[T]) getCells(aabb geom.AABB, grid *spatialGrid) []spatialCoord {
-	cellMinX := math.Floor(aabb.Min.X/grid.cellSize) - float64(h.padding[0])
-	cellMinY := math.Floor(aabb.Min.Y/grid.cellSize) - float64(h.padding[1])
-	cellMaxX := math.Floor(aabb.Max.X/grid.cellSize) + float64(h.padding[2])
-	cellMaxY := math.Floor(aabb.Max.Y/grid.cellSize) + float64(h.padding[3])
-
-	h.cells = h.cells[:0]
-	for x := cellMinX; x <= cellMaxX; x++ {
-		for y := cellMinY; y <= cellMaxY; y++ {
-			h.cells = append(h.cells, encodeCoord(int64(x), int64(y)))
-		}
-	}
-	return h.cells
 }

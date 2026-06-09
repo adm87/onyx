@@ -13,7 +13,6 @@ const (
 )
 
 func New() engine.SceneState {
-
 	return engine.SceneState{
 		OnEnter: func(ecs donburi.World) error {
 			return nil

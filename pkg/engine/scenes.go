@@ -95,9 +95,6 @@ func (s *scenes) update(steps int, deltaTime float64, fixedDeltaTime float64) er
 }
 
 func (s *scenes) render(screen *ebiten.Image, viewPort geom.AABB, viewMatrix ebiten.GeoM) error {
-	if err := s.world.render(screen, viewPort, viewMatrix); err != nil {
-		return err
-	}
 	return s.renderCurrent(screen, viewPort, viewMatrix)
 }
 
@@ -179,9 +176,6 @@ func (s *scenes) fixedUpdateCurrent(currentState SceneState, dt float64, steps i
 			if err := currentState.OnFixedUpdate(s.world.ecs, dt); err != nil {
 				return err
 			}
-		}
-		if err := s.world.collision.checkCollision(s.world.ecs); err != nil {
-			return err
 		}
 	}
 	return nil

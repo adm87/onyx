@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/file"
 )
 
@@ -35,13 +34,6 @@ const (
 	EmbeddedImg10x10White        file.FilePath = "embedded/images/img_10x10_white.png"
 	EmbeddedSplash1920x1080Black file.FilePath = "embedded/images/splash_1920x1080_black.png"
 )
-
-func LoadDefaultContent(assets engine.Assets, logger engine.Logger) error {
-	logger.Debug("Loading default content...")
-	return assets.Load(embedded,
-		EmbeddedImg10x10White,
-	)
-}
 
 func InitContentDirectories(rootDir string) {
 	assets = os.DirFS(filepath.Join(rootDir, "content", "assets"))

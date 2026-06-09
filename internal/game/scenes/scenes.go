@@ -14,9 +14,13 @@ const (
 func AddScenes(onyx engine.Game) {
 	s := onyx.Scenes()
 
+	assets := onyx.Assets()
+
 	s.AddScene(
 		SplashScreenSceneID,
-		splashscreen.New(),
+		splashscreen.New(
+			assets,
+		),
 		engine.SceneTransitions{
 			splashscreen.CompleteExitCode: GameplaySceneID,
 		},

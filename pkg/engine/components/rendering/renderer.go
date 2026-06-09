@@ -9,28 +9,22 @@ import (
 	"github.com/yohamta/donburi/filter"
 )
 
-type RendererType string
-
-func (t RendererType) IsValid() bool {
-	return t != ""
-}
-
 type RendererInfo struct {
 	Visible bool
 	Layer   int
 	ZIndex  int
-	Type    RendererType
+	ID      uint64
 }
 
 type (
 	Options struct {
-		Visible bool
-		Layer   int
-		ZIndex  int
-		Type    RendererType
-		Anchor  geom.Vec2
-		Color   color.RGBA
-		Filter  ebiten.Filter
+		Visible  bool
+		Layer    int
+		ZIndex   int
+		Renderer uint64
+		Anchor   geom.Vec2
+		Color    color.RGBA
+		Filter   ebiten.Filter
 	}
 	Option func(*Options)
 )
@@ -43,14 +37,14 @@ type QueryCallback func(
 	visible bool,
 	layer int,
 	zIndex int,
+	renderer uint64,
 )
 
 var (
-	defaultFilter       = ebiten.FilterNearest
-	defaultColor        = color.RGBA{R: 255, G: 255, B: 255, A: 255}
-	defaultAnchor       = geom.Vec2{X: 0, Y: 0}
-	defaultRendererType = RendererType("")
-	defaultRenderer     = RendererInfo{Visible: true}
+	defaultFilter   = ebiten.FilterNearest
+	defaultColor    = color.RGBA{R: 255, G: 255, B: 255, A: 255}
+	defaultAnchor   = geom.Vec2{X: 0, Y: 0}
+	defaultRenderer = RendererInfo{Visible: true}
 )
 
 var (
@@ -74,10 +68,15 @@ func defaultOptions() Options {
 		Visible: defaultRenderer.Visible,
 		Layer:   defaultRenderer.Layer,
 		ZIndex:  defaultRenderer.ZIndex,
-		Type:    defaultRendererType,
 		Anchor:  defaultAnchor,
 		Color:   defaultColor,
 		Filter:  defaultFilter,
+	}
+}
+
+func WithRendererID(renderer uint64) Option {
+	return func(opts *Options) {
+		opts.Renderer = renderer
 	}
 }
 
@@ -117,12 +116,6 @@ func WithFilter(filter ebiten.Filter) Option {
 	}
 }
 
-func WithType(rendererType RendererType) Option {
-	return func(opts *Options) {
-		opts.Type = rendererType
-	}
-}
-
 // Query iterates over all entities with the necessary components for rendering and applies the provided function to each entry.
 func Query(ecs donburi.World, fn QueryCallback) {
 	query.Each(ecs, func(entry *donburi.Entry) {
@@ -130,7 +123,7 @@ func Query(ecs donburi.World, fn QueryCallback) {
 		color := GetColor(entry)
 		filter := GetFilter(entry)
 		info := Renderer.Get(entry)
-		fn(entry, anchor, color, filter, info.Visible, info.Layer, info.ZIndex)
+		fn(entry, anchor, color, filter, info.Visible, info.Layer, info.ZIndex, info.ID)
 	})
 }
 
@@ -142,7 +135,7 @@ func QueryWith(ecs donburi.World, q *donburi.Query, fn QueryCallback) {
 		color := GetColor(entry)
 		filter := GetFilter(entry)
 		info := Renderer.Get(entry)
-		fn(entry, anchor, color, filter, info.Visible, info.Layer, info.ZIndex)
+		fn(entry, anchor, color, filter, info.Visible, info.Layer, info.ZIndex, info.ID)
 	})
 }
 
@@ -156,7 +149,7 @@ func QueryVisible(ecs donburi.World, fn QueryCallback) {
 		anchor := GetAnchor(entry)
 		color := GetColor(entry)
 		filter := GetFilter(entry)
-		fn(entry, anchor, color, filter, info.Visible, info.Layer, info.ZIndex)
+		fn(entry, anchor, color, filter, info.Visible, info.Layer, info.ZIndex, info.ID)
 	})
 }
 
@@ -171,7 +164,7 @@ func QueryVisibleWith(ecs donburi.World, q *donburi.Query, fn QueryCallback) {
 		anchor := GetAnchor(entry)
 		color := GetColor(entry)
 		filter := GetFilter(entry)
-		fn(entry, anchor, color, filter, info.Visible, info.Layer, info.ZIndex)
+		fn(entry, anchor, color, filter, info.Visible, info.Layer, info.ZIndex, info.ID)
 	})
 }
 
@@ -202,18 +195,17 @@ func AddRenderer(entry *donburi.Entry, options ...Option) *donburi.Entry {
 		Visible: opts.Visible,
 		Layer:   opts.Layer,
 		ZIndex:  opts.ZIndex,
-		Type:    opts.Type,
+		ID:      opts.Renderer,
 	})
 
 	return entry
 }
 
-// GetRendererType retrieves the renderer type from an entity, returning a default value if it does not exist.
-func GetRendererType(entry *donburi.Entry) RendererType {
+func GetRenderer(entry *donburi.Entry) uint64 {
 	if !entry.HasComponent(Renderer) {
-		return defaultRendererType
+		return defaultRenderer.ID
 	}
-	return Renderer.Get(entry).Type
+	return Renderer.Get(entry).ID
 }
 
 // GetFilter retrieves the filter component from an entity, returning a default value if it does not exist.

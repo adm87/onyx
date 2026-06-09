@@ -1,172 +1,76 @@
 package engine
 
 import (
-	"cmp"
 	"slices"
-	"sync"
 
+	"github.com/adm87/onyx/pkg/assert"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
-	"github.com/adm87/onyx/pkg/engine/components/shapes"
-	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/engine/partitioning/spatialhash"
+	"github.com/adm87/onyx/pkg/engine/storage/slotmap"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
 
-type RenderingJob func(screen *ebiten.Image, viewMatrix ebiten.GeoM) error
+type RenderingJob func(target *ebiten.Image)
 
 type RenderingTask struct {
-	Render RenderingJob
 	Layer  int
 	ZIndex int
+	Job    RenderingJob
 }
 
 type RenderingAdapter interface {
-	SupportedRendererTypes() []rendering.RendererType
 	GetRenderingTasks(entry *donburi.Entry, viewport geom.AABB, viewMatrix ebiten.GeoM) []RenderingTask
 }
 
 type Renderer interface {
-	AddRenderingAdapter(adapterID AdapterID, adapter RenderingAdapter)
-	GetRenderingAdapter(adapterID AdapterID) (RenderingAdapter, bool)
+	AddRenderingAdapter(adapter RenderingAdapter) uint64
 }
-
-type renderableIndexing map[donburi.Entity]spatialhash.SpatialIndex
 
 type renderer struct {
-	logger *logger
-	queue  []RenderingTask
+	adapters  *slotmap.SlotMap[RenderingAdapter]
+	partition *spatialhash.SpatialHash[donburi.Entity]
 
-	adapters  map[AdapterID]RenderingAdapter
-	renderers map[rendering.RendererType]RenderingAdapter
-
-	partitioning *spatialhash.SpatialHash[donburi.Entity]
-	indexing     renderableIndexing
-
-	pool sync.Pool
+	tasks []RenderingTask
 }
 
-func newRenderer(logger *logger) *renderer {
+func newRenderer() *renderer {
 	return &renderer{
-		logger:    logger,
-		queue:     make([]RenderingTask, 0, 100),
-		adapters:  make(map[AdapterID]RenderingAdapter),
-		renderers: make(map[rendering.RendererType]RenderingAdapter),
-		partitioning: spatialhash.New[donburi.Entity](
-			spatialhash.WithResolutions(16, 32, 64, 128, 256, 512, 1024),
-			spatialhash.WithPadding(1, 1, 0, 0),
-			spatialhash.WithCapacity(100),
+		adapters: slotmap.New[RenderingAdapter](0),
+		partition: spatialhash.New[donburi.Entity](64,
+			spatialhash.Padding{Left: 1, Right: 1},
 		),
-		indexing: make(renderableIndexing),
+		tasks: make([]RenderingTask, 0, 100),
 	}
 }
 
-func (r *renderer) addRenderable(entry *donburi.Entry, aabb geom.AABB) bool {
-	entity := entry.Entity()
-
-	if _, exists := r.indexing[entity]; exists {
-		return false // Entity is already indexed, cannot add again
-	}
-
-	index, ok := r.partitioning.Insert(entity, aabb)
-	if ok {
-		r.indexing[entity] = index
-	}
-
-	return ok
+func (r *renderer) AddRenderingAdapter(adapter RenderingAdapter) uint64 {
+	return r.adapters.Insert(adapter)
 }
 
-func (r *renderer) removeRenderable(entry *donburi.Entry) bool {
-	entity := entry.Entity()
+func (r *renderer) render(ecs donburi.World, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) {
+	r.tasks = r.tasks[:0]
 
-	index, exists := r.indexing[entity]
-	if !exists {
-		return false // Entity is not indexed, cannot remove
-	}
+	queryRegion := viewport.Scale(2)
+	r.partition.Query(queryRegion, func(entity donburi.Entity) {
+		entry := ecs.Entry(entity)
 
-	ok := r.partitioning.Remove(index)
-	if ok {
-		delete(r.indexing, entity)
-	}
-
-	return ok
-}
-
-func (r *renderer) updateRenderable(entry *donburi.Entry, aabb geom.AABB) bool {
-	entity := entry.Entity()
-
-	index, exists := r.indexing[entity]
-	if !exists {
-		return false // Entity is not indexed, cannot update
-	}
-
-	return r.partitioning.Reinsert(index, aabb)
-}
-
-func (r *renderer) render(ecs donburi.World, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
-	r.queue = r.queue[:0]
-
-	r.partitioning.QueryAll(viewport, func(e donburi.Entity) bool {
-		entry := ecs.Entry(e)
-
-		visible := rendering.IsVisible(entry)
-		if !visible {
-			return true // Skip invisible entities
-		}
-
-		aabb := shapes.GetAABB(entry).Translate(transform.GetPosition(entry))
-		if !aabb.Intersects(viewport) {
-			return true // Skip entities outside the viewport
-		}
-
-		rendererType := rendering.GetRendererType(entry)
-
-		adapter, exists := r.renderers[rendererType]
-		if !exists {
-			return true // No adapter for this renderer type, skip
-		}
+		adapter, exists := r.adapters.Get(rendering.GetRenderer(entry))
+		assert.True(exists, "cannot find rendering adapter")
 
 		tasks := adapter.GetRenderingTasks(entry, viewport, viewMatrix)
-		r.queue = append(r.queue, tasks...)
-
-		return true
+		r.tasks = append(r.tasks, tasks...)
 	})
 
-	slices.SortFunc(r.queue, func(a, b RenderingTask) int {
-		if a.Layer != b.Layer {
-			return cmp.Compare(a.Layer, b.Layer)
+	slices.SortFunc(r.tasks, func(a, b RenderingTask) int {
+		if a.Layer == b.Layer {
+			return a.ZIndex - b.ZIndex
 		}
-		return cmp.Compare(a.ZIndex, b.ZIndex)
+		return a.Layer - b.Layer
 	})
 
-	for _, task := range r.queue {
-		if err := task.Render(screen, viewMatrix); err != nil {
-			return err
-		}
+	for _, task := range r.tasks {
+		task.Job(screen)
 	}
-
-	return nil
-}
-
-func (r *renderer) AddRenderingAdapter(adapterID AdapterID, adapter RenderingAdapter) {
-	if _, exists := r.adapters[adapterID]; exists {
-		r.logger.Warn("Rendering adapter with ID '%s' already exists, skipping", adapterID)
-		return
-	}
-
-	for _, rendererType := range adapter.SupportedRendererTypes() {
-		if _, exists := r.renderers[rendererType]; exists {
-			r.logger.Warn("Renderer for type '%s' already exists, skipping", rendererType)
-			continue
-		}
-		r.renderers[rendererType] = adapter
-	}
-
-	r.adapters[adapterID] = adapter
-}
-
-func (r *renderer) GetRenderingAdapter(adapterID AdapterID) (RenderingAdapter, bool) {
-	adapter, found := r.adapters[adapterID]
-	return adapter, found
 }

@@ -1,8 +1,8 @@
 package images
 
 import (
+	"github.com/adm87/onyx/pkg/assert"
 	"github.com/adm87/onyx/pkg/engine"
-	"github.com/adm87/onyx/pkg/engine/components/asset"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
@@ -10,68 +10,59 @@ import (
 	"github.com/yohamta/donburi"
 )
 
-type ImageRenderingAdapter struct {
-	assetAdapter   *ImageAssetAdapter
+type renderingAdapter struct {
+	assetAdapter   *assetAdapter
 	renderingTasks []engine.RenderingTask
-	rendererTypes  []rendering.RendererType
 }
 
-func NewImageRenderingAdapter(assetAdapter *ImageAssetAdapter) *ImageRenderingAdapter {
-	return &ImageRenderingAdapter{
+func newRendererAdapter(assetAdapter *assetAdapter) *renderingAdapter {
+	return &renderingAdapter{
 		assetAdapter:   assetAdapter,
-		renderingTasks: make([]engine.RenderingTask, 0, 100),
-		rendererTypes:  []rendering.RendererType{ImageRendererType},
+		renderingTasks: make([]engine.RenderingTask, 1),
 	}
 }
 
-func (a *ImageRenderingAdapter) SupportedRendererTypes() []rendering.RendererType {
-	return a.rendererTypes
-}
-
-func (a *ImageRenderingAdapter) GetRenderingTasks(entry *donburi.Entry, viewport geom.AABB, viewMatrix ebiten.GeoM) []engine.RenderingTask {
+func (a *renderingAdapter) GetRenderingTasks(entry *donburi.Entry, viewport geom.AABB, viewMatrix ebiten.GeoM) []engine.RenderingTask {
 	a.renderingTasks = a.renderingTasks[:0]
 
-	ref := asset.GetAssetReference(entry)
-	if ref == asset.UnknownRef {
-		return a.renderingTasks // Don't enqueue render tasks for entities without an image reference
+	visible := rendering.IsVisible(entry)
+	if !visible {
+		return a.renderingTasks
 	}
 
-	img, exists := a.assetAdapter.GetImage(ref)
-	if !exists {
-		return a.renderingTasks // Don't enqueue render tasks for entities with an invalid image reference
-	}
-
-	matrix := transform.GetMatrix(entry)
-	anchor := rendering.GetAnchor(entry)
+	layer := rendering.GetLayer(entry)
+	zIndex := rendering.GetZIndex(entry)
 	color := rendering.GetColor(entry)
 	filter := rendering.GetFilter(entry)
+	anchor := rendering.GetAnchor(entry)
+
+	img, exists := a.assetAdapter.GetImage(GetImageHandle(entry))
+	assert.True(exists, "cannot find image")
+
 	scale := transform.GetScale(entry)
 
-	aX := anchor.X * float64(img.Bounds().Dx()) * scale.X
-	aY := anchor.Y * float64(img.Bounds().Dy()) * scale.Y
+	// TODO - revist this, should it be scale or sign of scale?
+	aX := float64(img.Bounds().Dx()) * anchor.X * scale.X
+	aY := float64(img.Bounds().Dy()) * anchor.Y * scale.Y
 
+	matrix := transform.GetMatrix(entry)
 	matrix.Translate(-aX, -aY)
 	matrix.Concat(viewMatrix)
 
-	opts := ebiten.DrawImageOptions{
-		Filter: filter,
-	}
-
-	alpha := float32(color.A) / 255
-
 	a.renderingTasks = append(a.renderingTasks, engine.RenderingTask{
-		Render: func(screen *ebiten.Image, viewMatrix ebiten.GeoM) error {
-			opts.GeoM = matrix
+		Layer:  layer,
+		ZIndex: zIndex,
+		Job: func(target *ebiten.Image) {
+			opt := ebiten.DrawImageOptions{
+				Filter: filter,
+				GeoM:   matrix,
+			}
 
-			// NOTE: Just using ScaleWithColor doesn't work as expected, it seems to ignore the alpha component of the color.
-			opts.ColorScale.ScaleWithColor(color)
-			opts.ColorScale.ScaleAlpha(alpha)
+			opt.ColorScale.ScaleWithColor(color)
+			opt.ColorScale.ScaleAlpha(float32(color.A) / 255)
 
-			screen.DrawImage(img, &opts)
-			return nil
+			target.DrawImage(img, &opt)
 		},
-		Layer:  rendering.GetLayer(entry),
-		ZIndex: rendering.GetZIndex(entry),
 	})
 
 	return a.renderingTasks

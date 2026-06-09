@@ -48,9 +48,11 @@ func NewGame(opts ...Option) Game {
 	setupWindow(cfg.Title, cfg.Width, cfg.Height)
 
 	logger := newLogger(os.Stdout)
+
 	assets := newAssets(
 		logger,
 	)
+
 	screen := newScreen(
 		cfg.Width,
 		cfg.Height,
@@ -59,22 +61,26 @@ func NewGame(opts ...Option) Game {
 		cfg.BackgroundColor,
 		logger,
 	)
+
 	collision := newCollision()
-	renderer := newRenderer(
-		logger,
-	)
+
+	renderer := newRenderer()
+
 	world := newWorld(
 		collision,
 		renderer,
 	)
+
 	scenes := newScenes(
 		cfg.InitialScene,
 		world,
 		logger,
 	)
+
 	time := newTime(
 		cfg.FPS,
 	)
+
 	camera := newCamera(
 		world,
 		screen,
