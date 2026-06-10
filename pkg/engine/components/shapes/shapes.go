@@ -93,6 +93,14 @@ func SetAABB(entry *donburi.Entry, box geom.AABB) {
 	donburi.Add(entry, AABB, &box)
 }
 
+func TranslateAABB(entry *donburi.Entry, offset geom.Vec2) {
+	if !entry.HasComponent(AABB) {
+		return
+	}
+	aabb := GetAABB(entry).Translate(offset)
+	donburi.Add(entry, AABB, &aabb)
+}
+
 func IsAABB(entry *donburi.Entry) bool {
 	return entry.HasComponent(AABB)
 }

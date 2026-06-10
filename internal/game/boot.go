@@ -10,6 +10,7 @@ import (
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/images"
+	"github.com/adm87/onyx/pkg/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -30,7 +31,7 @@ func Boot() error {
 		engine.WithScreenSize(1280, 720),
 		engine.WithFullscreen(args.Fullscreen),
 		engine.WithScreenScale(engine.ScreenScaleFill),
-		engine.WithInitialScene(onyx.SplashScreenSceneID),
+		engine.WithInitialScene(onyx.GameplaySceneID),
 		engine.WithFilter(ebiten.FilterNearest),
 	).WithContext(ctx)
 
@@ -38,9 +39,10 @@ func Boot() error {
 	renderer := g.Renderer()
 
 	imageModule := images.NewModule(assets, renderer)
+	tiledModule := tiled.NewModule(assets, renderer, imageModule)
 
-	return onyx.NewGame(
-		g,
+	return onyx.NewGame(g,
 		imageModule,
+		tiledModule,
 	).Start()
 }

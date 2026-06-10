@@ -2,9 +2,12 @@ package images
 
 import (
 	"github.com/adm87/onyx/pkg/engine"
+	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
+	"github.com/adm87/onyx/pkg/engine/components/shapes"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/file"
+	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
@@ -55,6 +58,13 @@ func (m *ImageModule) CreateImage(ecs donburi.World, opts ...ImageOption) *donbu
 
 	SetImageHandle(entry, options.Handle)
 
+	width, height, ok := m.GetImageSize(options.Handle)
+	assert.True(ok, "failed to get image size for the provided handle")
+
+	shapes.AddAABB(entry, shapes.WithBounds(
+		geom.Vec2{X: 0, Y: 0},
+		geom.Vec2{X: float64(width), Y: float64(height)},
+	))
 	transform.AddTransform(entry)
 	rendering.AddRenderer(entry, rendering.WithRendererID(m.renderingAdapterHandle))
 

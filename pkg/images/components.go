@@ -1,8 +1,6 @@
 package images
 
-import (
-	"github.com/yohamta/donburi"
-)
+import "github.com/yohamta/donburi"
 
 type ImageOptions struct {
 	Handle uint64

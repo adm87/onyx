@@ -1,15 +1,43 @@
 package onyx
 
 import (
+	"fmt"
+
+	"github.com/adm87/onyx/content"
 	"github.com/adm87/onyx/pkg/engine"
+	"github.com/adm87/onyx/pkg/engine/assert"
+	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/engine/geom"
+	"github.com/adm87/onyx/pkg/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/yohamta/donburi"
 )
 
+var gameplayManifest = []file.FilePath{
+	content.AssetsTiledGym04,
+}
+
 func (o *Onyx) GameplayScene() engine.SceneState {
+	var tilemapEntry *donburi.Entry
+
+	assets := o.game.Assets()
+	world := o.game.World()
+
 	return engine.SceneState{
 		OnEnter: func(ecs donburi.World) error {
+			err := assets.Load(content.AssetsFS(), gameplayManifest...)
+			assert.Nil(err, fmt.Sprintf("failed to load gameplay assets: %v", err))
+
+			tmxHandle, exists := o.tiled.GetTmxHandle(content.AssetsTiledGym04)
+			assert.True(exists, "failed to get handle for tiled map")
+
+			_, tilemapHandle, err := o.tiled.ParseTmx(tmxHandle)
+			assert.Nil(err, fmt.Sprintf("failed to parse tiled map: %v", err))
+
+			tilemapEntry = o.tiled.CreateTilemap(ecs, tiled.WithTilemapHandle(tilemapHandle))
+			world.Add(tilemapEntry)
+
 			return nil
 		},
 		OnUpdate: func(ecs donburi.World, dt float64) (engine.SceneExitCode, error) {
@@ -22,6 +50,7 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			return nil
 		},
 		OnRender: func(ecs donburi.World, img *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
+			ebitenutil.DebugPrint(img, "Gameplay Scene")
 			return nil
 		},
 	}
