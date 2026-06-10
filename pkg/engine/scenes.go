@@ -95,6 +95,7 @@ func (s *scenes) update(steps int, deltaTime float64, fixedDeltaTime float64) er
 }
 
 func (s *scenes) render(screen *ebiten.Image, viewPort geom.AABB, viewMatrix ebiten.GeoM) error {
+	s.world.render(screen, viewPort, viewMatrix)
 	return s.renderCurrent(screen, viewPort, viewMatrix)
 }
 

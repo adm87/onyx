@@ -1,4 +1,4 @@
-package gameplay
+package onyx
 
 import (
 	"github.com/adm87/onyx/pkg/engine"
@@ -7,12 +7,7 @@ import (
 	"github.com/yohamta/donburi"
 )
 
-const (
-	PlayerIdleAnim = "Idle"
-	PlayerRunAnim  = "Run"
-)
-
-func New() engine.SceneState {
+func (o *Onyx) GameplayScene() engine.SceneState {
 	return engine.SceneState{
 		OnEnter: func(ecs donburi.World) error {
 			return nil

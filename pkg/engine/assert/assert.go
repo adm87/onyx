@@ -17,3 +17,15 @@ func False(condition bool, message string) {
 		panic(message)
 	}
 }
+
+func NotNil(value any, message string) {
+	if value == nil {
+		panic(message)
+	}
+}
+
+func Nil(value any, message string) {
+	if value != nil {
+		panic(message)
+	}
+}

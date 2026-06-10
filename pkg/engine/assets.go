@@ -4,6 +4,7 @@ import (
 	"io/fs"
 
 	"github.com/adm87/onyx/pkg/engine/file"
+	"github.com/adm87/onyx/pkg/engine/storage/slotmap"
 )
 
 type AdapterID string
@@ -18,26 +19,25 @@ type Assets interface {
 	Load(fileSystem fs.FS, paths ...file.FilePath) error
 	Unload(paths ...file.FilePath)
 
-	AddAssetAdapter(id AdapterID, adapter AssetAdapter)
-	GetAdapter(id AdapterID) (AssetAdapter, bool)
+	AddAssetAdapter(adapter AssetAdapter) uint64
+	GetAdapter(id uint64) (AssetAdapter, bool)
 
 	GetData(path file.FilePath) ([]byte, bool)
 }
 
 type assets struct {
 	logger *logger
+	store  *slotmap.SlotMap[AssetAdapter]
 
-	adaptersByID  map[AdapterID]AssetAdapter
-	adaptersByExt map[file.FileExt]AssetAdapter
-
-	data map[file.FilePath][]byte
+	adaptersByExt map[file.FileExt]uint64
+	data          map[file.FilePath][]byte
 }
 
 func newAssets(logger *logger) *assets {
 	return &assets{
 		logger:        logger,
-		adaptersByID:  make(map[AdapterID]AssetAdapter),
-		adaptersByExt: make(map[file.FileExt]AssetAdapter),
+		store:         slotmap.New[AssetAdapter](0),
+		adaptersByExt: make(map[file.FileExt]uint64),
 		data:          make(map[file.FilePath][]byte),
 	}
 }
@@ -50,9 +50,15 @@ func (a *assets) Load(fileSystem fs.FS, paths ...file.FilePath) error {
 			continue
 		}
 
-		adapter, exists := a.adaptersByExt[path.Ext()]
+		handle, exists := a.adaptersByExt[path.Ext()]
 		if !exists {
 			a.data[path] = raw
+			continue
+		}
+
+		adapter, exists := a.store.Get(handle)
+		if !exists {
+			a.logger.Error("Asset adapter with handle %d not found for asset '%s'", handle, path)
 			continue
 		}
 
@@ -70,9 +76,15 @@ func (a *assets) Unload(paths ...file.FilePath) {
 	for _, path := range paths {
 		ext := path.Ext()
 
-		adapter, exists := a.adaptersByExt[ext]
+		handle, exists := a.adaptersByExt[ext]
 		if !exists {
 			a.logger.Warn("No asset adapter found for file extension '%s', skipping unload of asset '%s'", ext, path)
+			continue
+		}
+
+		adapter, exists := a.store.Get(handle)
+		if !exists {
+			a.logger.Warn("Asset adapter with handle %d not found for asset '%s', skipping unload", handle, path)
 			continue
 		}
 
@@ -84,13 +96,8 @@ func (a *assets) Unload(paths ...file.FilePath) {
 	}
 }
 
-func (a *assets) AddAssetAdapter(id AdapterID, adapter AssetAdapter) {
-	if _, exists := a.adaptersByID[id]; exists {
-		a.logger.Warn("Asset adapter with ID '%s' already exists, skipping", id)
-		return
-	}
-
-	a.adaptersByID[id] = adapter
+func (a *assets) AddAssetAdapter(adapter AssetAdapter) uint64 {
+	handle := a.store.Insert(adapter)
 
 	for _, ext := range adapter.SupportedExtensions() {
 		if _, exists := a.adaptersByExt[ext]; exists {
@@ -98,12 +105,14 @@ func (a *assets) AddAssetAdapter(id AdapterID, adapter AssetAdapter) {
 			continue
 		}
 
-		a.adaptersByExt[ext] = adapter
+		a.adaptersByExt[ext] = handle
 	}
+
+	return handle
 }
 
-func (a *assets) GetAdapter(id AdapterID) (AssetAdapter, bool) {
-	adapter, exists := a.adaptersByID[id]
+func (a *assets) GetAdapter(id uint64) (AssetAdapter, bool) {
+	adapter, exists := a.store.Get(id)
 	return adapter, exists
 }
 

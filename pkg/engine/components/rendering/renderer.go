@@ -201,6 +201,10 @@ func AddRenderer(entry *donburi.Entry, options ...Option) *donburi.Entry {
 	return entry
 }
 
+func HasRenderer(entry *donburi.Entry) bool {
+	return entry.HasComponent(Renderer)
+}
+
 func GetRenderer(entry *donburi.Entry) uint64 {
 	if !entry.HasComponent(Renderer) {
 		return defaultRenderer.ID

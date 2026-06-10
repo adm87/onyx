@@ -1,7 +1,11 @@
 package engine
 
 import (
+	"github.com/adm87/onyx/pkg/engine/components/rendering"
+	"github.com/adm87/onyx/pkg/engine/components/shapes"
+	"github.com/adm87/onyx/pkg/engine/components/spatial"
 	"github.com/adm87/onyx/pkg/engine/geom"
+	"github.com/adm87/onyx/pkg/engine/partitioning/spatialhash"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
@@ -19,14 +23,19 @@ type world struct {
 
 	collision *collision
 	renderer  *renderer
+
+	entities     *spatialhash.SpatialHash[donburi.Entity]
+	queryResults []*donburi.Entry
 }
 
 func newWorld(collision *collision, renderer *renderer) *world {
 	ecs := donburi.NewWorld()
 	return &world{
-		ecs:       ecs,
-		collision: collision,
-		renderer:  renderer,
+		ecs:          ecs,
+		collision:    collision,
+		renderer:     renderer,
+		entities:     spatialhash.New[donburi.Entity](16, spatialhash.Padding{}),
+		queryResults: make([]*donburi.Entry, 0, 100),
 	}
 }
 
@@ -35,17 +44,41 @@ func (w *world) ECS() donburi.World {
 }
 
 func (w *world) Add(entry *donburi.Entry) {
+	aabb := shapes.GetAABB(entry)
 
+	entity := entry.Entity()
+	index := w.entities.Insert(entity, aabb)
+
+	spatial.AddSpatialIndexing(entry, index)
 }
 
 func (w *world) Remove(entry *donburi.Entry) {
-
+	index, ok := spatial.GetSpatialIndexing(entry)
+	if !ok {
+		return
+	}
+	w.entities.Remove(index)
 }
 
 func (w *world) Update(entry *donburi.Entry) {
 
 }
 
-func (w *world) render(screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) {
+func (w *world) QueryRegion(region geom.AABB, callback func(*donburi.Entry)) {
+	w.entities.Query(region, func(entity donburi.Entity) {
+		entry := w.ecs.Entry(entity)
+		callback(entry)
+	})
+}
 
+func (w *world) render(screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) {
+	w.queryResults = w.queryResults[:0]
+	w.entities.Query(viewport, func(entity donburi.Entity) {
+		entry := w.ecs.Entry(entity)
+		if !rendering.IsVisible(entry) {
+			return
+		}
+		w.queryResults = append(w.queryResults, entry)
+	})
+	w.renderer.render(w.queryResults, screen, viewport, viewMatrix)
 }

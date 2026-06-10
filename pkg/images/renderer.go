@@ -1,8 +1,8 @@
 package images
 
 import (
-	"github.com/adm87/onyx/pkg/assert"
 	"github.com/adm87/onyx/pkg/engine"
+	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
@@ -36,7 +36,7 @@ func (a *renderingAdapter) GetRenderingTasks(entry *donburi.Entry, viewport geom
 	filter := rendering.GetFilter(entry)
 	anchor := rendering.GetAnchor(entry)
 
-	img, exists := a.assetAdapter.GetImage(GetImageHandle(entry))
+	img, exists := a.assetAdapter.store.Get(GetImageHandle(entry))
 	assert.True(exists, "cannot find image")
 
 	scale := transform.GetScale(entry)

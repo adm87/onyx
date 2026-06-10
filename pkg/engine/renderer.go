@@ -3,7 +3,7 @@ package engine
 import (
 	"slices"
 
-	"github.com/adm87/onyx/pkg/assert"
+	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/engine/partitioning/spatialhash"
@@ -49,19 +49,18 @@ func (r *renderer) AddRenderingAdapter(adapter RenderingAdapter) uint64 {
 	return r.adapters.Insert(adapter)
 }
 
-func (r *renderer) render(ecs donburi.World, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) {
+func (r *renderer) render(entries []*donburi.Entry, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) {
 	r.tasks = r.tasks[:0]
 
-	queryRegion := viewport.Scale(2)
-	r.partition.Query(queryRegion, func(entity donburi.Entity) {
-		entry := ecs.Entry(entity)
+	for _, entry := range entries {
+		renderer := rendering.GetRenderer(entry)
 
-		adapter, exists := r.adapters.Get(rendering.GetRenderer(entry))
+		adapter, exists := r.adapters.Get(renderer)
 		assert.True(exists, "cannot find rendering adapter")
 
 		tasks := adapter.GetRenderingTasks(entry, viewport, viewMatrix)
 		r.tasks = append(r.tasks, tasks...)
-	})
+	}
 
 	slices.SortFunc(r.tasks, func(a, b RenderingTask) int {
 		if a.Layer == b.Layer {

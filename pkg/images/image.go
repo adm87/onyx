@@ -1,8 +1,6 @@
 package images
 
 import (
-	"github.com/adm87/onyx/pkg/engine/components/rendering"
-	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/yohamta/donburi"
 )
 
@@ -18,31 +16,6 @@ func defaultImageOptions() *ImageOptions {
 	return &ImageOptions{
 		Handle: 0,
 	}
-}
-
-func NewImage(ecs donburi.World, opts ...ImageOption) *donburi.Entry {
-	return AddImage(ecs.Entry(
-		ecs.Create(
-			ImageHandle,
-		),
-	), opts...)
-}
-
-func AddImage(entry *donburi.Entry, opts ...ImageOption) *donburi.Entry {
-	options := defaultImageOptions()
-	for _, opt := range opts {
-		opt(options)
-	}
-
-	SetImageHandle(entry, options.Handle)
-
-	transform.AddTransform(entry)
-
-	rendering.AddRenderer(entry,
-		rendering.WithRendererID(uint64(imageRendererID)),
-	)
-
-	return entry
 }
 
 func WithImageHandle(handle uint64) ImageOption {

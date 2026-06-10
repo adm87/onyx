@@ -6,9 +6,9 @@ import (
 
 	"github.com/adm87/onyx/content"
 	"github.com/adm87/onyx/internal/game/cli"
-	"github.com/adm87/onyx/internal/game/scenes"
-	"github.com/adm87/onyx/pkg/assert"
+	"github.com/adm87/onyx/internal/game/onyx"
 	"github.com/adm87/onyx/pkg/engine"
+	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/images"
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -25,28 +25,22 @@ func Boot() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	onyx := engine.NewGame(
+	g := engine.NewGame(
 		engine.WithTitle("Onyx"),
 		engine.WithScreenSize(1280, 720),
 		engine.WithFullscreen(args.Fullscreen),
 		engine.WithScreenScale(engine.ScreenScaleFill),
-		engine.WithInitialScene(scenes.SplashScreenSceneID),
+		engine.WithInitialScene(onyx.SplashScreenSceneID),
 		engine.WithFilter(ebiten.FilterNearest),
 	).WithContext(ctx)
 
-	registerPackages(onyx)
+	assets := g.Assets()
+	renderer := g.Renderer()
 
-	scenes.AddScenes(onyx)
+	imageModule := images.NewModule(assets, renderer)
 
-	return onyx.Start()
-}
-
-func registerPackages(onyx engine.Game) {
-	assets := onyx.Assets()
-	renderer := onyx.Renderer()
-
-	images.RegisterPackage(
-		assets,
-		renderer,
-	)
+	return onyx.NewGame(
+		g,
+		imageModule,
+	).Start()
 }
