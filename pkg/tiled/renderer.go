@@ -1,7 +1,6 @@
 package tiled
 
 import (
-	"image"
 	"math"
 
 	"github.com/adm87/onyx/pkg/engine"
@@ -13,11 +12,14 @@ import (
 )
 
 type renderingAdapter struct {
-	screen         engine.Screen
-	imageModule    *images.ImageModule
-	tiledAssets    *assetAdapter
-	renderingTasks []engine.RenderingTask
-	buffers        map[uint64][]*ebiten.Image
+	screen             engine.Screen
+	imageModule        *images.ImageModule
+	tiledAssets        *assetAdapter
+	drawOpts           ebiten.DrawImageOptions
+	buffers            map[uint64][]*ebiten.Image
+	jobs               []*engine.RenderingJob
+	lastMinX, lastMaxX int
+	lastMinY, lastMaxY int
 }
 
 func newRenderingAdapter(
@@ -25,15 +27,15 @@ func newRenderingAdapter(
 	imageModule *images.ImageModule,
 	tiledAssets *assetAdapter) *renderingAdapter {
 	return &renderingAdapter{
-		screen:         screen,
-		imageModule:    imageModule,
-		tiledAssets:    tiledAssets,
-		renderingTasks: make([]engine.RenderingTask, 1),
-		buffers:        make(map[uint64][]*ebiten.Image),
+		screen:      screen,
+		imageModule: imageModule,
+		tiledAssets: tiledAssets,
+		jobs:        make([]*engine.RenderingJob, 0, 100),
+		buffers:     make(map[uint64][]*ebiten.Image),
 	}
 }
 
-func (a *renderingAdapter) getBuffer(handle uint64, layer int) *ebiten.Image {
+func (a *renderingAdapter) getBuffer(handle uint64, layer int) (*ebiten.Image, bool) {
 	width, height := a.screen.SafeArea().Width(), a.screen.SafeArea().Height()
 
 	buffers, exists := a.buffers[handle]
@@ -49,14 +51,14 @@ func (a *renderingAdapter) getBuffer(handle uint64, layer int) *ebiten.Image {
 	buffer := buffers[layer]
 
 	if buffer.Bounds().Dx() == int(width) && buffer.Bounds().Dy() == int(height) {
-		return buffer
+		return buffer, false
 	}
 
 	buffer.Deallocate()
 	buffer = ebiten.NewImage(int(width), int(height))
 	buffers[layer] = buffer
 
-	return buffer
+	return buffer, true
 }
 
 func (a *renderingAdapter) releaseBuffer(handle uint64) {
@@ -68,69 +70,70 @@ func (a *renderingAdapter) releaseBuffer(handle uint64) {
 	}
 }
 
-func (a *renderingAdapter) GetRenderingTasks(entry *donburi.Entry, viewport geom.AABB, viewMatrix ebiten.GeoM) []engine.RenderingTask {
-	a.renderingTasks = a.renderingTasks[:0]
+func (a *renderingAdapter) GetJobs(
+	entry *donburi.Entry,
+	viewport geom.AABB,
+	viewMatrix ebiten.GeoM,
+	pool engine.RenderingJobPool) []*engine.RenderingJob {
+	a.jobs = a.jobs[:0]
 
 	handle, exists := GetTilemapHandle(entry)
 	if !exists {
-		return a.renderingTasks
+		return a.jobs
 	}
 
 	layer := rendering.GetLayer(entry)
 	zindex := rendering.GetZIndex(entry)
-	filter := rendering.GetFilter(entry)
-	color := rendering.GetColor(entry)
 
 	tilemap, exists := a.tiledAssets.tilemapStore.Get(handle)
 	if !exists {
-		return a.renderingTasks
+		return a.jobs
 	}
 
 	tmx, exists := a.tiledAssets.tmxStore.Get(handle)
 	if !exists {
-		return a.renderingTasks
+		return a.jobs
 	}
-
-	var buffer *ebiten.Image
 
 	minTileX := int(math.Floor(viewport.Min.X / float64(tmx.TileWidth)))
 	maxTileX := int(math.Floor(viewport.Max.X / float64(tmx.TileWidth)))
 	minTileY := int(math.Floor(viewport.Min.Y / float64(tmx.TileHeight)))
 	maxTileY := int(math.Floor(viewport.Max.Y / float64(tmx.TileHeight)))
 
+	var buffer *ebiten.Image
+	var resized bool
+
+	viewChanged := minTileX != a.lastMinX || maxTileX != a.lastMaxX || minTileY != a.lastMinY || maxTileY != a.lastMaxY
+	if viewChanged {
+		a.lastMinX, a.lastMaxX, a.lastMinY, a.lastMaxY = minTileX, maxTileX, minTileY, maxTileY
+	}
+
 	for i := range tilemap.layers {
 		if !tmx.Layers[i].Visible {
 			continue
 		}
 
-		buffer = a.getBuffer(handle, i)
-		buffer.Clear()
+		buffer, resized = a.getBuffer(handle, i)
+		if resized || viewChanged {
+			buffer.Clear()
+			a.drawTilemapLayer(
+				buffer,
+				tilemap, i,
+				tmx.TileWidth, tmx.TileHeight,
+				minTileX, maxTileX,
+				minTileY, maxTileY,
+				tmx.Tilesets,
+				viewMatrix,
+			)
+		}
 
-		a.drawTilemapLayer(
-			buffer,
-			tilemap, i,
-			tmx.TileWidth, tmx.TileHeight,
-			minTileX, maxTileX,
-			minTileY, maxTileY,
-			tmx.Tilesets,
-			viewMatrix)
-		a.renderingTasks = append(a.renderingTasks, engine.RenderingTask{
-			Layer:  layer,
-			ZIndex: zindex + i,
-			Job: func(target *ebiten.Image) {
-				opt := &ebiten.DrawImageOptions{
-					Filter: filter,
-				}
-
-				opt.ColorScale.ScaleWithColor(color)
-				opt.ColorScale.ScaleAlpha(float32(color.A) / 255)
-
-				target.DrawImage(buffer, opt)
-			},
-		})
+		job := pool.Get(buffer)
+		job.Layer = layer
+		job.ZIndex = zindex + i
+		a.jobs = append(a.jobs, job)
 	}
 
-	return a.renderingTasks
+	return a.jobs
 }
 
 func (a *renderingAdapter) drawTilemapLayer(
@@ -143,61 +146,51 @@ func (a *renderingAdapter) drawTilemapLayer(
 	tilesets []TmxTileset,
 	viewMatrix ebiten.GeoM) {
 
-	opts := &ebiten.DrawImageOptions{}
-
 	for y := minTileY; y <= maxTileY; y++ {
 		for x := minTileX; x <= maxTileX; x++ {
-			tile, exists := tilemap.GetTile(layerIndex, x, y)
+			tile, tileIndex, exists := tilemap.GetTile(layerIndex, x, y)
 			if !exists || tile.ID() == 0 {
 				continue
 			}
 
-			tileset := NearestTileset(tilesets, tile.ID())
+			tileset := tilesets[tilemap.tilesets[tileIndex]]
+
 			tsx, exists := a.tiledAssets.tsxStore.Get(tileset.Handle)
 			if !exists {
 				continue
 			}
 
-			img, exists := a.imageModule.GetImage(tsx.Image.Handle)
+			a.drawOpts.GeoM.Reset()
+
+			// // Ref: https://doc.mapeditor.org/en/stable/reference/global-tile-ids/#tile-flipping
+			if tile.FlippedDiagonally() {
+				a.drawOpts.GeoM.Rotate(math.Pi * 0.5)
+				a.drawOpts.GeoM.Scale(-1, 1)
+				a.drawOpts.GeoM.Translate(float64(tsx.TileHeight-tsx.TileWidth), 0)
+			}
+			if tile.FlippedHorizontally() {
+				a.drawOpts.GeoM.Scale(-1, 1)
+				a.drawOpts.GeoM.Translate(float64(tsx.TileWidth), 0)
+			}
+			if tile.FlippedVertically() {
+				a.drawOpts.GeoM.Scale(1, -1)
+				a.drawOpts.GeoM.Translate(0, float64(tsx.TileHeight))
+			}
+
+			tileX, tileY := x*cellWidth, y*cellHeight
+			a.drawOpts.GeoM.Translate(0, float64(cellHeight-tsx.TileHeight))
+			a.drawOpts.GeoM.Translate(float64(tsx.TileOffset.X), float64(tsx.TileOffset.Y))
+			a.drawOpts.GeoM.Translate(float64(tileX), float64(tileY))
+			a.drawOpts.GeoM.Concat(viewMatrix)
+
+			tileID := tile.ID() - uint32(tileset.FirstGID)
+
+			frame, exists := a.imageModule.GetFrame(tsx.Image.Handle, int(tileID))
 			if !exists {
 				continue
 			}
 
-			tileID := tile.ID() - uint32(tileset.FirstGID)
-			tileX, tileY := x*cellWidth, y*cellHeight
-
-			srcX := int(tileID % uint32(tsx.Columns) * uint32(tsx.TileWidth))
-			srcY := int(tileID / uint32(tsx.Columns) * uint32(tsx.TileHeight))
-
-			opts.GeoM.Reset()
-
-			// Ref: https://doc.mapeditor.org/en/stable/reference/global-tile-ids/#tile-flipping
-			if tile.FlippedDiagonally() {
-				opts.GeoM.Rotate(math.Pi * 0.5)
-				opts.GeoM.Scale(-1, 1)
-				opts.GeoM.Translate(float64(tsx.TileHeight-tsx.TileWidth), 0)
-			}
-			if tile.FlippedHorizontally() {
-				opts.GeoM.Scale(-1, 1)
-				opts.GeoM.Translate(float64(tsx.TileWidth), 0)
-			}
-			if tile.FlippedVertically() {
-				opts.GeoM.Scale(1, -1)
-				opts.GeoM.Translate(0, float64(tsx.TileHeight))
-			}
-
-			opts.GeoM.Translate(0, float64(cellHeight-tsx.TileHeight))
-			opts.GeoM.Translate(float64(tsx.TileOffset.X), float64(tsx.TileOffset.Y))
-			opts.GeoM.Translate(float64(tileX), float64(tileY))
-			opts.GeoM.Concat(viewMatrix)
-
-			target.DrawImage(img.SubImage(
-				image.Rect(
-					srcX, srcY,
-					srcX+tsx.TileWidth,
-					srcY+tsx.TileHeight,
-				),
-			).(*ebiten.Image), opts)
+			target.DrawImage(frame, &a.drawOpts)
 		}
 	}
 }

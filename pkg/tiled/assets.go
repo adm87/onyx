@@ -108,18 +108,21 @@ func (a *assetAdapter) importTsx(fileSystem fs.FS, path file.FilePath, raw []byt
 
 	dir := filepath.Dir(path.String())
 
-	if tsx.Image.Source != "" {
-		imgPath := file.ResolvedPath(dir, tsx.Image.Source)
-		tsx.Image.Source = imgPath.String()
-
-		err := a.assets.Load(fileSystem, imgPath)
-		assert.Fatal(err)
-
-		imgHandle, exists := a.imageModule.GetAssetHandle(imgPath)
-		assert.True(exists, fmt.Sprintf("Failed to load image asset for TSX at path %s", imgPath))
-
-		tsx.Image.Handle = imgHandle
+	if tsx.Image.Source == "" {
+		return nil
 	}
+
+	imgPath := file.ResolvedPath(dir, tsx.Image.Source)
+	tsx.Image.Source = imgPath.String()
+
+	err = a.assets.Load(fileSystem, imgPath)
+	assert.Fatal(err)
+
+	imgHandle, exists := a.imageModule.GetAssetHandle(imgPath)
+	assert.True(exists, fmt.Sprintf("Failed to load image asset for TSX at path %s", imgPath))
+
+	tsx.Image.Handle = imgHandle
+	a.imageModule.SliceFramesUniform(imgHandle, tsx.TileWidth, tsx.TileHeight)
 
 	return nil
 }

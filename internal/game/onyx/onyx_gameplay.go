@@ -10,6 +10,7 @@ import (
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/yohamta/donburi"
 )
 
@@ -25,6 +26,7 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 
 	assets := o.game.Assets()
 	camera := o.game.Camera()
+	screen := o.game.Screen()
 	world := o.game.World()
 
 	return engine.SceneState{
@@ -56,6 +58,8 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			return nil
 		},
 		OnRender: func(ecs donburi.World, img *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
+			min := screen.SafeArea().Min
+			ebitenutil.DebugPrintAt(img, fmt.Sprintf("FPS: %.2f", ebiten.ActualFPS()), int(min.X), int(min.Y))
 			return nil
 		},
 	}

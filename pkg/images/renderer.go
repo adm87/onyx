@@ -1,6 +1,8 @@
 package images
 
 import (
+	"image/color"
+
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
@@ -11,24 +13,27 @@ import (
 )
 
 type renderingAdapter struct {
-	assetAdapter   *assetAdapter
-	renderingTasks []engine.RenderingTask
-	buffers        map[uint64]*ebiten.Image
+	assetAdapter *assetAdapter
+	jobs         []*engine.RenderingJob
 }
 
 func newRendererAdapter(assetAdapter *assetAdapter) *renderingAdapter {
 	return &renderingAdapter{
-		assetAdapter:   assetAdapter,
-		renderingTasks: make([]engine.RenderingTask, 1),
+		assetAdapter: assetAdapter,
+		jobs:         make([]*engine.RenderingJob, 0, 100),
 	}
 }
 
-func (a *renderingAdapter) GetRenderingTasks(entry *donburi.Entry, viewport geom.AABB, viewMatrix ebiten.GeoM) []engine.RenderingTask {
-	a.renderingTasks = a.renderingTasks[:0]
+func (a *renderingAdapter) GetJobs(
+	entry *donburi.Entry,
+	viewport geom.AABB,
+	viewMatrix ebiten.GeoM,
+	pool engine.RenderingJobPool) []*engine.RenderingJob {
+	a.jobs = a.jobs[:0]
 
 	handle, exists := GetImageHandle(entry)
 	if !exists {
-		return a.renderingTasks
+		return nil
 	}
 
 	layer := rendering.GetLayer(entry)
@@ -50,21 +55,32 @@ func (a *renderingAdapter) GetRenderingTasks(entry *donburi.Entry, viewport geom
 	matrix.Translate(-aX, -aY)
 	matrix.Concat(viewMatrix)
 
-	a.renderingTasks = append(a.renderingTasks, engine.RenderingTask{
-		Layer:  layer,
-		ZIndex: zIndex,
-		Job: func(target *ebiten.Image) {
-			opt := ebiten.DrawImageOptions{
-				Filter: filter,
-				GeoM:   matrix,
-			}
+	job := pool.Get(img)
+	job.Layer = layer
+	job.ZIndex = zIndex
+	job.Options.Filter = filter
+	job.Options.GeoM = matrix
+	job.Options.ColorScale.ScaleWithColor(color)
+	job.Options.ColorScale.ScaleAlpha(float32(color.A) / 255)
 
-			opt.ColorScale.ScaleWithColor(color)
-			opt.ColorScale.ScaleAlpha(float32(color.A) / 255)
+	a.jobs = append(a.jobs, job)
+	return a.jobs
+}
 
-			target.DrawImage(img, &opt)
-		},
-	})
+func (a *renderingAdapter) drawImage(
+	img *ebiten.Image,
+	matrix ebiten.GeoM,
+	color color.RGBA,
+	filter ebiten.Filter) func(target *ebiten.Image) {
+	return func(target *ebiten.Image) {
+		opt := ebiten.DrawImageOptions{
+			Filter: filter,
+			GeoM:   matrix,
+		}
 
-	return a.renderingTasks
+		opt.ColorScale.ScaleWithColor(color)
+		opt.ColorScale.ScaleAlpha(float32(color.A) / 255)
+
+		target.DrawImage(img, &opt)
+	}
 }

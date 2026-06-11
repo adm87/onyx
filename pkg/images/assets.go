@@ -2,7 +2,9 @@ package images
 
 import (
 	"bytes"
+	"image"
 	"io/fs"
+	"math"
 
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
@@ -12,18 +14,11 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
-type ImageAssetAdapter interface {
-	GetImageSize(handle uint64) (int, int, bool)
-	GetImage(handle uint64) (*ebiten.Image, bool)
-	GetHandle(path file.FilePath) (uint64, bool)
-	LoadImage(filesystem fs.FS, path file.FilePath) (uint64, error)
-	DeleteImage(path file.FilePath) bool
-}
-
 type assetAdapter struct {
 	store   *slotmap.SlotMap[*ebiten.Image]
 	assets  engine.Assets
 	handles map[file.FilePath]uint64
+	frames  map[uint64][]*ebiten.Image
 }
 
 func newAssetAdapter(assets engine.Assets) *assetAdapter {
@@ -31,6 +26,7 @@ func newAssetAdapter(assets engine.Assets) *assetAdapter {
 		assets:  assets,
 		store:   slotmap.New[*ebiten.Image](256),
 		handles: make(map[file.FilePath]uint64),
+		frames:  make(map[uint64][]*ebiten.Image),
 	}
 }
 
@@ -58,9 +54,54 @@ func (a *assetAdapter) DeleteAsset(path file.FilePath) bool {
 	img.Deallocate()
 	delete(a.handles, path)
 
+	if frames, exists := a.frames[handle]; exists {
+		clear(frames)
+		delete(a.frames, handle)
+	}
+
 	return true
 }
 
 func (a *assetAdapter) SupportedExtensions() []file.FileExt {
 	return []file.FileExt{".png", ".jpg", ".jpeg"}
+}
+
+func (a *assetAdapter) getFrame(handle uint64, index int) (*ebiten.Image, bool) {
+	frames, exists := a.frames[handle]
+	if !exists || index < 0 || index >= len(frames) {
+		if img, exists := a.store.Get(handle); exists {
+			return img, true
+		}
+		return nil, false
+	}
+	return frames[index], true
+}
+
+func (a *assetAdapter) sliceFramesUniform(handle uint64, frameWidth, frameHeight int) {
+	img, exists := a.store.Get(handle)
+	if !exists {
+		return
+	}
+
+	frames, exists := a.frames[handle]
+	if exists {
+		frames = frames[:0]
+	}
+
+	columns := int(math.Ceil(float64(img.Bounds().Dx()) / float64(frameWidth)))
+	rows := int(math.Ceil(float64(img.Bounds().Dy()) / float64(frameHeight)))
+
+	for y := 0; y < rows; y++ {
+		for x := 0; x < columns; x++ {
+			frame := img.SubImage(image.Rect(
+				x*frameWidth,
+				y*frameHeight,
+				(x+1)*frameWidth,
+				(y+1)*frameHeight,
+			)).(*ebiten.Image)
+			frames = append(frames, frame)
+		}
+	}
+
+	a.frames[handle] = frames
 }

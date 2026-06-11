@@ -1,47 +1,67 @@
 package engine
 
 import (
+	"fmt"
 	"slices"
+	gtime "time"
 
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/geom"
-	"github.com/adm87/onyx/pkg/engine/partitioning/spatialhash"
 	"github.com/adm87/onyx/pkg/engine/storage/slotmap"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
 
-type RenderingJob func(target *ebiten.Image)
+type RenderingJob struct {
+	Layer   int
+	ZIndex  int
+	Buffer  *ebiten.Image
+	Options ebiten.DrawImageOptions
+}
 
-type RenderingTask struct {
-	Layer  int
-	ZIndex int
-	Job    RenderingJob
+type RenderingJobPool interface {
+	Get(buffer *ebiten.Image) *RenderingJob
 }
 
 type RenderingAdapter interface {
-	GetRenderingTasks(entry *donburi.Entry, viewport geom.AABB, viewMatrix ebiten.GeoM) []RenderingTask
+	GetJobs(entry *donburi.Entry, viewport geom.AABB, viewMatrix ebiten.GeoM, pool RenderingJobPool) []*RenderingJob
 }
 
 type Renderer interface {
 	AddRenderingAdapter(adapter RenderingAdapter) uint64
 }
 
-type renderer struct {
-	adapters  *slotmap.SlotMap[RenderingAdapter]
-	partition *spatialhash.SpatialHash[donburi.Entity]
+type renderingJobPool struct {
+	pool []*RenderingJob
+	i    int
+}
 
-	tasks []RenderingTask
+func (p *renderingJobPool) Get(buffer *ebiten.Image) *RenderingJob {
+	if p.i >= len(p.pool) {
+		p.pool = append(p.pool, &RenderingJob{})
+	}
+	job := p.pool[p.i]
+	job.Buffer = buffer
+	job.Options.GeoM.Reset()
+	job.Options.ColorScale.Reset()
+	p.i++
+	return job
+}
+
+type renderer struct {
+	adapters *slotmap.SlotMap[RenderingAdapter]
+	jobPool  *renderingJobPool
+	jobs     []*RenderingJob
 }
 
 func newRenderer() *renderer {
 	return &renderer{
 		adapters: slotmap.New[RenderingAdapter](0),
-		partition: spatialhash.New[donburi.Entity](64,
-			spatialhash.Padding{Left: 1, Right: 1},
-		),
-		tasks: make([]RenderingTask, 0, 100),
+		jobPool: &renderingJobPool{
+			pool: make([]*RenderingJob, 0, 100),
+		},
+		jobs: make([]*RenderingJob, 0, 100),
 	}
 }
 
@@ -50,7 +70,10 @@ func (r *renderer) AddRenderingAdapter(adapter RenderingAdapter) uint64 {
 }
 
 func (r *renderer) render(entries []*donburi.Entry, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) {
-	r.tasks = r.tasks[:0]
+	r.jobs = r.jobs[:0]
+	r.jobPool.i = 0
+
+	now := gtime.Now()
 
 	for _, entry := range entries {
 		renderer := rendering.GetRenderer(entry)
@@ -58,18 +81,22 @@ func (r *renderer) render(entries []*donburi.Entry, screen *ebiten.Image, viewpo
 		adapter, exists := r.adapters.Get(renderer)
 		assert.True(exists, "cannot find rendering adapter")
 
-		tasks := adapter.GetRenderingTasks(entry, viewport, viewMatrix)
-		r.tasks = append(r.tasks, tasks...)
+		jobs := adapter.GetJobs(entry, viewport, viewMatrix, r.jobPool)
+		r.jobs = append(r.jobs, jobs...)
 	}
 
-	slices.SortFunc(r.tasks, func(a, b RenderingTask) int {
+	slices.SortFunc(r.jobs, func(a, b *RenderingJob) int {
 		if a.Layer == b.Layer {
 			return a.ZIndex - b.ZIndex
 		}
 		return a.Layer - b.Layer
 	})
 
-	for _, task := range r.tasks {
-		task.Job(screen)
+	for _, job := range r.jobs {
+		if job.Buffer != nil {
+			screen.DrawImage(job.Buffer, &job.Options)
+		}
 	}
+
+	println(fmt.Sprintf("rendered %d jobs in %s", len(r.jobs), gtime.Since(now)))
 }

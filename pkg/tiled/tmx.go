@@ -177,14 +177,16 @@ func (l *TmxLayer) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	return nil
 }
 
-func NearestTileset(sets []TmxTileset, gid uint32) *TmxTileset {
+func NearestTileset(sets []TmxTileset, gid uint32) (*TmxTileset, int) {
 	var nearest *TmxTileset
+	var index int
 	for i := range sets {
 		if sets[i].FirstGID <= int(gid) {
 			nearest = &sets[i]
+			index = i
 		} else {
 			break
 		}
 	}
-	return nearest
+	return nearest, index
 }

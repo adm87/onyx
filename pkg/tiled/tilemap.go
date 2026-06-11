@@ -35,6 +35,7 @@ type Tilemap struct {
 	bounds     geom.AABB
 	tileBounds geom.AABB
 	tiles      []Tile // Flattened array of tiles, ordered by layer and then by position
+	tilesets   []int  // Parallel array to tiles, storing the index of the tileset for each tile
 }
 
 func (t *Tilemap) GetTileIndex(layer, x, y int) int {
@@ -43,15 +44,15 @@ func (t *Tilemap) GetTileIndex(layer, x, y int) int {
 	return (layer * width * height) + (y * width) + x
 }
 
-func (t *Tilemap) GetTile(layer, x, y int) (Tile, bool) {
+func (t *Tilemap) GetTile(layer, x, y int) (Tile, int, bool) {
 	wx := x - int(t.tileBounds.Min.X)
 	wy := y - int(t.tileBounds.Min.Y)
 	w, h := int(t.tileBounds.Width()), int(t.tileBounds.Height())
 	if layer < 0 || layer >= t.layers || wx < 0 || wx >= w || wy < 0 || wy >= h {
-		return Tile(0), false
+		return Tile(0), 0, false
 	}
 	index := t.GetTileIndex(layer, wx, wy)
-	return t.tiles[index], true
+	return t.tiles[index], index, true
 }
 
 func (t *Tilemap) Bounds() geom.AABB {
@@ -80,29 +81,30 @@ func buildTilemap(tmx *Tmx) (*Tilemap, error) {
 		},
 	}
 	size := int(tileBounds.Width() * tileBounds.Height())
-
 	tilemap := &Tilemap{
 		tileBounds: tileBounds,
 		bounds:     bounds,
 		layers:     len(tmx.Layers),
 		tiles:      make([]Tile, size*len(tmx.Layers)),
+		tilesets:   make([]int, 0, size*len(tmx.Layers)),
 	}
-
 	for i, layer := range tmx.Layers {
-		if err := buildTilemapLayer(layer, tilemap, i, size, tileBounds); err != nil {
+		if err := buildTilemapLayer(layer, tilemap, tmx.Tilesets, i, size, tileBounds); err != nil {
 			return nil, err
 		}
 	}
-
 	return tilemap, nil
 }
 
-func buildTilemapLayer(layer TmxLayer, tilemap *Tilemap, i, size int, bounds geom.AABB) error {
+func buildTilemapLayer(layer TmxLayer, tilemap *Tilemap, tilesets []TmxTileset, i, size int, bounds geom.AABB) error {
+	var tiles []Tile
+	var err error
+
 	if len(layer.Data.Chunks) > 0 {
 		mapWidth := int(bounds.Width())
 		layerOffset := i * size
 		for _, chunk := range layer.Data.Chunks {
-			tiles, err := decodeContent(layer.Data.Encoding, layer.Data.Compression, chunk.Content)
+			tiles, err = decodeContent(layer.Data.Encoding, layer.Data.Compression, chunk.Content)
 			if err != nil {
 				return err
 			}
@@ -116,11 +118,15 @@ func buildTilemapLayer(layer TmxLayer, tilemap *Tilemap, i, size int, bounds geo
 			}
 		}
 	} else {
-		tiles, err := decodeContent(layer.Data.Encoding, layer.Data.Compression, layer.Data.Content)
+		tiles, err = decodeContent(layer.Data.Encoding, layer.Data.Compression, layer.Data.Content)
 		if err != nil {
 			return err
 		}
 		copy(tilemap.tiles[i*size:(i+1)*size], tiles)
+	}
+	for i := range tiles {
+		_, j := NearestTileset(tilesets, tiles[i].ID())
+		tilemap.tilesets = append(tilemap.tilesets, j)
 	}
 	return nil
 }

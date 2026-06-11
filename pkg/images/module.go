@@ -48,6 +48,14 @@ func (m *ImageModule) GetImage(handle uint64) (*ebiten.Image, bool) {
 	return m.assetAdapter.store.Get(handle)
 }
 
+func (m *ImageModule) GetFrame(handle uint64, index int) (*ebiten.Image, bool) {
+	return m.assetAdapter.getFrame(handle, index)
+}
+
+func (m *ImageModule) SliceFramesUniform(handle uint64, frameWidth, frameHeight int) {
+	m.assetAdapter.sliceFramesUniform(handle, frameWidth, frameHeight)
+}
+
 func (m *ImageModule) CreateImage(ecs donburi.World, opts ...ImageOption) *donburi.Entry {
 	entry := ecs.Entry(ecs.Create(ImageHandle))
 
