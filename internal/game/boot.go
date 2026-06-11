@@ -29,17 +29,26 @@ func Boot() error {
 	g := engine.NewGame(
 		engine.WithTitle("Onyx"),
 		engine.WithScreenSize(1280, 720),
-		engine.WithFullscreen(args.Fullscreen),
 		engine.WithScreenScale(engine.ScreenScaleFill),
+		engine.WithFullscreen(args.Fullscreen),
 		engine.WithInitialScene(onyx.GameplaySceneID),
 		engine.WithFilter(ebiten.FilterNearest),
 	).WithContext(ctx)
 
 	assets := g.Assets()
 	renderer := g.Renderer()
+	screen := g.Screen()
 
-	imageModule := images.NewModule(assets, renderer)
-	tiledModule := tiled.NewModule(assets, renderer, imageModule)
+	imageModule := images.NewModule(
+		assets,
+		renderer,
+	)
+	tiledModule := tiled.NewModule(
+		assets,
+		renderer,
+		screen,
+		imageModule,
+	)
 
 	return onyx.NewGame(g,
 		imageModule,

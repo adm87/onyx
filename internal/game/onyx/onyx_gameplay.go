@@ -10,7 +10,6 @@ import (
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/yohamta/donburi"
 )
 
@@ -20,23 +19,30 @@ var gameplayManifest = []file.FilePath{
 
 func (o *Onyx) GameplayScene() engine.SceneState {
 	var tilemapEntry *donburi.Entry
+	var tilemap *tiled.Tilemap
+	var tilemapHandle uint64
+	var err error
 
 	assets := o.game.Assets()
+	camera := o.game.Camera()
 	world := o.game.World()
 
 	return engine.SceneState{
 		OnEnter: func(ecs donburi.World) error {
-			err := assets.Load(content.AssetsFS(), gameplayManifest...)
+			err = assets.Load(content.AssetsFS(), gameplayManifest...)
 			assert.Nil(err, fmt.Sprintf("failed to load gameplay assets: %v", err))
 
 			tmxHandle, exists := o.tiled.GetTmxHandle(content.AssetsTiledGym04)
 			assert.True(exists, "failed to get handle for tiled map")
 
-			_, tilemapHandle, err := o.tiled.ParseTmx(tmxHandle)
+			tilemap, tilemapHandle, err = o.tiled.BuildTilemap(tmxHandle)
 			assert.Nil(err, fmt.Sprintf("failed to parse tiled map: %v", err))
 
 			tilemapEntry = o.tiled.CreateTilemap(ecs, tiled.WithTilemapHandle(tilemapHandle))
 			world.Add(tilemapEntry)
+
+			camera.SetPosition(tilemap.Bounds().Center())
+			camera.SetZoom(0.25)
 
 			return nil
 		},
@@ -50,7 +56,6 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			return nil
 		},
 		OnRender: func(ecs donburi.World, img *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
-			ebitenutil.DebugPrint(img, "Gameplay Scene")
 			return nil
 		},
 	}

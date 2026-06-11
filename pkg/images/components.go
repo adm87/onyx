@@ -22,11 +22,11 @@ func WithImageHandle(handle uint64) ImageOption {
 	}
 }
 
-func GetImageHandle(entry *donburi.Entry) uint64 {
+func GetImageHandle(entry *donburi.Entry) (uint64, bool) {
 	if !entry.HasComponent(ImageHandle) {
-		return 0
+		return 0, false
 	}
-	return *ImageHandle.Get(entry)
+	return *ImageHandle.Get(entry), true
 }
 
 func SetImageHandle(entry *donburi.Entry, handle uint64) {

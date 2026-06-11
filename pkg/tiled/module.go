@@ -10,7 +10,6 @@ import (
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/engine/geom"
-	"github.com/adm87/onyx/pkg/engine/storage/slotmap"
 	"github.com/adm87/onyx/pkg/images"
 	"github.com/yohamta/donburi"
 )
@@ -18,38 +17,44 @@ import (
 type TiledModule struct {
 	assetsAdapter    *assetAdapter
 	renderingAdapter *renderingAdapter
-	imageModule      *images.ImageModule
-	tilemapStore     *slotmap.SlotMap[*Tilemap]
 
 	assetAdapterHandle     uint64
 	renderingAdapterHandle uint64
 }
 
-func NewModule(assets engine.Assets, renderer engine.Renderer, imageModule *images.ImageModule) *TiledModule {
-	assetsAdapter := newAssetsAdapter(assets)
-	renderingAdapter := newRenderingAdapter()
+func NewModule(
+	assets engine.Assets,
+	renderer engine.Renderer,
+	screen engine.Screen,
+	imageModule *images.ImageModule) *TiledModule {
+
+	assetsAdapter := newAssetsAdapter(assets, imageModule)
+	renderingAdapter := newRenderingAdapter(screen, imageModule, assetsAdapter)
 	return &TiledModule{
 		assetsAdapter:          assetsAdapter,
 		renderingAdapter:       renderingAdapter,
-		imageModule:            imageModule,
-		tilemapStore:           slotmap.New[*Tilemap](0),
 		assetAdapterHandle:     assets.AddAssetAdapter(assetsAdapter),
 		renderingAdapterHandle: renderer.AddRenderingAdapter(renderingAdapter),
 	}
 }
 
-func (m *TiledModule) ParseTmx(handle uint64) (*Tilemap, uint64, error) {
+func (m *TiledModule) BuildTilemap(handle uint64) (*Tilemap, uint64, error) {
 	tmx, ok := m.assetsAdapter.tmxStore.Get(handle)
 	assert.True(ok, fmt.Sprintf("TMX asset with handle %d not found", handle))
 
 	tilemap, err := buildTilemap(tmx)
 	assert.Nil(err, fmt.Sprintf("Failed to build tilemap from TMX asset with handle %d: %v", handle, err))
 
-	return tilemap, m.tilemapStore.Insert(tilemap), nil
+	return tilemap, m.assetsAdapter.tilemapStore.Insert(tilemap), nil
 }
 
-func (m *TiledModule) GetTilmapSize(handle uint64) (int, int, bool) {
-	tilemap, ok := m.tilemapStore.Get(handle)
+func (m *TiledModule) ReleaseTilemap(handle uint64) {
+	m.assetsAdapter.tilemapStore.Delete(handle)
+	m.renderingAdapter.releaseBuffer(handle)
+}
+
+func (m *TiledModule) GetTilemapSize(handle uint64) (int, int, bool) {
+	tilemap, ok := m.assetsAdapter.tilemapStore.Get(handle)
 	if !ok {
 		return 0, 0, false
 	}
@@ -68,7 +73,7 @@ func (m *TiledModule) GetTsxHandle(path file.FilePath) (uint64, bool) {
 }
 
 func (m *TiledModule) GetTilemap(handle uint64) (*Tilemap, bool) {
-	tilemap, ok := m.tilemapStore.Get(handle)
+	tilemap, ok := m.assetsAdapter.tilemapStore.Get(handle)
 	return tilemap, ok
 }
 
@@ -92,7 +97,7 @@ func (m *TiledModule) CreateTilemap(ecs donburi.World, opts ...TilemapOption) *d
 
 	SetTilemapHandle(entry, options.Handle)
 
-	width, height, ok := m.GetTilmapSize(options.Handle)
+	width, height, ok := m.GetTilemapSize(options.Handle)
 	assert.True(ok, "failed to get tilemap size for the provided handle")
 
 	shapes.AddAABB(entry, shapes.WithBounds(

@@ -13,6 +13,7 @@ import (
 type renderingAdapter struct {
 	assetAdapter   *assetAdapter
 	renderingTasks []engine.RenderingTask
+	buffers        map[uint64]*ebiten.Image
 }
 
 func newRendererAdapter(assetAdapter *assetAdapter) *renderingAdapter {
@@ -25,8 +26,8 @@ func newRendererAdapter(assetAdapter *assetAdapter) *renderingAdapter {
 func (a *renderingAdapter) GetRenderingTasks(entry *donburi.Entry, viewport geom.AABB, viewMatrix ebiten.GeoM) []engine.RenderingTask {
 	a.renderingTasks = a.renderingTasks[:0]
 
-	visible := rendering.IsVisible(entry)
-	if !visible {
+	handle, exists := GetImageHandle(entry)
+	if !exists {
 		return a.renderingTasks
 	}
 
@@ -36,7 +37,7 @@ func (a *renderingAdapter) GetRenderingTasks(entry *donburi.Entry, viewport geom
 	filter := rendering.GetFilter(entry)
 	anchor := rendering.GetAnchor(entry)
 
-	img, exists := a.assetAdapter.store.Get(GetImageHandle(entry))
+	img, exists := a.assetAdapter.store.Get(handle)
 	assert.True(exists, "cannot find image")
 
 	scale := transform.GetScale(entry)

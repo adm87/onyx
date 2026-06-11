@@ -54,6 +54,7 @@ func (g TmxObjectGroups) EachInGroup(groupName string, fn func(object *TmxObject
 }
 
 type Tmx struct {
+	Handle       uint64          `xml:"-"`
 	Version      string          `xml:"version,attr"`
 	TiledVersion string          `xml:"tiledversion,attr"`
 	Orientation  Orientation     `xml:"orientation,attr"`
@@ -71,6 +72,7 @@ type Tmx struct {
 }
 
 type TmxTileset struct {
+	Handle   uint64 `xml:"-"`
 	FirstGID int    `xml:"firstgid,attr"`
 	Source   string `xml:"source,attr"`
 }
@@ -115,6 +117,7 @@ type TmxObject struct {
 }
 
 type Tsx struct {
+	Handle       uint64    `xml:"-"`
 	Version      string    `xml:"version,attr"`
 	TiledVersion string    `xml:"tiledversion,attr"`
 	Name         string    `xml:"name,attr"`
@@ -127,6 +130,7 @@ type Tsx struct {
 }
 
 type TsxImage struct {
+	Handle uint64 `xml:"-"`
 	Source string `xml:"source,attr"`
 	Width  int    `xml:"width,attr"`
 	Height int    `xml:"height,attr"`

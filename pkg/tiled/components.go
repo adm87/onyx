@@ -22,11 +22,11 @@ func WithTilemapHandle(handle uint64) TilemapOption {
 	}
 }
 
-func GetTilemapHandle(entry *donburi.Entry) uint64 {
+func GetTilemapHandle(entry *donburi.Entry) (uint64, bool) {
 	if !entry.HasComponent(TilemapHandle) {
-		return 0
+		return 0, false
 	}
-	return *TilemapHandle.Get(entry)
+	return *TilemapHandle.Get(entry), true
 }
 
 func SetTilemapHandle(entry *donburi.Entry, handle uint64) {
