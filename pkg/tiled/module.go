@@ -87,7 +87,7 @@ func (m *TiledModule) GetTsx(handle uint64) (*Tsx, bool) {
 	return tsx, ok
 }
 
-func (m *TiledModule) CreateTilemap(ecs donburi.World, opts ...TilemapOption) *donburi.Entry {
+func (m *TiledModule) CreateTilemapEntity(ecs donburi.World, opts ...TilemapOption) *donburi.Entry {
 	entry := ecs.Entry(ecs.Create(TilemapHandle))
 
 	options := defaultTilemapOptions()
@@ -105,7 +105,12 @@ func (m *TiledModule) CreateTilemap(ecs donburi.World, opts ...TilemapOption) *d
 		geom.Vec2{X: float64(width), Y: float64(height)},
 	))
 
-	rendering.AddRenderer(entry, rendering.WithRendererID(m.renderingAdapterHandle))
+	rendering.AddRenderer(entry,
+		rendering.WithRendererID(
+			m.renderingAdapterHandle,
+		),
+	)
+
 	transform.AddTransform(entry)
 
 	return entry

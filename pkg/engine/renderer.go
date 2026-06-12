@@ -2,7 +2,6 @@ package engine
 
 import (
 	"slices"
-	gtime "time"
 
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/geom"
@@ -74,8 +73,6 @@ func (r *renderer) render(entries []*donburi.Entry, screen *ebiten.Image, viewpo
 	r.jobs = r.jobs[:0]
 	r.jobPool.i = 0
 
-	now := gtime.Now()
-
 	for _, entry := range entries {
 		renderer := rendering.GetRenderer(entry)
 
@@ -101,6 +98,4 @@ func (r *renderer) render(entries []*donburi.Entry, screen *ebiten.Image, viewpo
 			screen.DrawImage(job.Buffer, &job.Options)
 		}
 	}
-
-	r.logger.Info("rendered %d jobs in %s", len(r.jobs), gtime.Since(now))
 }

@@ -13,8 +13,8 @@ import (
 )
 
 type ImageModule struct {
-	assetAdapter    *assetAdapter
-	rendererAdapter *renderingAdapter
+	assetAdapter     *assetAdapter
+	renderingAdapter *renderingAdapter
 
 	assetAdapterHandle     uint64
 	renderingAdapterHandle uint64
@@ -22,10 +22,10 @@ type ImageModule struct {
 
 func NewModule(assets engine.Assets, renderer engine.Renderer) *ImageModule {
 	assetAdapter := newAssetAdapter(assets)
-	renderingAdapter := newRendererAdapter(assetAdapter)
+	renderingAdapter := newRenderingAdapter(assetAdapter)
 	return &ImageModule{
 		assetAdapter:           assetAdapter,
-		rendererAdapter:        renderingAdapter,
+		renderingAdapter:       renderingAdapter,
 		assetAdapterHandle:     assets.AddAssetAdapter(assetAdapter),
 		renderingAdapterHandle: renderer.AddRenderingAdapter(renderingAdapter),
 	}
@@ -56,7 +56,7 @@ func (m *ImageModule) GetImage(handle uint64) (*ebiten.Image, bool) {
 	return m.assetAdapter.store.Get(handle)
 }
 
-func (m *ImageModule) GetFrame(handle uint64, index int) (*ebiten.Image, bool) {
+func (m *ImageModule) GetFrameImage(handle uint64, index int) (*ebiten.Image, bool) {
 	return m.assetAdapter.getFrame(handle, index)
 }
 
@@ -64,7 +64,7 @@ func (m *ImageModule) ExtractUniformFrames(handle uint64, frameWidth, frameHeigh
 	m.assetAdapter.extractUniformFrames(handle, frameWidth, frameHeight)
 }
 
-func (m *ImageModule) CreateImage(ecs donburi.World, opts ...Option) *donburi.Entry {
+func (m *ImageModule) CreateImageEntity(ecs donburi.World, opts ...Option) *donburi.Entry {
 	options := defaultImageOptions()
 	for _, opt := range opts {
 		opt(options)

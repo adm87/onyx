@@ -186,7 +186,7 @@ func (a *renderingAdapter) drawTilemapLayer(
 
 			tileID := tile.ID() - uint32(tileset.FirstGID)
 
-			frame, exists := a.imageModule.GetFrame(tsx.Image.Handle, int(tileID))
+			frame, exists := a.imageModule.GetFrameImage(tsx.Image.Handle, int(tileID))
 			if !exists {
 				continue
 			}

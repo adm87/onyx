@@ -38,7 +38,7 @@ func (o *Onyx) SplashScreenScene() engine.SceneState {
 			assert.True(ok, "failed to get image size for splash screen")
 			screen.ResizeBuffer(width, height)
 
-			splashScreenEntry = o.images.CreateImage(ecs,
+			splashScreenEntry = o.images.CreateImageEntity(ecs,
 				images.WithImageHandle(handle),
 			)
 

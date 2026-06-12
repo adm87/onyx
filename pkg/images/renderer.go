@@ -14,7 +14,7 @@ type renderingAdapter struct {
 	jobs         []*engine.RenderingJob
 }
 
-func newRendererAdapter(assetAdapter *assetAdapter) *renderingAdapter {
+func newRenderingAdapter(assetAdapter *assetAdapter) *renderingAdapter {
 	return &renderingAdapter{
 		assetAdapter: assetAdapter,
 		jobs:         make([]*engine.RenderingJob, 0, 100),
@@ -44,9 +44,8 @@ func (a *renderingAdapter) GetJobs(
 		return a.jobs
 	}
 
-	scale := transform.GetScale(entry)
-
 	// TODO - revist this, should it be scale or sign of scale?
+	scale := transform.GetScale(entry)
 	aX := float64(img.Bounds().Dx()) * anchor.X * scale.X
 	aY := float64(img.Bounds().Dy()) * anchor.Y * scale.Y
 

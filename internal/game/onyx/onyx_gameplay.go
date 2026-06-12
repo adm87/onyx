@@ -40,7 +40,7 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			tilemap, tilemapHandle, err = o.tiled.BuildTilemap(tmxHandle)
 			assert.Nil(err, fmt.Sprintf("failed to parse tiled map: %v", err))
 
-			tilemapEntry = o.tiled.CreateTilemap(ecs, tiled.WithTilemapHandle(tilemapHandle))
+			tilemapEntry = o.tiled.CreateTilemapEntity(ecs, tiled.WithTilemapHandle(tilemapHandle))
 			world.Add(tilemapEntry)
 
 			camera.SetPosition(tilemap.Bounds().Center())
