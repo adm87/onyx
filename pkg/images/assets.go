@@ -14,6 +14,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
+var imageExtensions = []file.FileExt{".png", ".jpg", ".jpeg"}
+
 type assetAdapter struct {
 	store   *slotmap.SlotMap[*ebiten.Image]
 	assets  engine.Assets
@@ -63,7 +65,7 @@ func (a *assetAdapter) DeleteAsset(path file.FilePath) bool {
 }
 
 func (a *assetAdapter) SupportedExtensions() []file.FileExt {
-	return []file.FileExt{".png", ".jpg", ".jpeg"}
+	return imageExtensions
 }
 
 func (a *assetAdapter) getFrame(handle uint64, index int) (*ebiten.Image, bool) {
@@ -77,7 +79,7 @@ func (a *assetAdapter) getFrame(handle uint64, index int) (*ebiten.Image, bool) 
 	return frames[index], true
 }
 
-func (a *assetAdapter) sliceFramesUniform(handle uint64, frameWidth, frameHeight int) {
+func (a *assetAdapter) extractUniformFrames(handle uint64, frameWidth, frameHeight int) {
 	img, exists := a.store.Get(handle)
 	if !exists {
 		return
@@ -91,8 +93,8 @@ func (a *assetAdapter) sliceFramesUniform(handle uint64, frameWidth, frameHeight
 	columns := int(math.Ceil(float64(img.Bounds().Dx()) / float64(frameWidth)))
 	rows := int(math.Ceil(float64(img.Bounds().Dy()) / float64(frameHeight)))
 
-	for y := 0; y < rows; y++ {
-		for x := 0; x < columns; x++ {
+	for y := range rows {
+		for x := range columns {
 			frame := img.SubImage(image.Rect(
 				x*frameWidth,
 				y*frameHeight,

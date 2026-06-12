@@ -1,10 +1,7 @@
 package images
 
 import (
-	"image/color"
-
 	"github.com/adm87/onyx/pkg/engine"
-	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
@@ -33,7 +30,7 @@ func (a *renderingAdapter) GetJobs(
 
 	handle, exists := GetImageHandle(entry)
 	if !exists {
-		return nil
+		return a.jobs
 	}
 
 	layer := rendering.GetLayer(entry)
@@ -43,7 +40,9 @@ func (a *renderingAdapter) GetJobs(
 	anchor := rendering.GetAnchor(entry)
 
 	img, exists := a.assetAdapter.store.Get(handle)
-	assert.True(exists, "cannot find image")
+	if !exists {
+		return a.jobs
+	}
 
 	scale := transform.GetScale(entry)
 
@@ -55,32 +54,15 @@ func (a *renderingAdapter) GetJobs(
 	matrix.Translate(-aX, -aY)
 	matrix.Concat(viewMatrix)
 
-	job := pool.Get(img)
+	job := pool.Get()
+	job.Buffer = img
 	job.Layer = layer
 	job.ZIndex = zIndex
 	job.Options.Filter = filter
 	job.Options.GeoM = matrix
 	job.Options.ColorScale.ScaleWithColor(color)
 	job.Options.ColorScale.ScaleAlpha(float32(color.A) / 255)
-
 	a.jobs = append(a.jobs, job)
+
 	return a.jobs
-}
-
-func (a *renderingAdapter) drawImage(
-	img *ebiten.Image,
-	matrix ebiten.GeoM,
-	color color.RGBA,
-	filter ebiten.Filter) func(target *ebiten.Image) {
-	return func(target *ebiten.Image) {
-		opt := ebiten.DrawImageOptions{
-			Filter: filter,
-			GeoM:   matrix,
-		}
-
-		opt.ColorScale.ScaleWithColor(color)
-		opt.ColorScale.ScaleAlpha(float32(color.A) / 255)
-
-		target.DrawImage(img, &opt)
-	}
 }

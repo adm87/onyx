@@ -1,11 +1,9 @@
 package engine
 
 import (
-	"fmt"
 	"slices"
 	gtime "time"
 
-	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/engine/storage/slotmap"
@@ -21,7 +19,7 @@ type RenderingJob struct {
 }
 
 type RenderingJobPool interface {
-	Get(buffer *ebiten.Image) *RenderingJob
+	Get() *RenderingJob
 }
 
 type RenderingAdapter interface {
@@ -37,12 +35,12 @@ type renderingJobPool struct {
 	i    int
 }
 
-func (p *renderingJobPool) Get(buffer *ebiten.Image) *RenderingJob {
+func (p *renderingJobPool) Get() *RenderingJob {
 	if p.i >= len(p.pool) {
 		p.pool = append(p.pool, &RenderingJob{})
 	}
 	job := p.pool[p.i]
-	job.Buffer = buffer
+	job.Buffer = nil
 	job.Options.GeoM.Reset()
 	job.Options.ColorScale.Reset()
 	p.i++
@@ -50,13 +48,16 @@ func (p *renderingJobPool) Get(buffer *ebiten.Image) *RenderingJob {
 }
 
 type renderer struct {
+	logger Logger
+
 	adapters *slotmap.SlotMap[RenderingAdapter]
 	jobPool  *renderingJobPool
 	jobs     []*RenderingJob
 }
 
-func newRenderer() *renderer {
+func newRenderer(logger Logger) *renderer {
 	return &renderer{
+		logger:   logger,
 		adapters: slotmap.New[RenderingAdapter](0),
 		jobPool: &renderingJobPool{
 			pool: make([]*RenderingJob, 0, 100),
@@ -79,7 +80,10 @@ func (r *renderer) render(entries []*donburi.Entry, screen *ebiten.Image, viewpo
 		renderer := rendering.GetRenderer(entry)
 
 		adapter, exists := r.adapters.Get(renderer)
-		assert.True(exists, "cannot find rendering adapter")
+		if !exists {
+			r.logger.Warn("renderer adapter not found for entry renderer: %v", renderer)
+			continue
+		}
 
 		jobs := adapter.GetJobs(entry, viewport, viewMatrix, r.jobPool)
 		r.jobs = append(r.jobs, jobs...)
@@ -98,5 +102,5 @@ func (r *renderer) render(entries []*donburi.Entry, screen *ebiten.Image, viewpo
 		}
 	}
 
-	println(fmt.Sprintf("rendered %d jobs in %s", len(r.jobs), gtime.Since(now)))
+	r.logger.Info("rendered %d jobs in %s", len(r.jobs), gtime.Since(now))
 }

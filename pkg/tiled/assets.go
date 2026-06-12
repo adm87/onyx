@@ -13,6 +13,8 @@ import (
 	"github.com/adm87/onyx/pkg/images"
 )
 
+var tiledExtensions = []file.FileExt{".tmx", ".tsx"}
+
 type assetAdapter struct {
 	assets engine.Assets
 
@@ -54,7 +56,7 @@ func (a *assetAdapter) DeleteAsset(path file.FilePath) bool {
 }
 
 func (a *assetAdapter) SupportedExtensions() []file.FileExt {
-	return []file.FileExt{".tmx", ".tsx"}
+	return tiledExtensions
 }
 
 func (a *assetAdapter) importTmx(fileSystem fs.FS, path file.FilePath, raw []byte) error {
@@ -122,7 +124,7 @@ func (a *assetAdapter) importTsx(fileSystem fs.FS, path file.FilePath, raw []byt
 	assert.True(exists, fmt.Sprintf("Failed to load image asset for TSX at path %s", imgPath))
 
 	tsx.Image.Handle = imgHandle
-	a.imageModule.SliceFramesUniform(imgHandle, tsx.TileWidth, tsx.TileHeight)
+	a.imageModule.ExtractUniformFrames(imgHandle, tsx.TileWidth, tsx.TileHeight)
 
 	return nil
 }

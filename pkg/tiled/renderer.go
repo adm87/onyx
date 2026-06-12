@@ -127,7 +127,8 @@ func (a *renderingAdapter) GetJobs(
 			)
 		}
 
-		job := pool.Get(buffer)
+		job := pool.Get()
+		job.Buffer = buffer
 		job.Layer = layer
 		job.ZIndex = zindex + i
 		a.jobs = append(a.jobs, job)

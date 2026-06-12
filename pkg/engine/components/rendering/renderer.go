@@ -188,7 +188,7 @@ func AddRenderer(entry *donburi.Entry, options ...Option) *donburi.Entry {
 	}
 
 	SetFilter(entry, opts.Filter)
-	SetAnchor(entry, opts.Anchor)
+	SetAnchor(entry, opts.Anchor.X, opts.Anchor.Y)
 	SetColor(entry, opts.Color)
 
 	donburi.Add(entry, Renderer, &RendererInfo{
@@ -234,8 +234,8 @@ func GetAnchor(entry *donburi.Entry) geom.Vec2 {
 }
 
 // SetAnchor sets the anchor component for an entity, adding it if it does not already exist.
-func SetAnchor(entry *donburi.Entry, anchor geom.Vec2) {
-	donburi.Add(entry, Anchor, &anchor)
+func SetAnchor(entry *donburi.Entry, x, y float64) {
+	donburi.Add(entry, Anchor, &geom.Vec2{X: x, Y: y})
 }
 
 // GetColor retrieves the color component from an entity, returning a default value if it does not exist.

@@ -38,16 +38,18 @@ func (o *Onyx) SplashScreenScene() engine.SceneState {
 			assert.True(ok, "failed to get image size for splash screen")
 			screen.ResizeBuffer(width, height)
 
-			splashScreenEntry = o.images.CreateImage(ecs, images.WithImageHandle(handle))
-			rendering.SetAnchor(splashScreenEntry, geom.Vec2{
-				X: 0.5,
-				Y: 0.5,
-			})
+			splashScreenEntry = o.images.CreateImage(ecs,
+				images.WithImageHandle(handle),
+			)
+
+			rendering.SetAnchor(splashScreenEntry, 0.5, 0.5)
 			rendering.SetAlpha(splashScreenEntry, 0)
+
 			shapes.TranslateAABB(splashScreenEntry, geom.Vec2{
 				X: -float64(width) / 2,
 				Y: -float64(height) / 2,
 			})
+
 			world.Add(splashScreenEntry)
 
 			sequence = gween.NewSequence(

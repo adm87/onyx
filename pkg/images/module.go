@@ -44,6 +44,14 @@ func (m *ImageModule) GetImageSize(handle uint64) (int, int, bool) {
 	return img.Bounds().Dx(), img.Bounds().Dy(), true
 }
 
+func (m *ImageModule) GetFrameSize(handle uint64, frame int) (int, int, bool) {
+	img, exists := m.assetAdapter.getFrame(handle, frame)
+	if !exists {
+		return 0, 0, false
+	}
+	return img.Bounds().Dx(), img.Bounds().Dy(), true
+}
+
 func (m *ImageModule) GetImage(handle uint64) (*ebiten.Image, bool) {
 	return m.assetAdapter.store.Get(handle)
 }
@@ -52,29 +60,40 @@ func (m *ImageModule) GetFrame(handle uint64, index int) (*ebiten.Image, bool) {
 	return m.assetAdapter.getFrame(handle, index)
 }
 
-func (m *ImageModule) SliceFramesUniform(handle uint64, frameWidth, frameHeight int) {
-	m.assetAdapter.sliceFramesUniform(handle, frameWidth, frameHeight)
+func (m *ImageModule) ExtractUniformFrames(handle uint64, frameWidth, frameHeight int) {
+	m.assetAdapter.extractUniformFrames(handle, frameWidth, frameHeight)
 }
 
-func (m *ImageModule) CreateImage(ecs donburi.World, opts ...ImageOption) *donburi.Entry {
-	entry := ecs.Entry(ecs.Create(ImageHandle))
-
+func (m *ImageModule) CreateImage(ecs donburi.World, opts ...Option) *donburi.Entry {
 	options := defaultImageOptions()
 	for _, opt := range opts {
 		opt(options)
 	}
 
-	SetImageHandle(entry, options.Handle)
+	entry := ecs.Entry(ecs.Create(
+		ImageHandle,
+		ImageFrame,
+	))
 
-	width, height, ok := m.GetImageSize(options.Handle)
+	SetImageHandle(entry, options.Handle)
+	SetImageFrame(entry, options.Frame)
+
+	width, height, ok := m.GetFrameSize(options.Handle, options.Frame)
 	assert.True(ok, "failed to get image size for the provided handle")
 
 	shapes.AddAABB(entry, shapes.WithBounds(
 		geom.Vec2{X: 0, Y: 0},
 		geom.Vec2{X: float64(width), Y: float64(height)},
 	))
+
 	transform.AddTransform(entry)
-	rendering.AddRenderer(entry, rendering.WithRendererID(m.renderingAdapterHandle))
+
+	rendering.AddRenderer(
+		entry,
+		rendering.WithRendererID(
+			m.renderingAdapterHandle,
+		),
+	)
 
 	return entry
 }

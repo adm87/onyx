@@ -64,7 +64,9 @@ func NewGame(opts ...Option) Game {
 
 	collision := newCollision()
 
-	renderer := newRenderer()
+	renderer := newRenderer(
+		logger,
+	)
 
 	world := newWorld(
 		collision,
