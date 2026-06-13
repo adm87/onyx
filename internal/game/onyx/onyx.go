@@ -1,6 +1,7 @@
 package onyx
 
 import (
+	"github.com/adm87/onyx/pkg/aseprite"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/images"
 	"github.com/adm87/onyx/pkg/tiled"
@@ -18,19 +19,22 @@ const (
 type Onyx struct {
 	game engine.Game
 
-	images *images.ImageModule
-	tiled  *tiled.TiledModule
+	images   *images.ImageModule
+	tiled    *tiled.TiledModule
+	aseprite *aseprite.AsepriteModule
 }
 
 func NewGame(
 	game engine.Game,
 	images *images.ImageModule,
-	tiled *tiled.TiledModule) *Onyx {
+	tiled *tiled.TiledModule,
+	aseprite *aseprite.AsepriteModule) *Onyx {
 
 	o := &Onyx{
-		game:   game,
-		images: images,
-		tiled:  tiled,
+		game:     game,
+		images:   images,
+		tiled:    tiled,
+		aseprite: aseprite,
 	}
 
 	o.AddScenes()

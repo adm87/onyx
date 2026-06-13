@@ -12,8 +12,8 @@ type Options struct {
 type Option func(*Options)
 
 var (
-	ImageHandle = donburi.NewComponentType[uint64]()
-	ImageFrame  = donburi.NewComponentType[int]()
+	Image = donburi.NewComponentType[uint64]()
+	Frame = donburi.NewComponentType[int]()
 )
 
 func defaultImageOptions() *Options {
@@ -35,24 +35,24 @@ func WithImageFrame(frame int) Option {
 	}
 }
 
-func GetImageHandle(entry *donburi.Entry) (uint64, bool) {
-	if !entry.HasComponent(ImageHandle) {
+func GetImage(entry *donburi.Entry) (uint64, bool) {
+	if !entry.HasComponent(Image) {
 		return 0, false
 	}
-	return *ImageHandle.Get(entry), true
+	return *Image.Get(entry), true
 }
 
 func SetImageHandle(entry *donburi.Entry, handle uint64) {
-	donburi.Add(entry, ImageHandle, &handle)
+	donburi.Add(entry, Image, &handle)
 }
 
-func GetImageFrame(entry *donburi.Entry) (int, bool) {
-	if !entry.HasComponent(ImageFrame) {
-		return 0, false
+func GetFrame(entry *donburi.Entry) int {
+	if !entry.HasComponent(Frame) {
+		return 0
 	}
-	return *ImageFrame.Get(entry), true
+	return *Frame.Get(entry)
 }
 
-func SetImageFrame(entry *donburi.Entry, frame int) {
-	donburi.Add(entry, ImageFrame, &frame)
+func SetFrame(entry *donburi.Entry, frame int) {
+	donburi.Add(entry, Frame, &frame)
 }

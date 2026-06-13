@@ -69,6 +69,25 @@ func (s *SlotMap[T]) Get(id uint64) (T, bool) {
 	return s.data[idx], true
 }
 
+func (s *SlotMap[T]) Set(id uint64, value T) (oldValue T, ok bool) {
+	idx, gen := unpack(id)
+
+	if idx >= len(s.data) {
+		return
+	}
+
+	currIdx, currGen := unpack(s.slots[idx])
+
+	if currIdx != idx || currGen != gen {
+		return
+	}
+
+	oldValue = s.data[idx]
+	s.data[idx] = value
+
+	return oldValue, true
+}
+
 // Delete removes the value associated with the given ID from the SlotMap.
 // It returns the deleted value and a boolean indicating whether the deletion was successful.
 func (s *SlotMap[T]) Delete(id uint64) (T, bool) {

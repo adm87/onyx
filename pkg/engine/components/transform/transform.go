@@ -113,7 +113,7 @@ func AddTransform(entry *donburi.Entry, options ...Option) *donburi.Entry {
 	}
 
 	SetPosition(entry, opts.Position)
-	SetScale(entry, opts.Scale)
+	SetScale(entry, opts.Scale.X, opts.Scale.Y)
 	SetRotation(entry, opts.Rotation)
 
 	m := defaultMatrix
@@ -156,11 +156,12 @@ func GetScale(entry *donburi.Entry) geom.Vec2 {
 }
 
 // SetScale sets the scale component for an entity, adding it if it does not already exist.
-func SetScale(entry *donburi.Entry, scale geom.Vec2) {
+func SetScale(entry *donburi.Entry, x, y float64) {
 	s := GetScale(entry)
-	if s == scale {
+	if s.X == x && s.Y == y {
 		return
 	}
+	scale := geom.Vec2{X: x, Y: y}
 	donburi.Add(entry, Scale, &scale)
 	markDirty(entry)
 }

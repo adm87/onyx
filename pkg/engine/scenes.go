@@ -24,7 +24,7 @@ type SceneState struct {
 	OnUpdate      func(ecs donburi.World, dt float64) (SceneExitCode, error)
 	OnFixedUpdate func(ecs donburi.World, dt float64) error
 	OnLateUpdate  func(ecs donburi.World, dt float64) error
-	OnRender      func(ecs donburi.World, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error
+	OnRender      func(entries []*donburi.Entry, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error
 }
 
 type scenes struct {
@@ -95,8 +95,8 @@ func (s *scenes) update(steps int, deltaTime float64, fixedDeltaTime float64) er
 }
 
 func (s *scenes) render(screen *ebiten.Image, viewPort geom.AABB, viewMatrix ebiten.GeoM) error {
-	s.world.render(screen, viewPort, viewMatrix)
-	return s.renderCurrent(screen, viewPort, viewMatrix)
+	entries := s.world.render(screen, viewPort, viewMatrix)
+	return s.renderCurrent(entries, screen, viewPort, viewMatrix)
 }
 
 func (s *scenes) transitionToNext() error {
@@ -192,7 +192,7 @@ func (s *scenes) lateUpdateCurrent(currentState SceneState, dt float64) error {
 	return nil
 }
 
-func (s *scenes) renderCurrent(screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
+func (s *scenes) renderCurrent(entries []*donburi.Entry, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
 	if s.currentScene == SceneIDNone {
 		return nil
 	}
@@ -202,7 +202,7 @@ func (s *scenes) renderCurrent(screen *ebiten.Image, viewport geom.AABB, viewMat
 		return fmt.Errorf("scene with ID '%s' not found", s.currentScene)
 	}
 	if currentState.OnRender != nil {
-		return currentState.OnRender(s.world.ecs, screen, viewport, viewMatrix)
+		return currentState.OnRender(entries, screen, viewport, viewMatrix)
 	}
 	return nil
 }

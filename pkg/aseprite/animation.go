@@ -25,9 +25,9 @@ const (
 	BlendModeScreen   BlendMode = "screen"
 )
 
-type AsepriteJson struct {
-	Meta   Meta             `json:"meta"`
-	Frames []AnimationFrame `json:"frames"`
+type AnimationData struct {
+	Meta   Meta        `json:"meta"`
+	Frames []FrameData `json:"frames"`
 }
 
 type Meta struct {
@@ -56,7 +56,7 @@ type Layer struct {
 	BlendMode BlendMode `json:"blendMode"`
 }
 
-type AnimationFrame struct {
+type FrameData struct {
 	Duration         int    `json:"duration"`
 	Filename         string `json:"filename"`
 	Rotated          bool   `json:"rotated"`

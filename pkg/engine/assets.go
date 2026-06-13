@@ -22,7 +22,8 @@ type Assets interface {
 	AddAssetAdapter(adapter AssetAdapter) uint64
 	GetAdapter(id uint64) (AssetAdapter, bool)
 
-	GetData(path file.FilePath) ([]byte, bool)
+	GetDataHandle(path file.FilePath) (uint64, bool)
+	GetData(handle uint64) ([]byte, bool)
 }
 
 type assets struct {
@@ -30,7 +31,8 @@ type assets struct {
 	store  *slotmap.SlotMap[AssetAdapter]
 
 	adaptersByExt map[file.FileExt]uint64
-	data          map[file.FilePath][]byte
+
+	dataStoreHandle uint64
 }
 
 func newAssets(logger *logger) *assets {
@@ -38,8 +40,20 @@ func newAssets(logger *logger) *assets {
 		logger:        logger,
 		store:         slotmap.New[AssetAdapter](0),
 		adaptersByExt: make(map[file.FileExt]uint64),
-		data:          make(map[file.FilePath][]byte),
 	}
+}
+
+func (a *assets) GetDataHandle(path file.FilePath) (uint64, bool) {
+	adapter, _ := a.GetAdapter(a.dataStoreHandle)
+	return adapter.(*dataStore).store.GetHandle(path)
+}
+
+func (a *assets) GetData(handle uint64) ([]byte, bool) {
+	adapter, exists := a.GetAdapter(handle)
+	if !exists {
+		return nil, false
+	}
+	return adapter.(*dataStore).store.Get(handle)
 }
 
 func (a *assets) Load(fileSystem fs.FS, paths ...file.FilePath) error {
@@ -52,7 +66,7 @@ func (a *assets) Load(fileSystem fs.FS, paths ...file.FilePath) error {
 
 		handle, exists := a.adaptersByExt[path.Ext()]
 		if !exists {
-			a.data[path] = raw
+			a.logger.Error("No asset adapter found for file extension '%s', skipping asset '%s'", path.Ext(), path)
 			continue
 		}
 
@@ -114,9 +128,4 @@ func (a *assets) AddAssetAdapter(adapter AssetAdapter) uint64 {
 func (a *assets) GetAdapter(id uint64) (AssetAdapter, bool) {
 	adapter, exists := a.store.Get(id)
 	return adapter, exists
-}
-
-func (a *assets) GetData(path file.FilePath) ([]byte, bool) {
-	data, exists := a.data[path]
-	return data, exists
 }

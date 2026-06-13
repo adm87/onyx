@@ -1,10 +1,11 @@
 package images
 
 import (
+	"image"
+
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
-	"github.com/adm87/onyx/pkg/engine/components/shapes"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/engine/geom"
@@ -32,8 +33,7 @@ func NewModule(assets engine.Assets, renderer engine.Renderer) *ImageModule {
 }
 
 func (m *ImageModule) GetAssetHandle(path file.FilePath) (uint64, bool) {
-	handle, exists := m.assetAdapter.handles[path]
-	return handle, exists
+	return m.assetAdapter.store.GetHandle(path)
 }
 
 func (m *ImageModule) GetImageSize(handle uint64) (int, int, bool) {
@@ -64,6 +64,10 @@ func (m *ImageModule) ExtractUniformFrames(handle uint64, frameWidth, frameHeigh
 	m.assetAdapter.extractUniformFrames(handle, frameWidth, frameHeight)
 }
 
+func (m *ImageModule) ExtractFrames(handle uint64, rects []image.Rectangle) {
+	m.assetAdapter.extractFrames(handle, rects)
+}
+
 func (m *ImageModule) CreateImageEntity(ecs donburi.World, opts ...Option) *donburi.Entry {
 	options := defaultImageOptions()
 	for _, opt := range opts {
@@ -71,28 +75,25 @@ func (m *ImageModule) CreateImageEntity(ecs donburi.World, opts ...Option) *donb
 	}
 
 	entry := ecs.Entry(ecs.Create(
-		ImageHandle,
-		ImageFrame,
+		Image,
+		Frame,
 	))
 
 	SetImageHandle(entry, options.Handle)
-	SetImageFrame(entry, options.Frame)
+	SetFrame(entry, options.Frame)
 
 	width, height, ok := m.GetFrameSize(options.Handle, options.Frame)
 	assert.True(ok, "failed to get image size for the provided handle")
-
-	shapes.AddAABB(entry, shapes.WithBounds(
-		geom.Vec2{X: 0, Y: 0},
-		geom.Vec2{X: float64(width), Y: float64(height)},
-	))
 
 	transform.AddTransform(entry)
 
 	rendering.AddRenderer(
 		entry,
-		rendering.WithRendererID(
-			m.renderingAdapterHandle,
-		),
+		rendering.WithRendererID(m.renderingAdapterHandle),
+		rendering.WithBounds(geom.AABB{
+			Min: geom.Vec2{X: 0, Y: 0},
+			Max: geom.Vec2{X: float64(width), Y: float64(height)},
+		}),
 	)
 
 	return entry

@@ -149,19 +149,21 @@ func (a *renderingAdapter) drawTilemapLayer(
 
 	for y := minTileY; y <= maxTileY; y++ {
 		for x := minTileX; x <= maxTileX; x++ {
-			tile, tileIndex, exists := tilemap.GetTile(layerIndex, x, y)
+			tile, i, exists := tilemap.GetTile(layerIndex, x, y)
 			if !exists || tile.ID() == 0 {
 				continue
 			}
+			j := tilemap.tilesets[i]
 
-			tileset := tilesets[tilemap.tilesets[tileIndex]]
-
-			tsx, exists := a.tiledAssets.tsxStore.Get(tileset.Handle)
+			// TODO - While just a slotmap lookup, we should consider caching this somewhere.
+			tsx, exists := a.tiledAssets.tsxStore.Get(tilesets[j].Handle)
 			if !exists {
 				continue
 			}
 
 			a.drawOpts.GeoM.Reset()
+
+			// TODO - Consider precomputing these transform offsets.
 
 			// // Ref: https://doc.mapeditor.org/en/stable/reference/global-tile-ids/#tile-flipping
 			if tile.FlippedDiagonally() {
@@ -184,7 +186,7 @@ func (a *renderingAdapter) drawTilemapLayer(
 			a.drawOpts.GeoM.Translate(float64(tileX), float64(tileY))
 			a.drawOpts.GeoM.Concat(viewMatrix)
 
-			tileID := tile.ID() - uint32(tileset.FirstGID)
+			tileID := tile.ID() - uint32(tilesets[j].FirstGID)
 
 			frame, exists := a.imageModule.GetFrameImage(tsx.Image.Handle, int(tileID))
 			if !exists {

@@ -25,6 +25,7 @@ type (
 		Anchor   geom.Vec2
 		Color    color.RGBA
 		Filter   ebiten.Filter
+		Bounds   geom.AABB
 	}
 	Option func(*Options)
 )
@@ -48,10 +49,12 @@ var (
 )
 
 var (
-	Filter   = donburi.NewComponentType[ebiten.Filter](defaultFilter)
 	Anchor   = donburi.NewComponentType[geom.Vec2](defaultAnchor)
 	Color    = donburi.NewComponentType[color.RGBA](defaultColor)
+	Filter   = donburi.NewComponentType[ebiten.Filter](defaultFilter)
 	Renderer = donburi.NewComponentType[RendererInfo](defaultRenderer)
+
+	bounds = donburi.NewComponentType[geom.AABB]()
 )
 
 var query = donburi.NewQuery(
@@ -113,6 +116,12 @@ func WithColor(color color.RGBA) Option {
 func WithFilter(filter ebiten.Filter) Option {
 	return func(opts *Options) {
 		opts.Filter = filter
+	}
+}
+
+func WithBounds(aabb geom.AABB) Option {
+	return func(opts *Options) {
+		opts.Bounds = aabb
 	}
 }
 
@@ -190,6 +199,7 @@ func AddRenderer(entry *donburi.Entry, options ...Option) *donburi.Entry {
 	SetFilter(entry, opts.Filter)
 	SetAnchor(entry, opts.Anchor.X, opts.Anchor.Y)
 	SetColor(entry, opts.Color)
+	SetBounds(entry, opts.Bounds)
 
 	donburi.Add(entry, Renderer, &RendererInfo{
 		Visible: opts.Visible,
@@ -315,4 +325,23 @@ func SetVisible(entry *donburi.Entry, visible bool) {
 	}
 	info := Renderer.Get(entry)
 	info.Visible = visible
+}
+
+func GetBounds(entry *donburi.Entry) geom.AABB {
+	if !entry.HasComponent(bounds) {
+		return geom.AABB{}
+	}
+	return *bounds.Get(entry)
+}
+
+func SetBounds(entry *donburi.Entry, aabb geom.AABB) {
+	donburi.Add(entry, bounds, &aabb)
+}
+
+// OffsetBounds use this to move the bounds in local space around the entity's local [0, 0]
+func OffsetBounds(entry *donburi.Entry, offset geom.Vec2) {
+	if !entry.HasComponent(bounds) {
+		return
+	}
+	SetBounds(entry, bounds.Get(entry).Translate(offset))
 }

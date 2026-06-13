@@ -7,7 +7,6 @@ import (
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
-	"github.com/adm87/onyx/pkg/engine/components/shapes"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/images"
 	"github.com/tanema/gween"
@@ -44,8 +43,7 @@ func (o *Onyx) SplashScreenScene() engine.SceneState {
 
 			rendering.SetAnchor(splashScreenEntry, 0.5, 0.5)
 			rendering.SetAlpha(splashScreenEntry, 0)
-
-			shapes.TranslateAABB(splashScreenEntry, geom.Vec2{
+			rendering.OffsetBounds(splashScreenEntry, geom.Vec2{
 				X: -float64(width) / 2,
 				Y: -float64(height) / 2,
 			})

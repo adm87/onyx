@@ -28,7 +28,12 @@ func (a *renderingAdapter) GetJobs(
 	pool engine.RenderingJobPool) []*engine.RenderingJob {
 	a.jobs = a.jobs[:0]
 
-	handle, exists := GetImageHandle(entry)
+	handle, exists := GetImage(entry)
+	if !exists {
+		return a.jobs
+	}
+
+	img, exists := a.assetAdapter.getFrame(handle, GetFrame(entry))
 	if !exists {
 		return a.jobs
 	}
@@ -38,11 +43,6 @@ func (a *renderingAdapter) GetJobs(
 	color := rendering.GetColor(entry)
 	filter := rendering.GetFilter(entry)
 	anchor := rendering.GetAnchor(entry)
-
-	img, exists := a.assetAdapter.store.Get(handle)
-	if !exists {
-		return a.jobs
-	}
 
 	// TODO - revist this, should it be scale or sign of scale?
 	scale := transform.GetScale(entry)

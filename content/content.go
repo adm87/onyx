@@ -23,8 +23,8 @@ func AssetsFS() fs.FS {
 }
 
 const (
-	AssetsAsepriteCaptainImg file.FilePath = "aseprite/captain/captain.png"
-	AssetsAsepriteCaptain    file.FilePath = "aseprite/captain/captain.json"
+	AssetsAsepriteCaptainImg  file.FilePath = "aseprite/captain/captain.png"
+	AssetsAsepriteCaptainJson file.FilePath = "aseprite/captain/captain.json"
 
 	AssetsTiledGym01 file.FilePath = "tiled/gym01.tmx"
 	AssetsTiledGym02 file.FilePath = "tiled/gym02.tmx"

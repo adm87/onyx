@@ -2,8 +2,8 @@ package engine
 
 import (
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
-	"github.com/adm87/onyx/pkg/engine/components/shapes"
 	"github.com/adm87/onyx/pkg/engine/components/spatial"
+	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/engine/partitioning/spatialhash"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -16,6 +16,8 @@ type World interface {
 	Add(entry *donburi.Entry)
 	Remove(entry *donburi.Entry)
 	Update(entry *donburi.Entry)
+
+	QueryRegion(region geom.AABB, callback func(*donburi.Entry))
 }
 
 type world struct {
@@ -44,7 +46,7 @@ func (w *world) ECS() donburi.World {
 }
 
 func (w *world) Add(entry *donburi.Entry) {
-	aabb := shapes.GetAABB(entry)
+	aabb := rendering.GetBounds(entry)
 
 	entity := entry.Entity()
 	index := w.entities.Insert(entity, aabb)
@@ -67,18 +69,22 @@ func (w *world) Update(entry *donburi.Entry) {
 func (w *world) QueryRegion(region geom.AABB, callback func(*donburi.Entry)) {
 	w.entities.Query(region, func(entity donburi.Entity) {
 		entry := w.ecs.Entry(entity)
+		aabb := rendering.GetBounds(entry).Translate(transform.GetPosition(entry))
+		if !aabb.Intersects(region) {
+			return
+		}
 		callback(entry)
 	})
 }
 
-func (w *world) render(screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) {
+func (w *world) render(screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) []*donburi.Entry {
 	w.queryResults = w.queryResults[:0]
-	w.entities.Query(viewport, func(entity donburi.Entity) {
-		entry := w.ecs.Entry(entity)
+	w.QueryRegion(viewport, func(entry *donburi.Entry) {
 		if !rendering.IsVisible(entry) {
 			return
 		}
 		w.queryResults = append(w.queryResults, entry)
 	})
 	w.renderer.render(w.queryResults, screen, viewport, viewMatrix)
+	return w.queryResults
 }

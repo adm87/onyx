@@ -55,7 +55,7 @@ func (c *camera) Zoom() float64 {
 
 func (c *camera) SetZoom(zoom float64) {
 	entry := c.world.ecs.Entry(c.Entity)
-	transform.SetScale(entry, geom.Vec2{X: zoom, Y: zoom})
+	transform.SetScale(entry, zoom, zoom)
 }
 
 func (c *camera) ToWorld(screenPos geom.Vec2) geom.Vec2 {

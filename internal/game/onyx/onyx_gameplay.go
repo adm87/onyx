@@ -2,46 +2,87 @@ package onyx
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/adm87/onyx/content"
+	"github.com/adm87/onyx/pkg/aseprite"
+	asepritemodule "github.com/adm87/onyx/pkg/aseprite"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
+	"github.com/adm87/onyx/pkg/engine/components/rendering"
+	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/engine/geom"
-	"github.com/adm87/onyx/pkg/tiled"
+	tiledmodule "github.com/adm87/onyx/pkg/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/yohamta/donburi"
+)
+
+var (
+	debugEntityInfo = false
 )
 
 var gameplayManifest = []file.FilePath{
 	content.AssetsTiledGym04,
+	content.AssetsAsepriteCaptainImg,
+	content.AssetsAsepriteCaptainJson,
 }
 
 func (o *Onyx) GameplayScene() engine.SceneState {
 	var tilemapEntry *donburi.Entry
-	var tilemap *tiled.Tilemap
+	var spriteEntry *donburi.Entry
+	var tilemap *tiledmodule.Tilemap
+	var path vector.Path
+	var move geom.Vec2
 	var tilemapHandle uint64
 	var err error
-
-	assets := o.game.Assets()
-	camera := o.game.Camera()
-	screen := o.game.Screen()
-	world := o.game.World()
-
 	return engine.SceneState{
 		OnEnter: func(ecs donburi.World) error {
+			assets := o.game.Assets()
+			camera := o.game.Camera()
+			images := o.images
+			tiled := o.tiled
+			aseprite := o.aseprite
+
 			err = assets.Load(content.AssetsFS(), gameplayManifest...)
 			assert.Nil(err, fmt.Sprintf("failed to load gameplay assets: %v", err))
 
-			tmxHandle, exists := o.tiled.GetTmxHandle(content.AssetsTiledGym04)
+			tmxHandle, exists := tiled.GetTmxHandle(content.AssetsTiledGym04)
 			assert.True(exists, "failed to get handle for tiled map")
 
-			tilemap, tilemapHandle, err = o.tiled.BuildTilemap(tmxHandle)
-			assert.Nil(err, fmt.Sprintf("failed to parse tiled map: %v", err))
+			tilemap, tilemapHandle = tiled.BuildTilemap(tmxHandle)
+			tilemapEntry = tiled.CreateTilemapEntity(ecs, tiledmodule.WithTilemapHandle(tilemapHandle))
+			o.game.World().Add(tilemapEntry)
 
-			tilemapEntry = o.tiled.CreateTilemapEntity(ecs, tiled.WithTilemapHandle(tilemapHandle))
-			world.Add(tilemapEntry)
+			playerImgHandle, exists := images.GetAssetHandle(content.AssetsAsepriteCaptainImg)
+			assert.True(exists, "failed to get handle for player image")
+
+			playerDataHandle, exists := assets.GetDataHandle(content.AssetsAsepriteCaptainJson)
+			assert.True(exists, "failed to get handle for player data")
+
+			playerData, exists := assets.GetData(playerDataHandle)
+			assert.True(exists, "failed to get data for player")
+
+			aseprite.BuildAnimations(playerImgHandle, playerData)
+			spriteEntry = aseprite.CreateSpriteEntity(ecs,
+				asepritemodule.WithImageHandle(playerImgHandle),
+				asepritemodule.WithClip("Run"),
+				asepritemodule.Playing(),
+			)
+			rendering.SetAnchor(spriteEntry, 0.5, 1.0)
+			rendering.SetLayer(spriteEntry, 6)
+			o.game.World().Add(spriteEntry)
+
+			playerWidth, playerHeight, _ := images.GetFrameSize(playerImgHandle, 0)
+			rendering.OffsetBounds(spriteEntry, geom.Vec2{
+				X: -float64(playerWidth) / 2,
+				Y: -float64(playerHeight),
+			})
+
+			transform.SetPosition(spriteEntry, tilemap.Bounds().Center())
 
 			camera.SetPosition(tilemap.Bounds().Center())
 			camera.SetZoom(0.25)
@@ -49,16 +90,83 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			return nil
 		},
 		OnUpdate: func(ecs donburi.World, dt float64) (engine.SceneExitCode, error) {
+			if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+				return engine.SceneExitNone, ebiten.Termination
+			}
+			if inpututil.IsKeyJustPressed(ebiten.KeyF3) {
+				debugEntityInfo = !debugEntityInfo
+			}
+			if inpututil.IsKeyJustPressed(ebiten.KeyF4) {
+				ebiten.SetFullscreen(!ebiten.IsFullscreen())
+			}
+
+			move = geom.Vec2{}
+
+			if ebiten.IsKeyPressed(ebiten.KeyLeft) {
+				move.X -= 1
+			}
+			if ebiten.IsKeyPressed(ebiten.KeyRight) {
+				move.X += 1
+			}
+			if ebiten.IsKeyPressed(ebiten.KeyUp) {
+				move.Y -= 1
+			}
+			if ebiten.IsKeyPressed(ebiten.KeyDown) {
+				move.Y += 1
+			}
 			return engine.SceneExitNone, nil
 		},
 		OnFixedUpdate: func(ecs donburi.World, dt float64) error {
+			if move.X != 0 || move.Y != 0 {
+				position := transform.GetPosition(spriteEntry)
+				move = move.Normalize().Mul(100 * dt)
+
+				newPos := position.Add(move)
+				transform.SetPosition(spriteEntry, newPos)
+			}
 			return nil
 		},
 		OnLateUpdate: func(ecs donburi.World, dt float64) error {
+			if move.X != 0 || move.Y != 0 {
+				aseprite.SetClip(spriteEntry, "Run")
+				if move.X < 0 {
+					transform.SetScale(spriteEntry, -1, 1)
+				} else {
+					transform.SetScale(spriteEntry, 1, 1)
+				}
+			} else {
+				aseprite.SetClip(spriteEntry, "Idle")
+			}
+
+			d := time.Duration(float64(time.Second) * dt)
+			o.game.World().QueryRegion(o.game.Camera().Viewport(), func(e *donburi.Entry) {
+				o.aseprite.UpdateAnimation(e, d)
+			})
 			return nil
 		},
-		OnRender: func(ecs donburi.World, img *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
-			min := screen.SafeArea().Min
+		OnRender: func(entries []*donburi.Entry, img *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
+			camera := o.game.Camera()
+
+			if debugEntityInfo {
+				path.Reset()
+				for _, entry := range entries {
+					aabb := rendering.GetBounds(entry).Translate(transform.GetPosition(entry))
+
+					min := camera.ToScreen(aabb.Min)
+					max := camera.ToScreen(aabb.Max)
+
+					path.MoveTo(float32(min.X), float32(min.Y))
+					path.LineTo(float32(max.X), float32(min.Y))
+					path.LineTo(float32(max.X), float32(max.Y))
+					path.LineTo(float32(min.X), float32(max.Y))
+					path.Close()
+
+					ebitenutil.DebugPrintAt(img, fmt.Sprintf("Entity: %d", entry.Entity()), int(min.X), int(min.Y))
+				}
+				vector.StrokePath(img, &path, &vector.StrokeOptions{Width: 2}, &vector.DrawPathOptions{})
+			}
+
+			min := o.game.Screen().SafeArea().Min
 			ebitenutil.DebugPrintAt(img, fmt.Sprintf("FPS: %.2f", ebiten.ActualFPS()), int(min.X), int(min.Y))
 			return nil
 		},

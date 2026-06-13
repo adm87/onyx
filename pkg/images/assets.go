@@ -9,7 +9,6 @@ import (
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/engine/file"
-	"github.com/adm87/onyx/pkg/engine/storage/slotmap"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
@@ -17,49 +16,37 @@ import (
 var imageExtensions = []file.FileExt{".png", ".jpg", ".jpeg"}
 
 type assetAdapter struct {
-	store   *slotmap.SlotMap[*ebiten.Image]
-	assets  engine.Assets
-	handles map[file.FilePath]uint64
-	frames  map[uint64][]*ebiten.Image
+	store  engine.AssetStore[*ebiten.Image]
+	assets engine.Assets
+	frames map[uint64][]*ebiten.Image
 }
 
 func newAssetAdapter(assets engine.Assets) *assetAdapter {
 	return &assetAdapter{
-		assets:  assets,
-		store:   slotmap.New[*ebiten.Image](256),
-		handles: make(map[file.FilePath]uint64),
-		frames:  make(map[uint64][]*ebiten.Image),
+		assets: assets,
+		store:  engine.NewFileStore[*ebiten.Image](0),
+		frames: make(map[uint64][]*ebiten.Image),
 	}
 }
 
 func (a *assetAdapter) ImportAsset(_ fs.FS, path file.FilePath, raw []byte) error {
 	img, _, err := ebitenutil.NewImageFromReader(bytes.NewReader(raw))
 	assert.Fatal(err)
-
-	handle := a.store.Insert(img)
-	a.handles[path] = handle
-
+	a.store.Insert(path, img)
 	return nil
 }
 
 func (a *assetAdapter) DeleteAsset(path file.FilePath) bool {
-	handle, exists := a.handles[path]
+	handle, exists := a.store.GetHandle(path)
 	if !exists {
 		return false
 	}
 
-	img, ok := a.store.Delete(handle)
-	if !ok {
-		return false
+	if img, deleted := a.store.Delete(handle); deleted {
+		img.Deallocate()
 	}
 
-	img.Deallocate()
-	delete(a.handles, path)
-
-	if frames, exists := a.frames[handle]; exists {
-		clear(frames)
-		delete(a.frames, handle)
-	}
+	delete(a.frames, handle)
 
 	return true
 }
@@ -103,6 +90,25 @@ func (a *assetAdapter) extractUniformFrames(handle uint64, frameWidth, frameHeig
 			)).(*ebiten.Image)
 			frames = append(frames, frame)
 		}
+	}
+
+	a.frames[handle] = frames
+}
+
+func (a *assetAdapter) extractFrames(handle uint64, rects []image.Rectangle) {
+	img, exists := a.store.Get(handle)
+	if !exists {
+		return
+	}
+
+	frames, exists := a.frames[handle]
+	if exists {
+		frames = frames[:0]
+	}
+
+	for _, frameRect := range rects {
+		frame := img.SubImage(frameRect).(*ebiten.Image)
+		frames = append(frames, frame)
 	}
 
 	a.frames[handle] = frames

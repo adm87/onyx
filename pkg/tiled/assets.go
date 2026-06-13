@@ -18,24 +18,19 @@ var tiledExtensions = []file.FileExt{".tmx", ".tsx"}
 type assetAdapter struct {
 	assets engine.Assets
 
-	tmxStore     *slotmap.SlotMap[*Tmx]
-	tsxStore     *slotmap.SlotMap[*Tsx]
+	tmxStore engine.AssetStore[*Tmx]
+	tsxStore engine.AssetStore[*Tsx]
+
 	tilemapStore *slotmap.SlotMap[*Tilemap]
-
-	tmxHandles map[file.FilePath]uint64
-	tsxHandles map[file.FilePath]uint64
-
-	imageModule *images.ImageModule
+	imageModule  *images.ImageModule
 }
 
 func newAssetsAdapter(assets engine.Assets, imageModule *images.ImageModule) *assetAdapter {
 	return &assetAdapter{
 		assets:       assets,
-		tmxStore:     slotmap.New[*Tmx](0),
-		tsxStore:     slotmap.New[*Tsx](0),
+		tmxStore:     engine.NewFileStore[*Tmx](0),
+		tsxStore:     engine.NewFileStore[*Tsx](0),
 		tilemapStore: slotmap.New[*Tilemap](0),
-		tmxHandles:   make(map[file.FilePath]uint64),
-		tsxHandles:   make(map[file.FilePath]uint64),
 		imageModule:  imageModule,
 	}
 }
@@ -52,6 +47,7 @@ func (a *assetAdapter) ImportAsset(fileSystem fs.FS, path file.FilePath, raw []b
 }
 
 func (a *assetAdapter) DeleteAsset(path file.FilePath) bool {
+	// TODO - implement this
 	return true
 }
 
@@ -60,7 +56,7 @@ func (a *assetAdapter) SupportedExtensions() []file.FileExt {
 }
 
 func (a *assetAdapter) importTmx(fileSystem fs.FS, path file.FilePath, raw []byte) error {
-	if _, exists := a.tmxHandles[path]; exists {
+	if _, exists := a.tmxStore.GetHandle(path); exists {
 		return nil
 	}
 
@@ -69,8 +65,7 @@ func (a *assetAdapter) importTmx(fileSystem fs.FS, path file.FilePath, raw []byt
 	err := xml.Unmarshal(raw, &tmx)
 	assert.Fatal(err)
 
-	tmx.Handle = a.tmxStore.Insert(&tmx)
-	a.tmxHandles[path] = tmx.Handle
+	tmx.Handle = a.tmxStore.Insert(path, &tmx)
 
 	if len(tmx.Tilesets) > 0 {
 		dir := filepath.Dir(path.String())
@@ -88,7 +83,10 @@ func (a *assetAdapter) importTmx(fileSystem fs.FS, path file.FilePath, raw []byt
 			err := a.assets.Load(fileSystem, tsxPath)
 			assert.Fatal(err)
 
-			tileset.Handle = a.tsxHandles[tsxPath]
+			handle, exists := a.tsxStore.GetHandle(tsxPath)
+			assert.True(exists, fmt.Sprintf("Failed to load TSX asset at path %s", tsxPath))
+
+			tileset.Handle = handle
 		}
 	}
 
@@ -96,7 +94,7 @@ func (a *assetAdapter) importTmx(fileSystem fs.FS, path file.FilePath, raw []byt
 }
 
 func (a *assetAdapter) importTsx(fileSystem fs.FS, path file.FilePath, raw []byte) error {
-	if _, exists := a.tsxHandles[path]; exists {
+	if _, exists := a.tsxStore.GetHandle(path); exists {
 		return nil
 	}
 
@@ -105,8 +103,7 @@ func (a *assetAdapter) importTsx(fileSystem fs.FS, path file.FilePath, raw []byt
 	err := xml.Unmarshal(raw, &tsx)
 	assert.Fatal(err)
 
-	tsx.Handle = a.tsxStore.Insert(&tsx)
-	a.tsxHandles[path] = tsx.Handle
+	tsx.Handle = a.tsxStore.Insert(path, &tsx)
 
 	dir := filepath.Dir(path.String())
 

@@ -89,6 +89,10 @@ func NewGame(opts ...Option) Game {
 		transform.NewTransform(world.ecs).Entity(),
 	)
 
+	assets.dataStoreHandle = assets.AddAssetAdapter(
+		newDataStore(),
+	)
+
 	return &game{
 		ctx:       context.Background(),
 		assets:    assets,
