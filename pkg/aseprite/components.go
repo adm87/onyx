@@ -134,19 +134,13 @@ func GetClip(entry *donburi.Entry) string {
 }
 
 func SetClip(entry *donburi.Entry, clip string) {
-	curr := GetClip(entry)
-	if curr == clip {
+	if GetClip(entry) == clip {
 		return
 	}
 
-	animator := GetAnimator(entry)
-	if animator != nil {
-		animator.time = 0
-		SetAnimator(entry, animator)
-		SetAnimationState(entry, AnimationStatePlaying)
-	}
-
+	SetAnimationState(entry, AnimationStatePlaying)
 	SetAnimationFrame(entry, 0)
+
 	donburi.Add(entry, AnimationClip, &clip)
 }
 

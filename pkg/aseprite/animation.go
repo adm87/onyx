@@ -31,6 +31,8 @@ type AnimationData struct {
 }
 
 type Meta struct {
+	Clips map[string]FrameTag `json:"_"`
+
 	App       string        `json:"app"`
 	Version   string        `json:"version"`
 	Format    string        `json:"format"`

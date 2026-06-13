@@ -67,22 +67,25 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			assert.True(exists, "failed to get data for player")
 
 			aseprite.BuildAnimations(playerImgHandle, playerData)
-			spriteEntry = aseprite.CreateSpriteEntity(ecs,
-				asepritemodule.WithImageHandle(playerImgHandle),
-				asepritemodule.WithClip("Run"),
-				asepritemodule.Playing(),
-			)
-			rendering.SetAnchor(spriteEntry, 0.5, 1.0)
-			rendering.SetLayer(spriteEntry, 6)
-			o.game.World().Add(spriteEntry)
 
-			playerWidth, playerHeight, _ := images.GetFrameSize(playerImgHandle, 0)
-			rendering.OffsetBounds(spriteEntry, geom.Vec2{
-				X: -float64(playerWidth) / 2,
-				Y: -float64(playerHeight),
-			})
+			for range 1 {
+				spriteEntry = aseprite.CreateSpriteEntity(ecs,
+					asepritemodule.WithImageHandle(playerImgHandle),
+					asepritemodule.WithClip("Run"),
+					asepritemodule.Playing(),
+				)
+				rendering.SetAnchor(spriteEntry, 0.5, 1.0)
+				rendering.SetLayer(spriteEntry, 6)
+				o.game.World().Add(spriteEntry)
 
-			transform.SetPosition(spriteEntry, tilemap.Bounds().Center())
+				playerWidth, playerHeight, _ := images.GetFrameSize(playerImgHandle, 0)
+				rendering.OffsetBounds(spriteEntry, geom.Vec2{
+					X: -float64(playerWidth) / 2,
+					Y: -float64(playerHeight),
+				})
+
+				transform.SetPosition(spriteEntry, tilemap.Bounds().Center())
+			}
 
 			camera.SetPosition(tilemap.Bounds().Center())
 			camera.SetZoom(0.25)
@@ -114,6 +117,17 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			if ebiten.IsKeyPressed(ebiten.KeyDown) {
 				move.Y += 1
 			}
+
+			if move.X != 0 || move.Y != 0 {
+				aseprite.SetClip(spriteEntry, "Run")
+				if move.X < 0 {
+					transform.SetScale(spriteEntry, -1, 1)
+				} else {
+					transform.SetScale(spriteEntry, 1, 1)
+				}
+			} else {
+				aseprite.SetClip(spriteEntry, "Idle")
+			}
 			return engine.SceneExitNone, nil
 		},
 		OnFixedUpdate: func(ecs donburi.World, dt float64) error {
@@ -127,17 +141,6 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			return nil
 		},
 		OnLateUpdate: func(ecs donburi.World, dt float64) error {
-			if move.X != 0 || move.Y != 0 {
-				aseprite.SetClip(spriteEntry, "Run")
-				if move.X < 0 {
-					transform.SetScale(spriteEntry, -1, 1)
-				} else {
-					transform.SetScale(spriteEntry, 1, 1)
-				}
-			} else {
-				aseprite.SetClip(spriteEntry, "Idle")
-			}
-
 			d := time.Duration(float64(time.Second) * dt)
 			o.game.World().QueryRegion(o.game.Camera().Viewport(), func(e *donburi.Entry) {
 				o.aseprite.UpdateAnimation(e, d)

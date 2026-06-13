@@ -29,6 +29,12 @@ func (m *AsepriteModule) BuildAnimations(imgHandle uint64, data []byte) *Animati
 	err := json.Unmarshal(data, &animations)
 	assert.Nil(err, fmt.Sprintf("failed to parse Aseprite JSON data: %v", err))
 
+	animations.Meta.Clips = make(map[string]FrameTag, len(animations.Meta.FrameTags))
+	for i := range animations.Meta.FrameTags {
+		tag := animations.Meta.FrameTags[i]
+		animations.Meta.Clips[tag.Name] = tag
+	}
+
 	rects := make([]image.Rectangle, len(animations.Frames))
 	for i, frame := range animations.Frames {
 		rects[i] = image.Rect(
@@ -59,7 +65,9 @@ func (m *AsepriteModule) UpdateAnimation(entry *donburi.Entry, dt time.Duration)
 		return
 	}
 
-	clip, exists := m.findClipMetadata(GetClip(entry), library)
+	clip := GetClip(entry)
+
+	tag, exists := library.Meta.Clips[clip]
 	if !exists {
 		return
 	}
@@ -72,35 +80,42 @@ func (m *AsepriteModule) UpdateAnimation(entry *donburi.Entry, dt time.Duration)
 	elapsed := animator.time + dt
 
 	frame := GetAnimationFrame(entry)
-	nextFrame := frame
-
-	frameIndex := clip.From + frame
-	frameCount := clip.To - clip.From + 1
+	frameIndex := tag.From + frame
 
 	duration := time.Duration(library.Frames[frameIndex].Duration) * time.Millisecond
+	if duration <= 0 || elapsed < duration {
+		animator.time = elapsed
+		SetAnimator(entry, animator)
+		return
+	}
+
+	nextFrame := frame
+	frameCount := tag.To - tag.From + 1
+
+	var completed bool
 	for elapsed >= duration {
 		elapsed -= duration
 
-		next, complete := m.getNextFrame(nextFrame, animator, frameCount)
-		nextFrame = next
-
-		if complete {
-			SetAnimationState(entry, AnimationStateStopped)
+		nextFrame, completed = m.getNextFrame(nextFrame, animator, frameCount)
+		if completed {
 			break
 		}
 
-		frameIndex = clip.From + nextFrame
+		frameIndex = tag.From + nextFrame
 		duration = time.Duration(library.Frames[frameIndex].Duration) * time.Millisecond
 	}
 
 	if nextFrame != frame {
+		images.SetFrame(entry, frameIndex)
 		SetAnimationFrame(entry, nextFrame)
 	}
-
-	images.SetFrame(entry, frameIndex)
-
-	animator.time = elapsed
-	SetAnimator(entry, animator)
+	if animator.time != elapsed {
+		animator.time = elapsed
+		SetAnimator(entry, animator)
+	}
+	if completed {
+		SetAnimationState(entry, AnimationStateStopped)
+	}
 }
 
 func (m *AsepriteModule) getNextFrame(current int, animator *AnimatorInfo, frameCount int) (int, bool) {
@@ -138,18 +153,8 @@ func (m *AsepriteModule) getLibrary(entry *donburi.Entry) (*AnimationData, bool)
 	if !exists {
 		return nil, false
 	}
-
 	library, exists := m.animations[imgHandle]
 	return library, exists
-}
-
-func (m *AsepriteModule) findClipMetadata(clipName string, library *AnimationData) (*FrameTag, bool) {
-	for i := range library.Meta.FrameTags {
-		if library.Meta.FrameTags[i].Name == clipName {
-			return &library.Meta.FrameTags[i], true
-		}
-	}
-	return nil, false
 }
 
 func (m *AsepriteModule) CreateSpriteEntity(ecs donburi.World, opts ...SpriteOption) *donburi.Entry {
