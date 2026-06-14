@@ -69,13 +69,12 @@ func NewGame(opts ...Option) Game {
 		logger,
 	)
 
-	world := newWorld(
-		renderer,
-	)
+	world := newWorld()
 
 	scenes := newScenes(
 		cfg.InitialScene,
 		world,
+		renderer,
 		logger,
 	)
 

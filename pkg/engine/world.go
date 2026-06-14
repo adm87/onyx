@@ -1,11 +1,9 @@
 package engine
 
 import (
-	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/engine/partitioning/spatialhash"
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
 
@@ -18,16 +16,14 @@ type World interface {
 }
 
 type world struct {
-	renderer     *renderer
 	entities     *spatialhash.SpatialHash[donburi.Entity]
 	queryResults []*donburi.Entry
 }
 
 var worldIndexing = donburi.NewComponentType[uint64]()
 
-func newWorld(renderer *renderer) *world {
+func newWorld() *world {
 	return &world{
-		renderer:     renderer,
 		entities:     spatialhash.New[donburi.Entity](16, spatialhash.Padding{}),
 		queryResults: make([]*donburi.Entry, 0, 100),
 	}
@@ -66,16 +62,4 @@ func (w *world) QueryRegion(ecs donburi.World, region *geom.AABB, callback func(
 		}
 		callback(entry)
 	})
-}
-
-func (w *world) render(ecs donburi.World, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) []*donburi.Entry {
-	w.queryResults = w.queryResults[:0]
-	w.QueryRegion(ecs, &viewport, func(entry *donburi.Entry) {
-		if !rendering.IsVisible(entry) {
-			return
-		}
-		w.queryResults = append(w.queryResults, entry)
-	})
-	w.renderer.render(w.queryResults, screen, viewport, viewMatrix)
-	return w.queryResults
 }
