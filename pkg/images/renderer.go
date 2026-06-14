@@ -28,39 +28,30 @@ func (a *renderingAdapter) GetJobs(
 	pool engine.RenderingJobPool) []*engine.RenderingJob {
 	a.jobs = a.jobs[:0]
 
-	handle, exists := GetImage(entry)
-	if !exists {
-		return a.jobs
-	}
-
-	img, exists := a.assetAdapter.getFrame(handle, GetFrame(entry))
-	if !exists {
-		return a.jobs
-	}
-
-	layer := rendering.GetLayer(entry)
-	zIndex := rendering.GetZIndex(entry)
-	color := rendering.GetColor(entry)
-	filter := rendering.GetFilter(entry)
-	anchor := rendering.GetAnchor(entry)
-
-	// TODO - revist this, should it be scale or sign of scale?
-	scale := transform.GetScale(entry)
-	aX := float64(img.Bounds().Dx()) * anchor.X * scale.X
-	aY := float64(img.Bounds().Dy()) * anchor.Y * scale.Y
-
+	image := GetImage(entry)
+	renderer := rendering.GetRenderer(entry)
+	trans := transform.GetTransform(entry)
 	matrix := transform.GetMatrix(entry)
+
+	img, exists := a.assetAdapter.getFrame(image.Handle, image.Frame)
+	if !exists {
+		return a.jobs
+	}
+
+	aX := float64(img.Bounds().Dx()) * image.Anchor.X * trans.ScaleX
+	aY := float64(img.Bounds().Dy()) * image.Anchor.Y * trans.ScaleY
+
 	matrix.Translate(-aX, -aY)
 	matrix.Concat(viewMatrix)
 
 	job := pool.Get()
 	job.Buffer = img
-	job.Layer = layer
-	job.ZIndex = zIndex
-	job.Options.Filter = filter
+	job.Layer = renderer.Layer
+	job.ZIndex = renderer.ZIndex
+	job.Options.Filter = image.Filter
 	job.Options.GeoM = matrix
-	job.Options.ColorScale.ScaleWithColor(color)
-	job.Options.ColorScale.ScaleAlpha(float32(color.A) / 255)
+	job.Options.ColorScale.ScaleWithColor(image.Color)
+	job.Options.ColorScale.ScaleAlpha(float32(image.Color.A) / 255)
 	a.jobs = append(a.jobs, job)
 
 	return a.jobs

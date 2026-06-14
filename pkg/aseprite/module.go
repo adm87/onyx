@@ -149,11 +149,7 @@ func (m *AsepriteModule) getNextFrame(current int, animator *AnimatorInfo, frame
 }
 
 func (m *AsepriteModule) getLibrary(entry *donburi.Entry) (*AnimationData, bool) {
-	imgHandle, exists := images.GetImage(entry)
-	if !exists {
-		return nil, false
-	}
-	library, exists := m.animations[imgHandle]
+	library, exists := m.animations[images.GetHandle(entry)]
 	return library, exists
 }
 
@@ -164,7 +160,7 @@ func (m *AsepriteModule) CreateSpriteEntity(ecs donburi.World, opts ...SpriteOpt
 	}
 
 	entry := m.imageModule.CreateImageEntity(ecs,
-		images.WithImageHandle(options.ImageHandle),
+		images.WithHandle(options.ImageHandle),
 	)
 
 	SetAnimationState(entry, options.State)

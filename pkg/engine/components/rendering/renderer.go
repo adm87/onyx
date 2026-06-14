@@ -6,10 +6,9 @@ import (
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
-	"github.com/yohamta/donburi/filter"
 )
 
-type RendererInfo struct {
+type RendererModel struct {
 	Visible bool
 	Layer   int
 	ZIndex  int
@@ -29,38 +28,16 @@ type (
 	Option func(*Options)
 )
 
-type QueryCallback func(
-	world *donburi.Entry,
-	anchor geom.Vec2,
-	color color.RGBA,
-	filter ebiten.Filter,
-	visible bool,
-	layer int,
-	zIndex int,
-	renderer uint64,
-)
-
 var (
 	defaultFilter   = ebiten.FilterNearest
 	defaultColor    = color.RGBA{R: 255, G: 255, B: 255, A: 255}
 	defaultAnchor   = geom.Vec2{X: 0, Y: 0}
-	defaultRenderer = RendererInfo{Visible: true}
+	defaultRenderer = RendererModel{Visible: true}
 )
 
 var (
-	Anchor   = donburi.NewComponentType[geom.Vec2](defaultAnchor)
-	Color    = donburi.NewComponentType[color.RGBA](defaultColor)
-	Filter   = donburi.NewComponentType[ebiten.Filter](defaultFilter)
-	Renderer = donburi.NewComponentType[RendererInfo](defaultRenderer)
-)
-
-var query = donburi.NewQuery(
-	filter.Contains(
-		Filter,
-		Anchor,
-		Color,
-		Renderer,
-	),
+	RendererID = donburi.NewComponentType[RendererModel](defaultRenderer)
+	Renderer   = donburi.NewComponentType[RendererModel]()
 )
 
 func defaultOptions() Options {
@@ -120,10 +97,7 @@ func WithFilter(filter ebiten.Filter) Option {
 func NewRenderer(ecs donburi.World, options ...Option) *donburi.Entry {
 	return AddRenderer(ecs.Entry(
 		ecs.Create(
-			Filter,
-			Anchor,
-			Color,
-			Renderer,
+			RendererID,
 		),
 	), options...)
 }
@@ -135,11 +109,7 @@ func AddRenderer(entry *donburi.Entry, options ...Option) *donburi.Entry {
 		option(&opts)
 	}
 
-	SetFilter(entry, opts.Filter)
-	SetAnchor(entry, opts.Anchor.X, opts.Anchor.Y)
-	SetColor(entry, opts.Color)
-
-	donburi.Add(entry, Renderer, &RendererInfo{
+	donburi.Add(entry, RendererID, &RendererModel{
 		Visible: opts.Visible,
 		Layer:   opts.Layer,
 		ZIndex:  opts.ZIndex,
@@ -150,117 +120,92 @@ func AddRenderer(entry *donburi.Entry, options ...Option) *donburi.Entry {
 }
 
 func HasRenderer(entry *donburi.Entry) bool {
-	return entry.HasComponent(Renderer)
+	return entry.HasComponent(RendererID)
 }
 
-func GetRenderer(entry *donburi.Entry) uint64 {
-	if !entry.HasComponent(Renderer) {
+func GetRendererID(entry *donburi.Entry) uint64 {
+	if !entry.HasComponent(RendererID) {
 		return defaultRenderer.ID
 	}
-	return Renderer.Get(entry).ID
-}
-
-// GetFilter retrieves the filter component from an entity, returning a default value if it does not exist.
-func GetFilter(entry *donburi.Entry) ebiten.Filter {
-	if !entry.HasComponent(Filter) {
-		return defaultFilter
-	}
-	return *Filter.Get(entry)
-}
-
-// SetFilter sets the filter component for an entity, adding it if it does not already exist.
-func SetFilter(entry *donburi.Entry, filter ebiten.Filter) {
-	donburi.Add(entry, Filter, &filter)
-}
-
-// GetAnchor retrieves the anchor component from an entity, returning a default value if it does not exist.
-func GetAnchor(entry *donburi.Entry) geom.Vec2 {
-	if !entry.HasComponent(Anchor) {
-		return defaultAnchor
-	}
-	return *Anchor.Get(entry)
-}
-
-// SetAnchor sets the anchor component for an entity, adding it if it does not already exist.
-func SetAnchor(entry *donburi.Entry, x, y float64) {
-	donburi.Add(entry, Anchor, &geom.Vec2{X: x, Y: y})
-}
-
-// GetColor retrieves the color component from an entity, returning a default value if it does not exist.
-func GetColor(entry *donburi.Entry) color.RGBA {
-	if !entry.HasComponent(Color) {
-		return defaultColor
-	}
-	return *Color.Get(entry)
-}
-
-// SetColor sets the color component for an entity, adding it if it does not already exist.
-func SetColor(entry *donburi.Entry, color color.RGBA) {
-	donburi.Add(entry, Color, &color)
-}
-
-func SetAlpha(entry *donburi.Entry, alpha uint8) {
-	color := GetColor(entry)
-	color.A = alpha
-	SetColor(entry, color)
+	return RendererID.Get(entry).ID
 }
 
 // GetLayer retrieves the layer information from an entity, returning a default value if it does not exist.
 func GetLayer(entry *donburi.Entry) int {
-	if !entry.HasComponent(Renderer) {
+	if !entry.HasComponent(RendererID) {
 		return defaultRenderer.Layer
 	}
-	return Renderer.Get(entry).Layer
+	return RendererID.Get(entry).Layer
 }
 
 // SetLayer sets the layer information for an entity, adding it if it does not already exist.
 func SetLayer(entry *donburi.Entry, layer int) {
-	if !entry.HasComponent(Renderer) {
+	if !entry.HasComponent(RendererID) {
 		info := defaultRenderer
 		info.Layer = layer
-		donburi.Add(entry, Renderer, &info)
+		donburi.Add(entry, RendererID, &info)
 		return
 	}
-	info := Renderer.Get(entry)
+	info := RendererID.Get(entry)
 	info.Layer = layer
 }
 
 // GetZIndex retrieves the z-index information from an entity, returning a default value if it does not exist.
 func GetZIndex(entry *donburi.Entry) int {
-	if !entry.HasComponent(Renderer) {
+	if !entry.HasComponent(RendererID) {
 		return defaultRenderer.ZIndex
 	}
-	return Renderer.Get(entry).ZIndex
+	return RendererID.Get(entry).ZIndex
 }
 
 // SetZIndex sets the z-index information for an entity, adding it if it does not already exist.
 func SetZIndex(entry *donburi.Entry, zIndex int) {
-	if !entry.HasComponent(Renderer) {
+	if !entry.HasComponent(RendererID) {
 		info := defaultRenderer
 		info.ZIndex = zIndex
-		donburi.Add(entry, Renderer, &info)
+		donburi.Add(entry, RendererID, &info)
 		return
 	}
-	info := Renderer.Get(entry)
+	info := RendererID.Get(entry)
 	info.ZIndex = zIndex
 }
 
 // IsVisible retrieves the visibility information from an entity, returning a default value if it does not exist.
 func IsVisible(entry *donburi.Entry) bool {
-	if !entry.HasComponent(Renderer) {
+	if !entry.HasComponent(RendererID) {
 		return defaultRenderer.Visible
 	}
-	return Renderer.Get(entry).Visible
+	return RendererID.Get(entry).Visible
 }
 
 // SetVisible sets the visibility information for an entity, adding it if it does not already exist.
 func SetVisible(entry *donburi.Entry, visible bool) {
-	if !entry.HasComponent(Renderer) {
+	if !entry.HasComponent(RendererID) {
 		info := defaultRenderer
 		info.Visible = visible
-		donburi.Add(entry, Renderer, &info)
+		donburi.Add(entry, RendererID, &info)
 		return
 	}
-	info := Renderer.Get(entry)
+	info := RendererID.Get(entry)
 	info.Visible = visible
+}
+
+func GetRenderer(entry *donburi.Entry) *RendererModel {
+	if !entry.HasComponent(RendererID) {
+		return &defaultRenderer
+	}
+	return RendererID.Get(entry)
+}
+
+func SetRenderer(entry *donburi.Entry, options ...Option) {
+	opts := defaultOptions()
+	for _, option := range options {
+		option(&opts)
+	}
+	donburi.Add(entry, RendererID, &RendererModel{
+		Visible: opts.Visible,
+		Layer:   opts.Layer,
+		ZIndex:  opts.ZIndex,
+		ID:      opts.Renderer,
+	})
 }

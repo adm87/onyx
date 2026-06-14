@@ -2,11 +2,11 @@ package onyx
 
 import (
 	"fmt"
+	"image/color"
 
 	"github.com/adm87/onyx/content"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
-	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/images"
@@ -37,11 +37,12 @@ func (o *Onyx) SplashScreenScene() engine.SceneState {
 			screen.ResizeBuffer(width, height)
 
 			splashScreenEntry = o.images.CreateImageEntity(ecs,
-				images.WithImageHandle(handle),
+				images.WithHandle(handle),
+				images.WithAnchor(0.5, 0.5),
+				images.WithColor(color.RGBA{
+					R: 255, G: 255, B: 255, A: 0,
+				}),
 			)
-
-			rendering.SetAnchor(splashScreenEntry, 0.5, 0.5)
-			rendering.SetAlpha(splashScreenEntry, 0)
 
 			transform.SetLocalBounds(splashScreenEntry, &geom.AABB{
 				Min: geom.Vec2{X: -float64(width) / 2, Y: -float64(height) / 2},
@@ -79,7 +80,7 @@ func (o *Onyx) SplashScreenScene() engine.SceneState {
 			}
 
 			opacity, _, sequenceComplete = sequence.Update(float32(dt))
-			rendering.SetAlpha(splashScreenEntry, uint8(opacity*255))
+			images.SetAlpha(splashScreenEntry, uint8(opacity*255))
 
 			return engine.SceneExitNone, nil
 		},

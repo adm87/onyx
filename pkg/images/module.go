@@ -76,11 +76,14 @@ func (m *ImageModule) CreateImageEntity(ecs donburi.World, opts ...Option) *donb
 
 	entry := ecs.Entry(ecs.Create(
 		Image,
-		Frame,
 	))
 
-	SetImageHandle(entry, options.Handle)
-	SetFrame(entry, options.Frame)
+	img := GetImage(entry)
+	img.Anchor = options.Anchor
+	img.Filter = options.Filter
+	img.Frame = options.Frame
+	img.Handle = options.Handle
+	img.Color = options.Color
 
 	width, height, ok := m.GetFrameSize(options.Handle, options.Frame)
 	assert.True(ok, "failed to get image size for the provided handle")

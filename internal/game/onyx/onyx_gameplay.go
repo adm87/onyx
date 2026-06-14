@@ -14,6 +14,7 @@ import (
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/engine/geom"
+	"github.com/adm87/onyx/pkg/images"
 	tiledmodule "github.com/adm87/onyx/pkg/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -43,43 +44,43 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 	var err error
 	return engine.SceneState{
 		OnEnter: func(ecs donburi.World) error {
-			assets := o.game.Assets()
-			camera := o.game.Camera()
-			images := o.images
-			tiled := o.tiled
-			aseprite := o.aseprite
+			a := o.game.Assets()
+			c := o.game.Camera()
+			i := o.images
+			t := o.tiled
+			as := o.aseprite
 
 			o.game.Screen().SetBackgroundColor(color.RGBA{R: 100, G: 149, B: 237, A: 255})
 
-			err = assets.Load(content.AssetsFS(), gameplayManifest...)
+			err = a.Load(content.AssetsFS(), gameplayManifest...)
 			assert.Nil(err, fmt.Sprintf("failed to load gameplay assets: %v", err))
 
-			tmxHandle, exists := tiled.GetTmxHandle(content.AssetsTiledGym04)
+			tmxHandle, exists := t.GetTmxHandle(content.AssetsTiledGym04)
 			assert.True(exists, "failed to get handle for tiled map")
 
-			tilemap, tilemapHandle = tiled.BuildTilemap(tmxHandle)
-			tilemapEntry = tiled.CreateTilemapEntity(ecs, tiledmodule.WithTilemapHandle(tilemapHandle))
+			tilemap, tilemapHandle = t.BuildTilemap(tmxHandle)
+			tilemapEntry = t.CreateTilemapEntity(ecs, tiledmodule.WithTilemapHandle(tilemapHandle))
 
-			playerImgHandle, exists := images.GetAssetHandle(content.AssetsAsepriteCaptainImg)
+			playerImgHandle, exists := i.GetAssetHandle(content.AssetsAsepriteCaptainImg)
 			assert.True(exists, "failed to get handle for player image")
 
-			playerDataHandle, exists := assets.GetDataHandle(content.AssetsAsepriteCaptainJson)
+			playerDataHandle, exists := a.GetDataHandle(content.AssetsAsepriteCaptainJson)
 			assert.True(exists, "failed to get handle for player data")
 
-			playerData, exists := assets.GetData(playerDataHandle)
+			playerData, exists := a.GetData(playerDataHandle)
 			assert.True(exists, "failed to get data for player")
 
-			aseprite.BuildAnimations(playerImgHandle, playerData)
+			as.BuildAnimations(playerImgHandle, playerData)
 
-			spriteEntry = aseprite.CreateSpriteEntity(ecs,
+			spriteEntry = as.CreateSpriteEntity(ecs,
 				asepritemodule.WithImageHandle(playerImgHandle),
 				asepritemodule.WithClip("Run"),
 				asepritemodule.Playing(),
 			)
-			rendering.SetAnchor(spriteEntry, 0.5, 1.0)
+			images.SetAnchor(spriteEntry, 0.5, 1.0)
 			rendering.SetLayer(spriteEntry, 6)
 
-			playerWidth, playerHeight, _ := images.GetFrameSize(playerImgHandle, 0)
+			playerWidth, playerHeight, _ := i.GetFrameSize(playerImgHandle, 0)
 			transform.SetLocalBounds(spriteEntry, &geom.AABB{
 				Min: geom.Vec2{X: -float64(playerWidth) / 2, Y: -float64(playerHeight)},
 				Max: geom.Vec2{X: float64(playerWidth) / 2, Y: 0},
@@ -87,8 +88,8 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 
 			transform.SetPosition(spriteEntry, tilemap.Bounds().Center())
 
-			camera.SetPosition(tilemap.Bounds().Center())
-			camera.SetZoom(0.25)
+			c.SetPosition(tilemap.Bounds().Center())
+			c.SetZoom(0.25)
 
 			o.game.World().Add(tilemapEntry)
 			o.game.World().Add(spriteEntry)

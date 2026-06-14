@@ -74,7 +74,7 @@ func (r *renderer) render(entries []*donburi.Entry, screen *ebiten.Image, viewpo
 	r.jobPool.i = 0
 
 	for _, entry := range entries {
-		renderer := rendering.GetRenderer(entry)
+		renderer := rendering.GetRendererID(entry)
 
 		adapter, exists := r.adapters.Get(renderer)
 		if !exists {

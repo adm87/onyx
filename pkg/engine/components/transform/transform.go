@@ -198,9 +198,9 @@ func GetMatrix(entry *donburi.Entry) ebiten.GeoM {
 	return m.geom
 }
 
-func GetTransform(entry *donburi.Entry) TransformModel {
+func GetTransform(entry *donburi.Entry) *TransformModel {
 	if !entry.HasComponent(Transform) {
-		return TransformModel{
+		return &TransformModel{
 			X:        defaultPosition.X,
 			Y:        defaultPosition.Y,
 			ScaleX:   defaultScale.X,
@@ -208,7 +208,7 @@ func GetTransform(entry *donburi.Entry) TransformModel {
 			Rotation: defaultRotation,
 		}
 	}
-	return *Transform.Get(entry)
+	return Transform.Get(entry)
 }
 
 func SetTransform(entry *donburi.Entry, position geom.Vec2, scale geom.Vec2, rotation float64) {
@@ -222,11 +222,11 @@ func SetTransform(entry *donburi.Entry, position geom.Vec2, scale geom.Vec2, rot
 	markDirty(entry)
 }
 
-func GetLocalBounds(entry *donburi.Entry) geom.AABB {
+func GetLocalBounds(entry *donburi.Entry) *geom.AABB {
 	if !entry.HasComponent(Bounds) {
-		return geom.AABB{}
+		return &geom.AABB{}
 	}
-	return *Bounds.Get(entry)
+	return Bounds.Get(entry)
 }
 
 func SetLocalBounds(entry *donburi.Entry, bounds *geom.AABB) {
