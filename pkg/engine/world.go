@@ -2,7 +2,6 @@ package engine
 
 import (
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
-	"github.com/adm87/onyx/pkg/engine/components/scene"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/engine/partitioning/spatialhash"
@@ -29,6 +28,8 @@ type world struct {
 	queryResults []*donburi.Entry
 }
 
+var worldIndexing = donburi.NewComponentType[uint64]()
+
 func newWorld(renderer *renderer) *world {
 	ecs := donburi.NewWorld()
 	return &world{
@@ -44,30 +45,33 @@ func (w *world) ECS() donburi.World {
 }
 
 func (w *world) Add(entry *donburi.Entry) {
-	aabb := scene.GetSceneBounds(entry).Translate(transform.GetPosition(entry))
-
+	aabb := transform.GetBounds(entry).Translate(transform.GetPosition(entry))
 	entity := entry.Entity()
 	index := w.entities.Insert(entity, aabb)
-
-	scene.AddSceneIndexing(entry, index)
+	donburi.Add(entry, worldIndexing, &index)
 }
 
 func (w *world) Remove(entry *donburi.Entry) {
-	index, ok := scene.GetSceneIndexing(entry)
-	if !ok {
-		return
-	}
-	w.entities.Remove(index)
+	index := worldIndexing.Get(entry)
+	w.entities.Remove(*index)
+	entry.Remove()
 }
 
 func (w *world) Update(entry *donburi.Entry) {
+	index := worldIndexing.Get(entry)
+	aabb := transform.GetBounds(entry).Translate(transform.GetPosition(entry))
+	w.entities.Update(*index, aabb)
+}
 
+func (w *world) UpdateBounds(entry *donburi.Entry, bounds geom.AABB) {
+	index := worldIndexing.Get(entry)
+	w.entities.Update(*index, bounds)
 }
 
 func (w *world) QueryRegion(region geom.AABB, callback func(*donburi.Entry)) {
 	w.entities.Query(region, func(entity donburi.Entity) {
 		entry := w.ecs.Entry(entity)
-		aabb := scene.GetSceneBounds(entry).Translate(transform.GetPosition(entry))
+		aabb := transform.GetBounds(entry).Translate(transform.GetPosition(entry))
 		if !aabb.Intersects(region) {
 			return
 		}

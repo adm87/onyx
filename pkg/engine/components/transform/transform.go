@@ -4,7 +4,6 @@ import (
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
-	"github.com/yohamta/donburi/filter"
 )
 
 type transformMatrix struct {
@@ -17,6 +16,7 @@ type (
 		Position geom.Vec2
 		Scale    geom.Vec2
 		Rotation float64
+		Bounds   geom.AABB
 	}
 	Option func(*Options)
 )
@@ -34,16 +34,8 @@ var (
 	Position = donburi.NewComponentType[geom.Vec2](defaultPosition)
 	Scale    = donburi.NewComponentType[geom.Vec2](defaultScale)
 	Rotation = donburi.NewComponentType[float64](defaultRotation)
+	Bounds   = donburi.NewComponentType[geom.AABB](geom.AABB{})
 	matrix   = donburi.NewComponentType[transformMatrix](defaultMatrix)
-)
-
-var query = donburi.NewQuery(
-	filter.Contains(
-		Position,
-		Scale,
-		Rotation,
-		matrix,
-	),
 )
 
 func defaultOptions() Options {
@@ -72,25 +64,10 @@ func WithRotation(rotation float64) Option {
 	}
 }
 
-// Query iterates over all entities with the necessary components for transformation and applies the provided function to each entry.
-func Query(ecs donburi.World, fn QueryCallback) {
-	query.Each(ecs, func(entry *donburi.Entry) {
-		position := GetPosition(entry)
-		scale := GetScale(entry)
-		rotation := GetRotation(entry)
-		fn(entry, position, scale, rotation)
-	})
-}
-
-// QueryWith allows you to specify a custom query to iterate over entities with the necessary components for transformation
-// and applies the provided function to each entry.
-func QueryWith(ecs donburi.World, q *donburi.Query, fn QueryCallback) {
-	q.Each(ecs, func(entry *donburi.Entry) {
-		position := GetPosition(entry)
-		scale := GetScale(entry)
-		rotation := GetRotation(entry)
-		fn(entry, position, scale, rotation)
-	})
+func WithBounds(bounds geom.AABB) Option {
+	return func(opts *Options) {
+		opts.Bounds = bounds
+	}
 }
 
 // NewTransform creates a new entity with the necessary components for position, scale, rotation, and transformation matrix.
@@ -115,6 +92,7 @@ func AddTransform(entry *donburi.Entry, options ...Option) *donburi.Entry {
 	SetPosition(entry, opts.Position)
 	SetScale(entry, opts.Scale.X, opts.Scale.Y)
 	SetRotation(entry, opts.Rotation)
+	SetBounds(entry, &opts.Bounds)
 
 	m := defaultMatrix
 	donburi.Add(entry, matrix, &m)
@@ -205,4 +183,15 @@ func GetMatrix(entry *donburi.Entry) ebiten.GeoM {
 		m.dirty = false
 	}
 	return m.geom
+}
+
+func GetBounds(entry *donburi.Entry) geom.AABB {
+	if !entry.HasComponent(Bounds) {
+		return geom.AABB{}
+	}
+	return *Bounds.Get(entry)
+}
+
+func SetBounds(entry *donburi.Entry, bounds *geom.AABB) {
+	donburi.Add(entry, Bounds, bounds)
 }

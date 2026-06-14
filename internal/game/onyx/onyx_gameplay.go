@@ -11,7 +11,6 @@ import (
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
-	"github.com/adm87/onyx/pkg/engine/components/scene"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/engine/geom"
@@ -60,7 +59,6 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 
 			tilemap, tilemapHandle = tiled.BuildTilemap(tmxHandle)
 			tilemapEntry = tiled.CreateTilemapEntity(ecs, tiledmodule.WithTilemapHandle(tilemapHandle))
-			o.game.World().Add(tilemapEntry)
 
 			playerImgHandle, exists := images.GetAssetHandle(content.AssetsAsepriteCaptainImg)
 			assert.True(exists, "failed to get handle for player image")
@@ -80,10 +78,9 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			)
 			rendering.SetAnchor(spriteEntry, 0.5, 1.0)
 			rendering.SetLayer(spriteEntry, 6)
-			o.game.World().Add(spriteEntry)
 
 			playerWidth, playerHeight, _ := images.GetFrameSize(playerImgHandle, 0)
-			scene.SetSceneBounds(spriteEntry, &geom.AABB{
+			transform.SetBounds(spriteEntry, &geom.AABB{
 				Min: geom.Vec2{X: -float64(playerWidth) / 2, Y: -float64(playerHeight)},
 				Max: geom.Vec2{X: float64(playerWidth) / 2, Y: 0},
 			})
@@ -92,6 +89,9 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 
 			camera.SetPosition(tilemap.Bounds().Center())
 			camera.SetZoom(0.25)
+
+			o.game.World().Add(tilemapEntry)
+			o.game.World().Add(spriteEntry)
 
 			return nil
 		},
@@ -143,6 +143,8 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 
 				newPos := position.Add(move)
 				transform.SetPosition(spriteEntry, newPos)
+
+				o.game.World().Update(spriteEntry)
 			}
 			return nil
 		},
@@ -170,7 +172,7 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 
 func drawDebugInfo(path *vector.Path, camera engine.Camera, entries []*donburi.Entry, img *ebiten.Image) {
 	for _, entry := range entries {
-		aabb := scene.GetSceneBounds(entry).Translate(transform.GetPosition(entry))
+		aabb := transform.GetBounds(entry).Translate(transform.GetPosition(entry))
 
 		min := camera.ToScreen(aabb.Min)
 		max := camera.ToScreen(aabb.Max)
