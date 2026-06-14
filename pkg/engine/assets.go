@@ -3,6 +3,7 @@ package engine
 import (
 	"io/fs"
 
+	"github.com/adm87/onyx/pkg/engine/data"
 	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/engine/storage/slotmap"
 )
@@ -31,29 +32,26 @@ type assets struct {
 	store  *slotmap.SlotMap[AssetAdapter]
 
 	adaptersByExt map[file.FileExt]uint64
-
-	dataStoreHandle uint64
+	dataAssets    *data.DataAssets
 }
 
 func newAssets(logger *logger) *assets {
-	return &assets{
+	a := &assets{
 		logger:        logger,
 		store:         slotmap.New[AssetAdapter](0),
 		adaptersByExt: make(map[file.FileExt]uint64),
+		dataAssets:    data.NewAssetAdapter(),
 	}
+	a.AddAssetAdapter(a.dataAssets)
+	return a
 }
 
 func (a *assets) GetDataHandle(path file.FilePath) (uint64, bool) {
-	adapter, _ := a.GetAdapter(a.dataStoreHandle)
-	return adapter.(*dataStore).store.GetHandle(path)
+	return a.dataAssets.GetDataHandle(path)
 }
 
 func (a *assets) GetData(handle uint64) ([]byte, bool) {
-	adapter, exists := a.GetAdapter(handle)
-	if !exists {
-		return nil, false
-	}
-	return adapter.(*dataStore).store.Get(handle)
+	return a.dataAssets.GetData(handle)
 }
 
 func (a *assets) Load(fileSystem fs.FS, paths ...file.FilePath) error {

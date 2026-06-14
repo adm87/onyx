@@ -18,8 +18,8 @@ var tiledExtensions = []file.FileExt{".tmx", ".tsx"}
 type assetAdapter struct {
 	assets engine.Assets
 
-	tmxStore engine.AssetStore[*Tmx]
-	tsxStore engine.AssetStore[*Tsx]
+	tmxStore file.FileStore[*Tmx]
+	tsxStore file.FileStore[*Tsx]
 
 	tilemapStore *slotmap.SlotMap[*Tilemap]
 	imageModule  *images.ImageModule
@@ -28,8 +28,8 @@ type assetAdapter struct {
 func newAssetsAdapter(assets engine.Assets, imageModule *images.ImageModule) *assetAdapter {
 	return &assetAdapter{
 		assets:       assets,
-		tmxStore:     engine.NewFileStore[*Tmx](0),
-		tsxStore:     engine.NewFileStore[*Tsx](0),
+		tmxStore:     file.NewFileStore[*Tmx](0),
+		tsxStore:     file.NewFileStore[*Tsx](0),
 		tilemapStore: slotmap.New[*Tilemap](0),
 		imageModule:  imageModule,
 	}

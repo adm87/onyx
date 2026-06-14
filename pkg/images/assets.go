@@ -16,7 +16,7 @@ import (
 var imageExtensions = []file.FileExt{".png", ".jpg", ".jpeg"}
 
 type assetAdapter struct {
-	store  engine.AssetStore[*ebiten.Image]
+	store  file.FileStore[*ebiten.Image]
 	assets engine.Assets
 	frames map[uint64][]*ebiten.Image
 }
@@ -24,7 +24,7 @@ type assetAdapter struct {
 func newAssetAdapter(assets engine.Assets) *assetAdapter {
 	return &assetAdapter{
 		assets: assets,
-		store:  engine.NewFileStore[*ebiten.Image](0),
+		store:  file.NewFileStore[*ebiten.Image](0),
 		frames: make(map[uint64][]*ebiten.Image),
 	}
 }
