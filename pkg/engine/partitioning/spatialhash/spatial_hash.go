@@ -40,7 +40,7 @@ func New[T comparable](resolution int, padding Padding) *SpatialHash[T] {
 	}
 }
 
-func (sh *SpatialHash[T]) Insert(item T, area *geom.AABB) uint64 {
+func (sh *SpatialHash[T]) Insert(item T, area geom.AABB) uint64 {
 	id := sh.store.Insert(item)
 
 	sh.cacheCells(area)
@@ -77,7 +77,7 @@ func (sh *SpatialHash[T]) Remove(id uint64) {
 	sh.store.Delete(id)
 }
 
-func (sh *SpatialHash[T]) Update(id uint64, area *geom.AABB) {
+func (sh *SpatialHash[T]) Update(id uint64, area geom.AABB) {
 	_, exists := sh.store.Get(id)
 	if !exists {
 		return
@@ -102,10 +102,9 @@ func (sh *SpatialHash[T]) Update(id uint64, area *geom.AABB) {
 	}
 }
 
-func (sh *SpatialHash[T]) Query(area *geom.AABB, fn func(item T)) {
+func (sh *SpatialHash[T]) Query(area geom.AABB, fn func(item T)) {
 	sh.cacheCells(area)
 	clear(sh.querySeen)
-
 	for _, cell := range sh.cellCache {
 		ids, exists := sh.grid[cell]
 		if !exists {
@@ -128,7 +127,33 @@ func (sh *SpatialHash[T]) Query(area *geom.AABB, fn func(item T)) {
 	}
 }
 
-func (sh *SpatialHash[T]) cacheCells(area *geom.AABB) {
+func (sh *SpatialHash[T]) QueryInto(area geom.AABB, results []T) []T {
+	sh.cacheCells(area)
+	clear(sh.querySeen)
+	for _, cell := range sh.cellCache {
+		ids, exists := sh.grid[cell]
+		if !exists {
+			continue
+		}
+
+		for _, id := range ids {
+			if _, alreadySeen := sh.querySeen[id]; alreadySeen {
+				continue
+			}
+			sh.querySeen[id] = struct{}{}
+
+			item, exists := sh.store.Get(id)
+			if !exists {
+				continue
+			}
+
+			results = append(results, item)
+		}
+	}
+	return results
+}
+
+func (sh *SpatialHash[T]) cacheCells(area geom.AABB) {
 	sh.cellCache = sh.cellCache[:0]
 
 	minX := math.Floor(area.Min.X/float64(sh.resolution)) - float64(sh.padding.Left)

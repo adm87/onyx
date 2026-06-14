@@ -233,13 +233,11 @@ func SetLocalBounds(entry *donburi.Entry, bounds *geom.AABB) {
 	donburi.Add(entry, Bounds, bounds)
 }
 
-func GetWorldBounds(entry *donburi.Entry) *geom.AABB {
+func GetWorldBounds(entry *donburi.Entry) geom.AABB {
 	if !entry.HasComponent(Bounds) {
-		return &geom.AABB{}
+		return geom.AABB{}
 	}
 
 	t := Transform.Get(entry)
-	bounds := Bounds.Get(entry).Translate(t.X, t.Y)
-
-	return &bounds
+	return Bounds.Get(entry).Translate(t.X, t.Y)
 }

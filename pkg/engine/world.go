@@ -12,7 +12,8 @@ type World interface {
 	Remove(entry *donburi.Entry)
 	Update(entry *donburi.Entry)
 
-	QueryRegion(ecs donburi.World, region *geom.AABB, callback func(*donburi.Entry))
+	QueryInto(ecs donburi.World, region geom.AABB, results []donburi.Entity) []donburi.Entity
+	QueryRegion(ecs donburi.World, region geom.AABB, callback func(entry *donburi.Entry))
 }
 
 type world struct {
@@ -48,18 +49,17 @@ func (w *world) Update(entry *donburi.Entry) {
 	w.entities.Update(*index, aabb)
 }
 
-func (w *world) UpdateBounds(entry *donburi.Entry, bounds *geom.AABB) {
+func (w *world) UpdateBounds(entry *donburi.Entry, bounds geom.AABB) {
 	index := worldIndexing.Get(entry)
 	w.entities.Update(*index, bounds)
 }
 
-func (w *world) QueryRegion(ecs donburi.World, region *geom.AABB, callback func(*donburi.Entry)) {
+func (w *world) QueryInto(ecs donburi.World, region geom.AABB, results []donburi.Entity) []donburi.Entity {
+	return w.entities.QueryInto(region, results)
+}
+
+func (w *world) QueryRegion(ecs donburi.World, region geom.AABB, callback func(entry *donburi.Entry)) {
 	w.entities.Query(region, func(entity donburi.Entity) {
-		entry := ecs.Entry(entity)
-		aabb := transform.GetWorldBounds(entry)
-		if !aabb.Intersects(region) {
-			return
-		}
-		callback(entry)
+		callback(ecs.Entry(entity))
 	})
 }

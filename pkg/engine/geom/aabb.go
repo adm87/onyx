@@ -43,17 +43,17 @@ func (a AABB) Contains(point Vec2) bool {
 		point.Y >= a.Min.Y && point.Y <= a.Max.Y
 }
 
-func (a AABB) ContainsAABB(other *AABB) bool {
+func (a AABB) ContainsAABB(other AABB) bool {
 	return a.Min.X <= other.Min.X && a.Max.X >= other.Max.X &&
 		a.Min.Y <= other.Min.Y && a.Max.Y >= other.Max.Y
 }
 
-func (a AABB) Intersects(other *AABB) bool {
+func (a AABB) Intersects(other AABB) bool {
 	return a.Min.X < other.Max.X && a.Max.X > other.Min.X &&
 		a.Min.Y < other.Max.Y && a.Max.Y > other.Min.Y
 }
 
-func (a AABB) Union(other *AABB) AABB {
+func (a AABB) Union(other AABB) AABB {
 	return AABB{
 		Min: Vec2{
 			X: min(a.Min.X, other.Min.X),

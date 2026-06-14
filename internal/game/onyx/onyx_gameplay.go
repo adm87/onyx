@@ -152,10 +152,10 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 		},
 		OnLateUpdate: func(ecs donburi.World, dt float64) error {
 			d := time.Duration(float64(time.Second) * dt)
-			vp := o.game.Camera().Viewport()
-
-			o.game.World().QueryRegion(o.game.ECS(), &vp, func(e *donburi.Entry) {
-				o.aseprite.UpdateAnimation(e, d)
+			o.game.World().QueryRegion(ecs, o.game.Camera().Viewport(), func(entry *donburi.Entry) {
+				if aseprite.IsPlaying(entry) {
+					o.aseprite.UpdateAnimation(entry, d)
+				}
 			})
 			return nil
 		},
