@@ -10,20 +10,15 @@ import (
 )
 
 type World interface {
-	ECS() donburi.World
-
 	Add(entry *donburi.Entry)
 	Remove(entry *donburi.Entry)
 	Update(entry *donburi.Entry)
 
-	QueryRegion(region *geom.AABB, callback func(*donburi.Entry))
+	QueryRegion(ecs donburi.World, region *geom.AABB, callback func(*donburi.Entry))
 }
 
 type world struct {
-	ecs donburi.World
-
-	renderer *renderer
-
+	renderer     *renderer
 	entities     *spatialhash.SpatialHash[donburi.Entity]
 	queryResults []*donburi.Entry
 }
@@ -31,17 +26,11 @@ type world struct {
 var worldIndexing = donburi.NewComponentType[uint64]()
 
 func newWorld(renderer *renderer) *world {
-	ecs := donburi.NewWorld()
 	return &world{
-		ecs:          ecs,
 		renderer:     renderer,
 		entities:     spatialhash.New[donburi.Entity](16, spatialhash.Padding{}),
 		queryResults: make([]*donburi.Entry, 0, 100),
 	}
-}
-
-func (w *world) ECS() donburi.World {
-	return w.ecs
 }
 
 func (w *world) Add(entry *donburi.Entry) {
@@ -68,9 +57,9 @@ func (w *world) UpdateBounds(entry *donburi.Entry, bounds *geom.AABB) {
 	w.entities.Update(*index, bounds)
 }
 
-func (w *world) QueryRegion(region *geom.AABB, callback func(*donburi.Entry)) {
+func (w *world) QueryRegion(ecs donburi.World, region *geom.AABB, callback func(*donburi.Entry)) {
 	w.entities.Query(region, func(entity donburi.Entity) {
-		entry := w.ecs.Entry(entity)
+		entry := ecs.Entry(entity)
 		aabb := transform.GetWorldBounds(entry)
 		if !aabb.Intersects(region) {
 			return
@@ -79,9 +68,9 @@ func (w *world) QueryRegion(region *geom.AABB, callback func(*donburi.Entry)) {
 	})
 }
 
-func (w *world) render(screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) []*donburi.Entry {
+func (w *world) render(ecs donburi.World, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) []*donburi.Entry {
 	w.queryResults = w.queryResults[:0]
-	w.QueryRegion(&viewport, func(entry *donburi.Entry) {
+	w.QueryRegion(ecs, &viewport, func(entry *donburi.Entry) {
 		if !rendering.IsVisible(entry) {
 			return
 		}

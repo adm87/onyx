@@ -91,8 +91,9 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			c.SetPosition(tilemap.Bounds().Center())
 			c.SetZoom(0.25)
 
-			o.game.World().Add(tilemapEntry)
-			o.game.World().Add(spriteEntry)
+			world := o.game.World()
+			world.Add(tilemapEntry)
+			world.Add(spriteEntry)
 
 			return nil
 		},
@@ -153,7 +154,7 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			d := time.Duration(float64(time.Second) * dt)
 			vp := o.game.Camera().Viewport()
 
-			o.game.World().QueryRegion(&vp, func(e *donburi.Entry) {
+			o.game.World().QueryRegion(o.game.ECS(), &vp, func(e *donburi.Entry) {
 				o.aseprite.UpdateAnimation(e, d)
 			})
 			return nil

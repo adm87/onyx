@@ -25,36 +25,36 @@ type Camera interface {
 type camera struct {
 	donburi.Entity
 
-	world  *world
+	ecs    donburi.World
 	screen *screen
 }
 
-func newCamera(world *world, screen *screen, entity donburi.Entity) *camera {
+func newCamera(ecs donburi.World, screen *screen, entity donburi.Entity) *camera {
 	return &camera{
 		Entity: entity,
-		world:  world,
+		ecs:    ecs,
 		screen: screen,
 	}
 }
 
 func (c *camera) Position() geom.Vec2 {
-	entry := c.world.ecs.Entry(c.Entity)
+	entry := c.ecs.Entry(c.Entity)
 	return transform.GetPosition(entry)
 }
 
 func (c *camera) SetPosition(pos geom.Vec2) {
-	entry := c.world.ecs.Entry(c.Entity)
+	entry := c.ecs.Entry(c.Entity)
 	transform.SetPosition(entry, pos)
 }
 
 func (c *camera) Zoom() float64 {
-	entry := c.world.ecs.Entry(c.Entity)
+	entry := c.ecs.Entry(c.Entity)
 	scale := transform.GetScale(entry)
 	return scale.X
 }
 
 func (c *camera) SetZoom(zoom float64) {
-	entry := c.world.ecs.Entry(c.Entity)
+	entry := c.ecs.Entry(c.Entity)
 	transform.SetScale(entry, zoom, zoom)
 }
 
@@ -73,7 +73,7 @@ func (c *camera) ToScreen(worldPos geom.Vec2) geom.Vec2 {
 }
 
 func (c *camera) View() ebiten.GeoM {
-	entry := c.world.ecs.Entry(c.Entity)
+	entry := c.ecs.Entry(c.Entity)
 
 	matrix := transform.GetMatrix(entry)
 	matrix.Invert()

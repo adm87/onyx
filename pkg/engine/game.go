@@ -6,12 +6,14 @@ import (
 
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/yohamta/donburi"
 )
 
 type Game interface {
 	Start() error
 	WithContext(ctx context.Context) Game
 
+	ECS() donburi.World
 	Assets() Assets
 	Camera() Camera
 	Logger() Logger
@@ -24,6 +26,7 @@ type Game interface {
 
 type game struct {
 	ctx context.Context
+	ecs donburi.World
 
 	assets   *assets
 	camera   *camera
@@ -44,6 +47,8 @@ func NewGame(opts ...Option) Game {
 	cfg := applyOptions(opts...)
 
 	setupWindow(cfg.Title, cfg.Width, cfg.Height)
+
+	ecs := donburi.NewWorld()
 
 	logger := newLogger(os.Stdout)
 
@@ -79,9 +84,9 @@ func NewGame(opts ...Option) Game {
 	)
 
 	camera := newCamera(
-		world,
+		ecs,
 		screen,
-		transform.NewTransform(world.ecs).Entity(),
+		transform.NewTransform(ecs).Entity(),
 	)
 
 	assets.dataStoreHandle = assets.AddAssetAdapter(
@@ -90,6 +95,7 @@ func NewGame(opts ...Option) Game {
 
 	return &game{
 		ctx:      context.Background(),
+		ecs:      ecs,
 		assets:   assets,
 		camera:   camera,
 		logger:   logger,
@@ -133,6 +139,10 @@ func (g *game) World() World {
 	return g.world
 }
 
+func (g *game) ECS() donburi.World {
+	return g.ecs
+}
+
 func (g *game) WithContext(ctx context.Context) Game {
 	if g.ctx == nil {
 		return g
@@ -152,6 +162,7 @@ func (g *game) Update() error {
 	default:
 		g.time.tick()
 		return g.scenes.update(
+			g.ecs,
 			g.time.fixedSteps,
 			g.time.deltaTime.Seconds(),
 			g.time.fixedDeltaTime.Seconds(),
@@ -169,7 +180,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 		viewMatrix := g.camera.View()
 		viewport := g.camera.Viewport()
 
-		if err := g.scenes.render(g.screen.buffer, viewport, viewMatrix); err != nil {
+		if err := g.scenes.render(g.ecs, g.screen.buffer, viewport, viewMatrix); err != nil {
 			g.logger.Error("scene render pipeline: %v", err)
 			return
 		}

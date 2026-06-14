@@ -68,12 +68,12 @@ func (s *scenes) AddScene(id SceneID, state SceneState, transitions SceneTransit
 	s.transitions[id] = transitions
 }
 
-func (s *scenes) update(steps int, deltaTime float64, fixedDeltaTime float64) error {
+func (s *scenes) update(ecs donburi.World, steps int, deltaTime float64, fixedDeltaTime float64) error {
 	if s.currentScene == SceneIDNone && s.nextScene == SceneIDNone {
 		return nil
 	}
 	if s.nextScene != SceneIDNone {
-		return s.transitionToNext()
+		return s.transitionToNext(ecs)
 	}
 
 	currentState, ok := s.scenes[s.currentScene]
@@ -81,29 +81,29 @@ func (s *scenes) update(steps int, deltaTime float64, fixedDeltaTime float64) er
 		return fmt.Errorf("scene with ID '%s' not found", s.currentScene)
 	}
 
-	exitCode, err := s.updateCurrent(currentState, deltaTime)
+	exitCode, err := s.updateCurrent(ecs, currentState, deltaTime)
 	if err != nil {
 		return err
 	}
 	if exitCode != SceneExitNone {
 		return s.setupNextTransition(exitCode)
 	}
-	if err := s.fixedUpdateCurrent(currentState, fixedDeltaTime, steps); err != nil {
+	if err := s.fixedUpdateCurrent(ecs, currentState, fixedDeltaTime, steps); err != nil {
 		return err
 	}
-	return s.lateUpdateCurrent(currentState, deltaTime)
+	return s.lateUpdateCurrent(ecs, currentState, deltaTime)
 }
 
-func (s *scenes) render(screen *ebiten.Image, viewPort geom.AABB, viewMatrix ebiten.GeoM) error {
-	entries := s.world.render(screen, viewPort, viewMatrix)
+func (s *scenes) render(ecs donburi.World, screen *ebiten.Image, viewPort geom.AABB, viewMatrix ebiten.GeoM) error {
+	entries := s.world.render(ecs, screen, viewPort, viewMatrix)
 	return s.renderCurrent(entries, screen, viewPort, viewMatrix)
 }
 
-func (s *scenes) transitionToNext() error {
-	if err := s.exitCurrent(); err != nil {
+func (s *scenes) transitionToNext(ecs donburi.World) error {
+	if err := s.exitCurrent(ecs); err != nil {
 		return err
 	}
-	if err := s.enterNext(); err != nil {
+	if err := s.enterNext(ecs); err != nil {
 		return err
 	}
 
@@ -128,7 +128,7 @@ func (s *scenes) setupNextTransition(exitCode SceneExitCode) error {
 	return nil
 }
 
-func (s *scenes) exitCurrent() error {
+func (s *scenes) exitCurrent(ecs donburi.World) error {
 	if s.currentScene == SceneIDNone {
 		return nil
 	}
@@ -138,12 +138,12 @@ func (s *scenes) exitCurrent() error {
 		return fmt.Errorf("scene with ID '%s' not found", s.currentScene)
 	}
 	if currentState.OnExit != nil {
-		return currentState.OnExit(s.world.ecs)
+		return currentState.OnExit(ecs)
 	}
 	return nil
 }
 
-func (s *scenes) enterNext() error {
+func (s *scenes) enterNext(ecs donburi.World) error {
 	if s.nextScene == SceneIDNone {
 		return nil
 	}
@@ -153,28 +153,28 @@ func (s *scenes) enterNext() error {
 		return fmt.Errorf("scene with ID '%s' not found", s.nextScene)
 	}
 	if nextState.OnEnter != nil {
-		return nextState.OnEnter(s.world.ecs)
+		return nextState.OnEnter(ecs)
 	}
 	return nil
 }
 
-func (s *scenes) updateCurrent(currentState SceneState, dt float64) (SceneExitCode, error) {
+func (s *scenes) updateCurrent(ecs donburi.World, currentState SceneState, dt float64) (SceneExitCode, error) {
 	if s.currentScene == SceneIDNone {
 		return SceneExitNone, nil
 	}
 	if currentState.OnUpdate != nil {
-		return currentState.OnUpdate(s.world.ecs, dt)
+		return currentState.OnUpdate(ecs, dt)
 	}
 	return SceneExitNone, nil
 }
 
-func (s *scenes) fixedUpdateCurrent(currentState SceneState, dt float64, steps int) error {
+func (s *scenes) fixedUpdateCurrent(ecs donburi.World, currentState SceneState, dt float64, steps int) error {
 	if s.currentScene == SceneIDNone {
 		return nil
 	}
 	for range steps {
 		if currentState.OnFixedUpdate != nil {
-			if err := currentState.OnFixedUpdate(s.world.ecs, dt); err != nil {
+			if err := currentState.OnFixedUpdate(ecs, dt); err != nil {
 				return err
 			}
 		}
@@ -182,12 +182,12 @@ func (s *scenes) fixedUpdateCurrent(currentState SceneState, dt float64, steps i
 	return nil
 }
 
-func (s *scenes) lateUpdateCurrent(currentState SceneState, dt float64) error {
+func (s *scenes) lateUpdateCurrent(ecs donburi.World, currentState SceneState, dt float64) error {
 	if s.currentScene == SceneIDNone {
 		return nil
 	}
 	if currentState.OnLateUpdate != nil {
-		return currentState.OnLateUpdate(s.world.ecs, dt)
+		return currentState.OnLateUpdate(ecs, dt)
 	}
 	return nil
 }
