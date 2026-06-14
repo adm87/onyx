@@ -56,7 +56,12 @@ func (m *AsepriteModule) DeleteAnimations(handle uint64) {
 }
 
 func (m *AsepriteModule) UpdateAnimation(entry *donburi.Entry, dt time.Duration) {
-	if !IsPlaying(entry) {
+	animator := GetAnimator(entry)
+	if animator == nil {
+		return
+	}
+
+	if animator.State != AnimationStatePlaying {
 		return
 	}
 
@@ -65,27 +70,19 @@ func (m *AsepriteModule) UpdateAnimation(entry *donburi.Entry, dt time.Duration)
 		return
 	}
 
-	clip := GetClip(entry)
-
-	tag, exists := library.Meta.Clips[clip]
+	tag, exists := library.Meta.Clips[animator.Clip]
 	if !exists {
-		return
-	}
-
-	animator := GetAnimator(entry)
-	if animator == nil {
 		return
 	}
 
 	elapsed := animator.time + dt
 
-	frame := GetAnimationFrame(entry)
+	frame := animator.Frame
 	frameIndex := tag.From + frame
 
 	duration := time.Duration(library.Frames[frameIndex].Duration) * time.Millisecond
 	if duration <= 0 || elapsed < duration {
 		animator.time = elapsed
-		SetAnimator(entry, animator)
 		return
 	}
 
@@ -107,18 +104,17 @@ func (m *AsepriteModule) UpdateAnimation(entry *donburi.Entry, dt time.Duration)
 
 	if nextFrame != frame {
 		images.SetFrame(entry, frameIndex)
-		SetAnimationFrame(entry, nextFrame)
+		animator.Frame = nextFrame
 	}
 	if animator.time != elapsed {
 		animator.time = elapsed
-		SetAnimator(entry, animator)
 	}
 	if completed {
-		SetAnimationState(entry, AnimationStateStopped)
+		animator.State = AnimationStateStopped
 	}
 }
 
-func (m *AsepriteModule) getNextFrame(current int, animator *AnimatorInfo, frameCount int) (int, bool) {
+func (m *AsepriteModule) getNextFrame(current int, animator *AnimatorModel, frameCount int) (int, bool) {
 	current += animator.direction
 
 	loopComplete := current >= frameCount || current < 0
@@ -164,7 +160,7 @@ func (m *AsepriteModule) CreateSpriteEntity(ecs donburi.World, opts ...SpriteOpt
 	)
 
 	SetAnimationState(entry, options.State)
-	SetAnimator(entry, &AnimatorInfo{
+	SetAnimator(entry, &AnimatorModel{
 		Loops:     options.Loops,
 		direction: 1,
 	})

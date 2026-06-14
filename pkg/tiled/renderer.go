@@ -82,9 +82,6 @@ func (a *renderingAdapter) GetJobs(
 		return a.jobs
 	}
 
-	layer := rendering.GetLayer(entry)
-	zindex := rendering.GetZIndex(entry)
-
 	tilemap, exists := a.tiledAssets.tilemapStore.Get(handle)
 	if !exists {
 		return a.jobs
@@ -108,6 +105,7 @@ func (a *renderingAdapter) GetJobs(
 		a.lastMinX, a.lastMaxX, a.lastMinY, a.lastMaxY = minTileX, maxTileX, minTileY, maxTileY
 	}
 
+	renderer := rendering.GetRenderer(entry)
 	for i := range tilemap.layers {
 		if !tmx.Layers[i].Visible {
 			continue
@@ -129,8 +127,8 @@ func (a *renderingAdapter) GetJobs(
 
 		job := pool.Get()
 		job.Buffer = buffer
-		job.Layer = layer
-		job.ZIndex = zindex + i
+		job.Layer = renderer.Layer
+		job.ZIndex = renderer.ZIndex + i
 		a.jobs = append(a.jobs, job)
 	}
 

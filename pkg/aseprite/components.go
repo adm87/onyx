@@ -8,9 +8,12 @@ import (
 
 type State uint8
 
-type AnimatorInfo struct {
+type AnimatorModel struct {
+	State     State
+	Frame     int
 	Loops     int
 	direction int
+	Clip      string
 	time      time.Duration
 }
 
@@ -29,12 +32,7 @@ const (
 	AnimationStatePlaying
 )
 
-var (
-	AnimationFrame = donburi.NewComponentType[int]()
-	AnimationClip  = donburi.NewComponentType[string]()
-	AnimationState = donburi.NewComponentType[State]()
-	Animator       = donburi.NewComponentType[AnimatorInfo]()
-)
+var Animator = donburi.NewComponentType[AnimatorModel]()
 
 func defaultSpriteOptions() *SpriteOptions {
 	return &SpriteOptions{
@@ -76,26 +74,31 @@ func WithClip(clip string) SpriteOption {
 	}
 }
 
-func GetAnimator(entry *donburi.Entry) *AnimatorInfo {
+func GetAnimator(entry *donburi.Entry) *AnimatorModel {
 	if !entry.HasComponent(Animator) {
 		return nil
 	}
 	return Animator.Get(entry)
 }
 
-func SetAnimator(entry *donburi.Entry, info *AnimatorInfo) {
+func SetAnimator(entry *donburi.Entry, info *AnimatorModel) {
 	donburi.Add(entry, Animator, info)
 }
 
 func GetAnimationState(entry *donburi.Entry) State {
-	if !entry.HasComponent(AnimationState) {
+	if !entry.HasComponent(Animator) {
 		return AnimationStateStopped
 	}
-	return *AnimationState.Get(entry)
+	return Animator.Get(entry).State
 }
 
 func SetAnimationState(entry *donburi.Entry, state State) {
-	donburi.Add(entry, AnimationState, &state)
+	animator := GetAnimator(entry)
+	if animator == nil {
+		return
+	}
+	animator.State = state
+	SetAnimator(entry, animator)
 }
 
 func GetLoops(entry *donburi.Entry) int {
@@ -116,32 +119,43 @@ func SetLoops(entry *donburi.Entry, loops int) {
 }
 
 func GetAnimationFrame(entry *donburi.Entry) int {
-	if !entry.HasComponent(AnimationFrame) {
+	animator := GetAnimator(entry)
+	if animator == nil {
 		return 0
 	}
-	return *AnimationFrame.Get(entry)
+	return animator.Frame
 }
 
 func SetAnimationFrame(entry *donburi.Entry, frame int) {
-	donburi.Add(entry, AnimationFrame, &frame)
+	animator := GetAnimator(entry)
+	if animator == nil {
+		return
+	}
+	animator.Frame = frame
+	SetAnimator(entry, animator)
 }
 
 func GetClip(entry *donburi.Entry) string {
-	if !entry.HasComponent(AnimationClip) {
+	animator := GetAnimator(entry)
+	if animator == nil {
 		return ""
 	}
-	return *AnimationClip.Get(entry)
+	return animator.Clip
 }
 
 func SetClip(entry *donburi.Entry, clip string) {
-	if GetClip(entry) == clip {
+	if !entry.HasComponent(Animator) {
 		return
 	}
 
-	SetAnimationState(entry, AnimationStatePlaying)
-	SetAnimationFrame(entry, 0)
+	animator := GetAnimator(entry)
+	if animator.Clip == clip {
+		return
+	}
 
-	donburi.Add(entry, AnimationClip, &clip)
+	animator.Clip = clip
+	animator.Frame = 0
+	animator.State = AnimationStatePlaying
 }
 
 func IsIdle(entry *donburi.Entry) bool {
