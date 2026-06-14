@@ -80,7 +80,7 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			rendering.SetLayer(spriteEntry, 6)
 
 			playerWidth, playerHeight, _ := images.GetFrameSize(playerImgHandle, 0)
-			transform.SetBounds(spriteEntry, &geom.AABB{
+			transform.SetLocalBounds(spriteEntry, &geom.AABB{
 				Min: geom.Vec2{X: -float64(playerWidth) / 2, Y: -float64(playerHeight)},
 				Max: geom.Vec2{X: float64(playerWidth) / 2, Y: 0},
 			})
@@ -172,7 +172,7 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 
 func drawDebugInfo(path *vector.Path, camera engine.Camera, entries []*donburi.Entry, img *ebiten.Image) {
 	for _, entry := range entries {
-		aabb := transform.GetBounds(entry).Translate(transform.GetPosition(entry))
+		aabb := transform.GetLocalBounds(entry).Translate(transform.GetPosition(entry))
 
 		min := camera.ToScreen(aabb.Min)
 		max := camera.ToScreen(aabb.Max)

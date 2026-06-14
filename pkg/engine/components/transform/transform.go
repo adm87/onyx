@@ -11,6 +11,12 @@ type transformMatrix struct {
 	geom  ebiten.GeoM
 }
 
+type TransformModel struct {
+	X, Y           float64
+	ScaleX, ScaleY float64
+	Rotation       float64
+}
+
 type (
 	Options struct {
 		Position geom.Vec2
@@ -21,8 +27,6 @@ type (
 	Option func(*Options)
 )
 
-type QueryCallback func(*donburi.Entry, geom.Vec2, geom.Vec2, float64)
-
 var (
 	defaultPosition = geom.Vec2{X: 0, Y: 0}
 	defaultScale    = geom.Vec2{X: 1, Y: 1}
@@ -31,11 +35,9 @@ var (
 )
 
 var (
-	Position = donburi.NewComponentType[geom.Vec2](defaultPosition)
-	Scale    = donburi.NewComponentType[geom.Vec2](defaultScale)
-	Rotation = donburi.NewComponentType[float64](defaultRotation)
-	Bounds   = donburi.NewComponentType[geom.AABB](geom.AABB{})
-	matrix   = donburi.NewComponentType[transformMatrix](defaultMatrix)
+	Transform = donburi.NewComponentType[TransformModel]()
+	Bounds    = donburi.NewComponentType[geom.AABB](geom.AABB{})
+	matrix    = donburi.NewComponentType[transformMatrix](defaultMatrix)
 )
 
 func defaultOptions() Options {
@@ -74,9 +76,7 @@ func WithBounds(bounds geom.AABB) Option {
 func NewTransform(ecs donburi.World, options ...Option) *donburi.Entry {
 	return AddTransform(ecs.Entry(
 		ecs.Create(
-			Position,
-			Scale,
-			Rotation,
+			Transform,
 			matrix,
 		),
 	), options...)
@@ -89,10 +89,8 @@ func AddTransform(entry *donburi.Entry, options ...Option) *donburi.Entry {
 		option(&opts)
 	}
 
-	SetPosition(entry, opts.Position)
-	SetScale(entry, opts.Scale.X, opts.Scale.Y)
-	SetRotation(entry, opts.Rotation)
-	SetBounds(entry, &opts.Bounds)
+	SetTransform(entry, opts.Position, opts.Scale, opts.Rotation)
+	SetLocalBounds(entry, &opts.Bounds)
 
 	m := defaultMatrix
 	donburi.Add(entry, matrix, &m)
@@ -109,56 +107,73 @@ func markDirty(entry *donburi.Entry) {
 
 // GetPosition retrieves the position component from an entity, returning a default value if it does not exist.
 func GetPosition(entry *donburi.Entry) geom.Vec2 {
-	if !entry.HasComponent(Position) {
+	if !entry.HasComponent(Transform) {
 		return defaultPosition
 	}
-	return *Position.Get(entry)
+	t := Transform.Get(entry)
+	return geom.Vec2{X: t.X, Y: t.Y}
 }
 
 // SetPosition sets the position component for an entity, adding it if it does not already exist.
 func SetPosition(entry *donburi.Entry, pos geom.Vec2) {
-	p := GetPosition(entry)
-	if p == pos {
+	if !entry.HasComponent(Transform) {
 		return
 	}
-	donburi.Add(entry, Position, &pos)
+
+	t := Transform.Get(entry)
+	if t.X == pos.X && t.Y == pos.Y {
+		return
+	}
+
+	t.X, t.Y = pos.X, pos.Y
 	markDirty(entry)
 }
 
 // GetScale retrieves the scale component from an entity, returning a default value if it does not exist.
 func GetScale(entry *donburi.Entry) geom.Vec2 {
-	if !entry.HasComponent(Scale) {
+	if !entry.HasComponent(Transform) {
 		return defaultScale
 	}
-	return *Scale.Get(entry)
+	t := Transform.Get(entry)
+	return geom.Vec2{X: t.ScaleX, Y: t.ScaleY}
 }
 
 // SetScale sets the scale component for an entity, adding it if it does not already exist.
 func SetScale(entry *donburi.Entry, x, y float64) {
-	s := GetScale(entry)
-	if s.X == x && s.Y == y {
+	if !entry.HasComponent(Transform) {
 		return
 	}
-	scale := geom.Vec2{X: x, Y: y}
-	donburi.Add(entry, Scale, &scale)
+
+	t := Transform.Get(entry)
+	if t.ScaleX == x && t.ScaleY == y {
+		return
+	}
+
+	t.ScaleX, t.ScaleY = x, y
 	markDirty(entry)
 }
 
 // GetRotation retrieves the rotation component from an entity, returning a default value if it does not exist.
 func GetRotation(entry *donburi.Entry) float64 {
-	if !entry.HasComponent(Rotation) {
+	if !entry.HasComponent(Transform) {
 		return defaultRotation
 	}
-	return *Rotation.Get(entry)
+	t := Transform.Get(entry)
+	return t.Rotation
 }
 
 // SetRotation sets the rotation component for an entity, adding it if it does not already exist.
 func SetRotation(entry *donburi.Entry, rotation float64) {
-	r := GetRotation(entry)
-	if r == rotation {
+	if !entry.HasComponent(Transform) {
 		return
 	}
-	donburi.Add(entry, Rotation, &rotation)
+
+	t := Transform.Get(entry)
+	if t.Rotation == rotation {
+		return
+	}
+
+	t.Rotation = rotation
 	markDirty(entry)
 }
 
@@ -171,27 +186,49 @@ func GetMatrix(entry *donburi.Entry) ebiten.GeoM {
 
 	m := matrix.Get(entry)
 	if m.dirty {
-		position := GetPosition(entry)
-		scale := GetScale(entry)
-		rotation := GetRotation(entry)
+		t := Transform.Get(entry)
 
 		m.geom.Reset()
-		m.geom.Scale(scale.X, scale.Y)
-		m.geom.Rotate(rotation)
-		m.geom.Translate(position.X, position.Y)
+		m.geom.Scale(t.ScaleX, t.ScaleY)
+		m.geom.Rotate(t.Rotation)
+		m.geom.Translate(t.X, t.Y)
 
 		m.dirty = false
 	}
 	return m.geom
 }
 
-func GetBounds(entry *donburi.Entry) geom.AABB {
+func GetTransform(entry *donburi.Entry) TransformModel {
+	if !entry.HasComponent(Transform) {
+		return TransformModel{
+			X:        defaultPosition.X,
+			Y:        defaultPosition.Y,
+			ScaleX:   defaultScale.X,
+			ScaleY:   defaultScale.Y,
+			Rotation: defaultRotation,
+		}
+	}
+	return *Transform.Get(entry)
+}
+
+func SetTransform(entry *donburi.Entry, position geom.Vec2, scale geom.Vec2, rotation float64) {
+	donburi.Add(entry, Transform, &TransformModel{
+		X:        position.X,
+		Y:        position.Y,
+		ScaleX:   scale.X,
+		ScaleY:   scale.Y,
+		Rotation: rotation,
+	})
+	markDirty(entry)
+}
+
+func GetLocalBounds(entry *donburi.Entry) geom.AABB {
 	if !entry.HasComponent(Bounds) {
 		return geom.AABB{}
 	}
 	return *Bounds.Get(entry)
 }
 
-func SetBounds(entry *donburi.Entry, bounds *geom.AABB) {
+func SetLocalBounds(entry *donburi.Entry, bounds *geom.AABB) {
 	donburi.Add(entry, Bounds, bounds)
 }

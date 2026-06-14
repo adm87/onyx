@@ -45,7 +45,7 @@ func (w *world) ECS() donburi.World {
 }
 
 func (w *world) Add(entry *donburi.Entry) {
-	aabb := transform.GetBounds(entry).Translate(transform.GetPosition(entry))
+	aabb := transform.GetLocalBounds(entry).Translate(transform.GetPosition(entry))
 	entity := entry.Entity()
 	index := w.entities.Insert(entity, aabb)
 	donburi.Add(entry, worldIndexing, &index)
@@ -59,7 +59,7 @@ func (w *world) Remove(entry *donburi.Entry) {
 
 func (w *world) Update(entry *donburi.Entry) {
 	index := worldIndexing.Get(entry)
-	aabb := transform.GetBounds(entry).Translate(transform.GetPosition(entry))
+	aabb := transform.GetLocalBounds(entry).Translate(transform.GetPosition(entry))
 	w.entities.Update(*index, aabb)
 }
 
@@ -71,7 +71,7 @@ func (w *world) UpdateBounds(entry *donburi.Entry, bounds geom.AABB) {
 func (w *world) QueryRegion(region geom.AABB, callback func(*donburi.Entry)) {
 	w.entities.Query(region, func(entity donburi.Entity) {
 		entry := w.ecs.Entry(entity)
-		aabb := transform.GetBounds(entry).Translate(transform.GetPosition(entry))
+		aabb := transform.GetLocalBounds(entry).Translate(transform.GetPosition(entry))
 		if !aabb.Intersects(region) {
 			return
 		}

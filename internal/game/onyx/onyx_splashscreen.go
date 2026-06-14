@@ -43,7 +43,7 @@ func (o *Onyx) SplashScreenScene() engine.SceneState {
 			rendering.SetAnchor(splashScreenEntry, 0.5, 0.5)
 			rendering.SetAlpha(splashScreenEntry, 0)
 
-			transform.SetBounds(splashScreenEntry, &geom.AABB{
+			transform.SetLocalBounds(splashScreenEntry, &geom.AABB{
 				Min: geom.Vec2{X: -float64(width) / 2, Y: -float64(height) / 2},
 				Max: geom.Vec2{X: float64(width) / 2, Y: float64(height) / 2},
 			})
