@@ -151,7 +151,9 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 		},
 		OnLateUpdate: func(ecs donburi.World, dt float64) error {
 			d := time.Duration(float64(time.Second) * dt)
-			o.game.World().QueryRegion(o.game.Camera().Viewport(), func(e *donburi.Entry) {
+			vp := o.game.Camera().Viewport()
+
+			o.game.World().QueryRegion(&vp, func(e *donburi.Entry) {
 				o.aseprite.UpdateAnimation(e, d)
 			})
 			return nil
@@ -173,7 +175,8 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 
 func drawDebugInfo(path *vector.Path, camera engine.Camera, entries []*donburi.Entry, img *ebiten.Image) {
 	for _, entry := range entries {
-		aabb := transform.GetLocalBounds(entry).Translate(transform.GetPosition(entry))
+		trans := transform.GetTransform(entry)
+		aabb := transform.GetLocalBounds(entry).Translate(trans.X, trans.Y)
 
 		min := camera.ToScreen(aabb.Min)
 		max := camera.ToScreen(aabb.Max)

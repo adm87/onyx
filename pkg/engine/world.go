@@ -16,7 +16,7 @@ type World interface {
 	Remove(entry *donburi.Entry)
 	Update(entry *donburi.Entry)
 
-	QueryRegion(region geom.AABB, callback func(*donburi.Entry))
+	QueryRegion(region *geom.AABB, callback func(*donburi.Entry))
 }
 
 type world struct {
@@ -45,7 +45,7 @@ func (w *world) ECS() donburi.World {
 }
 
 func (w *world) Add(entry *donburi.Entry) {
-	aabb := transform.GetLocalBounds(entry).Translate(transform.GetPosition(entry))
+	aabb := transform.GetWorldBounds(entry)
 	entity := entry.Entity()
 	index := w.entities.Insert(entity, aabb)
 	donburi.Add(entry, worldIndexing, &index)
@@ -59,19 +59,19 @@ func (w *world) Remove(entry *donburi.Entry) {
 
 func (w *world) Update(entry *donburi.Entry) {
 	index := worldIndexing.Get(entry)
-	aabb := transform.GetLocalBounds(entry).Translate(transform.GetPosition(entry))
+	aabb := transform.GetWorldBounds(entry)
 	w.entities.Update(*index, aabb)
 }
 
-func (w *world) UpdateBounds(entry *donburi.Entry, bounds geom.AABB) {
+func (w *world) UpdateBounds(entry *donburi.Entry, bounds *geom.AABB) {
 	index := worldIndexing.Get(entry)
 	w.entities.Update(*index, bounds)
 }
 
-func (w *world) QueryRegion(region geom.AABB, callback func(*donburi.Entry)) {
+func (w *world) QueryRegion(region *geom.AABB, callback func(*donburi.Entry)) {
 	w.entities.Query(region, func(entity donburi.Entity) {
 		entry := w.ecs.Entry(entity)
-		aabb := transform.GetLocalBounds(entry).Translate(transform.GetPosition(entry))
+		aabb := transform.GetWorldBounds(entry)
 		if !aabb.Intersects(region) {
 			return
 		}
@@ -81,7 +81,7 @@ func (w *world) QueryRegion(region geom.AABB, callback func(*donburi.Entry)) {
 
 func (w *world) render(screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) []*donburi.Entry {
 	w.queryResults = w.queryResults[:0]
-	w.QueryRegion(viewport, func(entry *donburi.Entry) {
+	w.QueryRegion(&viewport, func(entry *donburi.Entry) {
 		if !rendering.IsVisible(entry) {
 			return
 		}
