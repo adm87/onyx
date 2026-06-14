@@ -2,6 +2,7 @@ package onyx
 
 import (
 	"fmt"
+	"image/color"
 	"time"
 
 	"github.com/adm87/onyx/content"
@@ -10,6 +11,7 @@ import (
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
+	"github.com/adm87/onyx/pkg/engine/components/scene"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/engine/geom"
@@ -22,7 +24,8 @@ import (
 )
 
 var (
-	debugEntityInfo = false
+	debugEntityInfo   = false
+	debugColliderInfo = true
 )
 
 var gameplayManifest = []file.FilePath{
@@ -47,6 +50,8 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			tiled := o.tiled
 			aseprite := o.aseprite
 
+			o.game.Screen().SetBackgroundColor(color.RGBA{R: 100, G: 149, B: 237, A: 255})
+
 			err = assets.Load(content.AssetsFS(), gameplayManifest...)
 			assert.Nil(err, fmt.Sprintf("failed to load gameplay assets: %v", err))
 
@@ -68,24 +73,22 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 
 			aseprite.BuildAnimations(playerImgHandle, playerData)
 
-			for range 1 {
-				spriteEntry = aseprite.CreateSpriteEntity(ecs,
-					asepritemodule.WithImageHandle(playerImgHandle),
-					asepritemodule.WithClip("Run"),
-					asepritemodule.Playing(),
-				)
-				rendering.SetAnchor(spriteEntry, 0.5, 1.0)
-				rendering.SetLayer(spriteEntry, 6)
-				o.game.World().Add(spriteEntry)
+			spriteEntry = aseprite.CreateSpriteEntity(ecs,
+				asepritemodule.WithImageHandle(playerImgHandle),
+				asepritemodule.WithClip("Run"),
+				asepritemodule.Playing(),
+			)
+			rendering.SetAnchor(spriteEntry, 0.5, 1.0)
+			rendering.SetLayer(spriteEntry, 6)
+			o.game.World().Add(spriteEntry)
 
-				playerWidth, playerHeight, _ := images.GetFrameSize(playerImgHandle, 0)
-				rendering.OffsetBounds(spriteEntry, geom.Vec2{
-					X: -float64(playerWidth) / 2,
-					Y: -float64(playerHeight),
-				})
+			playerWidth, playerHeight, _ := images.GetFrameSize(playerImgHandle, 0)
+			scene.SetSceneBounds(spriteEntry, &geom.AABB{
+				Min: geom.Vec2{X: -float64(playerWidth) / 2, Y: -float64(playerHeight)},
+				Max: geom.Vec2{X: float64(playerWidth) / 2, Y: 0},
+			})
 
-				transform.SetPosition(spriteEntry, tilemap.Bounds().Center())
-			}
+			transform.SetPosition(spriteEntry, tilemap.Bounds().Center())
 
 			camera.SetPosition(tilemap.Bounds().Center())
 			camera.SetZoom(0.25)
@@ -96,11 +99,14 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 				return engine.SceneExitNone, ebiten.Termination
 			}
+			if inpututil.IsKeyJustPressed(ebiten.KeyF) {
+				ebiten.SetFullscreen(!ebiten.IsFullscreen())
+			}
 			if inpututil.IsKeyJustPressed(ebiten.KeyF3) {
 				debugEntityInfo = !debugEntityInfo
 			}
 			if inpututil.IsKeyJustPressed(ebiten.KeyF4) {
-				ebiten.SetFullscreen(!ebiten.IsFullscreen())
+				debugColliderInfo = !debugColliderInfo
 			}
 
 			move = geom.Vec2{}
@@ -152,21 +158,7 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 
 			if debugEntityInfo {
 				path.Reset()
-				for _, entry := range entries {
-					aabb := rendering.GetBounds(entry).Translate(transform.GetPosition(entry))
-
-					min := camera.ToScreen(aabb.Min)
-					max := camera.ToScreen(aabb.Max)
-
-					path.MoveTo(float32(min.X), float32(min.Y))
-					path.LineTo(float32(max.X), float32(min.Y))
-					path.LineTo(float32(max.X), float32(max.Y))
-					path.LineTo(float32(min.X), float32(max.Y))
-					path.Close()
-
-					ebitenutil.DebugPrintAt(img, fmt.Sprintf("Entity: %d", entry.Entity()), int(min.X), int(min.Y))
-				}
-				vector.StrokePath(img, &path, &vector.StrokeOptions{Width: 2}, &vector.DrawPathOptions{})
+				drawDebugInfo(&path, camera, entries, img)
 			}
 
 			min := o.game.Screen().SafeArea().Min
@@ -174,4 +166,22 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			return nil
 		},
 	}
+}
+
+func drawDebugInfo(path *vector.Path, camera engine.Camera, entries []*donburi.Entry, img *ebiten.Image) {
+	for _, entry := range entries {
+		aabb := scene.GetSceneBounds(entry).Translate(transform.GetPosition(entry))
+
+		min := camera.ToScreen(aabb.Min)
+		max := camera.ToScreen(aabb.Max)
+
+		path.MoveTo(float32(min.X), float32(min.Y))
+		path.LineTo(float32(max.X), float32(min.Y))
+		path.LineTo(float32(max.X), float32(max.Y))
+		path.LineTo(float32(min.X), float32(max.Y))
+		path.Close()
+
+		ebitenutil.DebugPrintAt(img, fmt.Sprintf("Entity:\n  ID %d", entry.Entity()), int(min.X), int(min.Y))
+	}
+	vector.StrokePath(img, path, &vector.StrokeOptions{Width: 2}, &vector.DrawPathOptions{})
 }

@@ -25,7 +25,6 @@ type (
 		Anchor   geom.Vec2
 		Color    color.RGBA
 		Filter   ebiten.Filter
-		Bounds   geom.AABB
 	}
 	Option func(*Options)
 )
@@ -53,8 +52,6 @@ var (
 	Color    = donburi.NewComponentType[color.RGBA](defaultColor)
 	Filter   = donburi.NewComponentType[ebiten.Filter](defaultFilter)
 	Renderer = donburi.NewComponentType[RendererInfo](defaultRenderer)
-
-	bounds = donburi.NewComponentType[geom.AABB]()
 )
 
 var query = donburi.NewQuery(
@@ -119,64 +116,6 @@ func WithFilter(filter ebiten.Filter) Option {
 	}
 }
 
-func WithBounds(aabb geom.AABB) Option {
-	return func(opts *Options) {
-		opts.Bounds = aabb
-	}
-}
-
-// Query iterates over all entities with the necessary components for rendering and applies the provided function to each entry.
-func Query(ecs donburi.World, fn QueryCallback) {
-	query.Each(ecs, func(entry *donburi.Entry) {
-		anchor := GetAnchor(entry)
-		color := GetColor(entry)
-		filter := GetFilter(entry)
-		info := Renderer.Get(entry)
-		fn(entry, anchor, color, filter, info.Visible, info.Layer, info.ZIndex, info.ID)
-	})
-}
-
-// QueryWith iterates over all entities that match the provided query and have the necessary components for rendering,
-// then applies the provided function to each entry.
-func QueryWith(ecs donburi.World, q *donburi.Query, fn QueryCallback) {
-	q.Each(ecs, func(entry *donburi.Entry) {
-		anchor := GetAnchor(entry)
-		color := GetColor(entry)
-		filter := GetFilter(entry)
-		info := Renderer.Get(entry)
-		fn(entry, anchor, color, filter, info.Visible, info.Layer, info.ZIndex, info.ID)
-	})
-}
-
-// QueryVisible iterates over all entities with the necessary components for rendering that are also marked as visible,
-func QueryVisible(ecs donburi.World, fn QueryCallback) {
-	query.Each(ecs, func(entry *donburi.Entry) {
-		info := Renderer.Get(entry)
-		if !info.Visible {
-			return
-		}
-		anchor := GetAnchor(entry)
-		color := GetColor(entry)
-		filter := GetFilter(entry)
-		fn(entry, anchor, color, filter, info.Visible, info.Layer, info.ZIndex, info.ID)
-	})
-}
-
-// QueryVisibleWith iterates over all entities that match the provided query and have the necessary components for rendering,
-// then applies the provided function to each entry that is also marked as visible.
-func QueryVisibleWith(ecs donburi.World, q *donburi.Query, fn QueryCallback) {
-	q.Each(ecs, func(entry *donburi.Entry) {
-		info := Renderer.Get(entry)
-		if !info.Visible {
-			return
-		}
-		anchor := GetAnchor(entry)
-		color := GetColor(entry)
-		filter := GetFilter(entry)
-		fn(entry, anchor, color, filter, info.Visible, info.Layer, info.ZIndex, info.ID)
-	})
-}
-
 // NewRenderer creates a new entity with the necessary components for rendering and applies the provided options.
 func NewRenderer(ecs donburi.World, options ...Option) *donburi.Entry {
 	return AddRenderer(ecs.Entry(
@@ -199,7 +138,6 @@ func AddRenderer(entry *donburi.Entry, options ...Option) *donburi.Entry {
 	SetFilter(entry, opts.Filter)
 	SetAnchor(entry, opts.Anchor.X, opts.Anchor.Y)
 	SetColor(entry, opts.Color)
-	SetBounds(entry, opts.Bounds)
 
 	donburi.Add(entry, Renderer, &RendererInfo{
 		Visible: opts.Visible,
@@ -325,23 +263,4 @@ func SetVisible(entry *donburi.Entry, visible bool) {
 	}
 	info := Renderer.Get(entry)
 	info.Visible = visible
-}
-
-func GetBounds(entry *donburi.Entry) geom.AABB {
-	if !entry.HasComponent(bounds) {
-		return geom.AABB{}
-	}
-	return *bounds.Get(entry)
-}
-
-func SetBounds(entry *donburi.Entry, aabb geom.AABB) {
-	donburi.Add(entry, bounds, &aabb)
-}
-
-// OffsetBounds use this to move the bounds in local space around the entity's local [0, 0]
-func OffsetBounds(entry *donburi.Entry, offset geom.Vec2) {
-	if !entry.HasComponent(bounds) {
-		return
-	}
-	SetBounds(entry, bounds.Get(entry).Translate(offset))
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
+	"github.com/adm87/onyx/pkg/engine/components/scene"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/engine/geom"
@@ -100,7 +101,8 @@ func (m *TiledModule) CreateTilemapEntity(ecs donburi.World, opts ...TilemapOpti
 	rendering.AddRenderer(entry,
 		rendering.WithRendererID(m.renderingAdapterHandle),
 	)
-	rendering.SetBounds(entry, geom.AABB{
+
+	scene.SetSceneBounds(entry, &geom.AABB{
 		Min: geom.Vec2{X: 0, Y: 0},
 		Max: geom.Vec2{X: float64(width), Y: float64(height)},
 	})

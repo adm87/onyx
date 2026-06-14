@@ -20,6 +20,7 @@ type Screen interface {
 	RestoreBuffer()
 	Size() geom.Vec2
 	SafeArea() geom.AABB
+	SetBackgroundColor(color.RGBA)
 }
 
 type screen struct {
@@ -96,6 +97,10 @@ func (s *screen) RestoreBuffer() {
 func (s *screen) Size() geom.Vec2 {
 	bufWidth, bufHeight := s.buffer.Bounds().Dx(), s.buffer.Bounds().Dy()
 	return geom.Vec2{X: float64(bufWidth), Y: float64(bufHeight)}
+}
+
+func (s *screen) SetBackgroundColor(color color.RGBA) {
+	s.backgroundColor = color
 }
 
 func (s *screen) calculateScreenScale(outsideWidth, outsideHeight int) {

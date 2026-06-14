@@ -7,6 +7,7 @@ import (
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
+	"github.com/adm87/onyx/pkg/engine/components/scene"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/images"
 	"github.com/tanema/gween"
@@ -17,16 +18,14 @@ import (
 func (o *Onyx) SplashScreenScene() engine.SceneState {
 	var splashScreenEntry *donburi.Entry
 	var sequence *gween.Sequence
-
 	var opacity float32
 	var sequenceComplete bool
-
-	assets := o.game.Assets()
-	world := o.game.World()
-	screen := o.game.Screen()
-
 	return engine.SceneState{
 		OnEnter: func(ecs donburi.World) error {
+			assets := o.game.Assets()
+			world := o.game.World()
+			screen := o.game.Screen()
+
 			err := assets.Load(content.EmbeddedFS(), content.EmbeddedSplash1920x1080Black)
 			assert.Nil(err, fmt.Sprintf("failed to load splash screen image: %v", err))
 
@@ -43,9 +42,10 @@ func (o *Onyx) SplashScreenScene() engine.SceneState {
 
 			rendering.SetAnchor(splashScreenEntry, 0.5, 0.5)
 			rendering.SetAlpha(splashScreenEntry, 0)
-			rendering.OffsetBounds(splashScreenEntry, geom.Vec2{
-				X: -float64(width) / 2,
-				Y: -float64(height) / 2,
+
+			scene.SetSceneBounds(splashScreenEntry, &geom.AABB{
+				Min: geom.Vec2{X: -float64(width) / 2, Y: -float64(height) / 2},
+				Max: geom.Vec2{X: float64(width) / 2, Y: float64(height) / 2},
 			})
 
 			world.Add(splashScreenEntry)
@@ -60,6 +60,10 @@ func (o *Onyx) SplashScreenScene() engine.SceneState {
 			return nil
 		},
 		OnExit: func(ecs donburi.World) error {
+			assets := o.game.Assets()
+			world := o.game.World()
+			screen := o.game.Screen()
+
 			assets.Unload(content.EmbeddedSplash1920x1080Black)
 			screen.RestoreBuffer()
 			world.Remove(splashScreenEntry)

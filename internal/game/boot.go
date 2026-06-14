@@ -2,7 +2,6 @@ package game
 
 import (
 	"context"
-	"image/color"
 	"path/filepath"
 
 	"github.com/adm87/onyx/content"
@@ -32,7 +31,6 @@ func Boot() error {
 		engine.WithTitle("Onyx"),
 		engine.WithScreenSize(1280, 720),
 		engine.WithScreenScale(engine.ScreenScaleFill),
-		engine.WithBackgroundColor(color.RGBA{R: 100, G: 149, B: 237, A: 255}),
 		engine.WithFullscreen(args.Fullscreen),
 		engine.WithInitialScene(onyx.GameplaySceneID),
 		engine.WithFilter(ebiten.FilterNearest),

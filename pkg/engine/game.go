@@ -14,7 +14,6 @@ type Game interface {
 
 	Assets() Assets
 	Camera() Camera
-	Collision() Collision
 	Logger() Logger
 	Renderer() Renderer
 	Scenes() Scenes
@@ -26,15 +25,14 @@ type Game interface {
 type game struct {
 	ctx context.Context
 
-	assets    *assets
-	camera    *camera
-	collision *collision
-	logger    *logger
-	renderer  *renderer
-	scenes    *scenes
-	screen    *screen
-	time      *time
-	world     *world
+	assets   *assets
+	camera   *camera
+	logger   *logger
+	renderer *renderer
+	scenes   *scenes
+	screen   *screen
+	time     *time
+	world    *world
 }
 
 func setupWindow(title string, width, height int) {
@@ -62,14 +60,11 @@ func NewGame(opts ...Option) Game {
 		logger,
 	)
 
-	collision := newCollision()
-
 	renderer := newRenderer(
 		logger,
 	)
 
 	world := newWorld(
-		collision,
 		renderer,
 	)
 
@@ -94,16 +89,15 @@ func NewGame(opts ...Option) Game {
 	)
 
 	return &game{
-		ctx:       context.Background(),
-		assets:    assets,
-		camera:    camera,
-		logger:    logger,
-		renderer:  renderer,
-		collision: collision,
-		screen:    screen,
-		scenes:    scenes,
-		time:      time,
-		world:     world,
+		ctx:      context.Background(),
+		assets:   assets,
+		camera:   camera,
+		logger:   logger,
+		renderer: renderer,
+		screen:   screen,
+		scenes:   scenes,
+		time:     time,
+		world:    world,
 	}
 }
 
@@ -113,10 +107,6 @@ func (g *game) Assets() Assets {
 
 func (g *game) Camera() Camera {
 	return g.camera
-}
-
-func (g *game) Collision() Collision {
-	return g.collision
 }
 
 func (g *game) Logger() Logger {
