@@ -28,9 +28,7 @@ type SceneState struct {
 }
 
 type scenes struct {
-	world    *world
-	renderer *renderer
-	logger   *logger
+	logger *logger
 
 	currentScene SceneID
 	nextScene    SceneID
@@ -44,10 +42,8 @@ const (
 	SceneIDNone   SceneID       = ""
 )
 
-func newScenes(initialScene SceneID, world *world, renderer *renderer, logger *logger) *scenes {
+func newScenes(initialScene SceneID, renderer *renderer, logger *logger) *scenes {
 	return &scenes{
-		world:        world,
-		renderer:     renderer,
 		logger:       logger,
 		currentScene: SceneIDNone,
 		nextScene:    initialScene,
@@ -96,9 +92,8 @@ func (s *scenes) update(ecs donburi.World, steps int, deltaTime float64, fixedDe
 	return s.lateUpdateCurrent(ecs, currentState, deltaTime)
 }
 
-func (s *scenes) render(ecs donburi.World, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
-	s.renderer.render(ecs, s.world, screen, viewport, viewMatrix)
-	return s.renderCurrent(s.renderer.entries, screen, viewport, viewMatrix)
+func (s *scenes) render(entries []*donburi.Entry, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
+	return s.renderCurrent(entries, screen, viewport, viewMatrix)
 }
 
 func (s *scenes) transitionToNext(ecs donburi.World) error {

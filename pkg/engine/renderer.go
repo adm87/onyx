@@ -25,6 +25,8 @@ type RenderingJobPool interface {
 type RenderingAdapter interface {
 	GetJobs(
 		entry *donburi.Entry,
+		renderer *rendering.RendererModel,
+		bounds geom.AABB,
 		viewport geom.AABB,
 		viewMatrix ebiten.GeoM,
 		pool RenderingJobPool) []*RenderingJob
@@ -57,9 +59,8 @@ type renderer struct {
 	adapters *slotmap.SlotMap[RenderingAdapter]
 	jobPool  *renderingJobPool
 
-	jobs     []*RenderingJob
-	entries  []*donburi.Entry
-	entities []donburi.Entity
+	jobs    []*RenderingJob
+	entries []*donburi.Entry
 }
 
 func newRenderer(logger Logger) *renderer {
@@ -69,9 +70,8 @@ func newRenderer(logger Logger) *renderer {
 		jobPool: &renderingJobPool{
 			pool: make([]*RenderingJob, 0, 100),
 		},
-		jobs:     make([]*RenderingJob, 0, 100),
-		entries:  make([]*donburi.Entry, 0, 100),
-		entities: make([]donburi.Entity, 0, 100),
+		jobs:    make([]*RenderingJob, 0, 100),
+		entries: make([]*donburi.Entry, 0, 100),
 	}
 }
 
@@ -79,15 +79,13 @@ func (r *renderer) AddRenderingAdapter(adapter RenderingAdapter) uint64 {
 	return r.adapters.Insert(adapter)
 }
 
-func (r *renderer) render(ecs donburi.World, world *world, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) {
-	r.entities = world.entities.QueryInto(viewport, r.entities[:0])
-
+func (r *renderer) render(entries []*donburi.Entry, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) {
 	r.entries = r.entries[:0]
 	r.jobs = r.jobs[:0]
 	r.jobPool.i = 0
 
-	for i := range r.entities {
-		entry := ecs.Entry(r.entities[i])
+	for i := range entries {
+		entry := entries[i]
 
 		renderer := rendering.GetRenderer(entry)
 		if !renderer.Visible {
@@ -107,7 +105,7 @@ func (r *renderer) render(ecs donburi.World, world *world, screen *ebiten.Image,
 			continue
 		}
 
-		jobs := adapter.GetJobs(entry, viewport, viewMatrix, r.jobPool)
+		jobs := adapter.GetJobs(entry, renderer, aabb, viewport, viewMatrix, r.jobPool)
 
 		r.jobs = append(r.jobs, jobs...)
 		r.entries = append(r.entries, entry)

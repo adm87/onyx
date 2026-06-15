@@ -36,6 +36,8 @@ type game struct {
 	screen   *screen
 	time     *time
 	world    *world
+
+	renderables []*donburi.Entry
 }
 
 func setupWindow(title string, width, height int) {
@@ -73,7 +75,6 @@ func NewGame(opts ...Option) Game {
 
 	scenes := newScenes(
 		cfg.InitialScene,
-		world,
 		renderer,
 		logger,
 	)
@@ -89,16 +90,17 @@ func NewGame(opts ...Option) Game {
 	)
 
 	return &game{
-		ctx:      context.Background(),
-		ecs:      ecs,
-		assets:   assets,
-		camera:   camera,
-		logger:   logger,
-		renderer: renderer,
-		screen:   screen,
-		scenes:   scenes,
-		time:     time,
-		world:    world,
+		ctx:         context.Background(),
+		ecs:         ecs,
+		assets:      assets,
+		camera:      camera,
+		logger:      logger,
+		renderer:    renderer,
+		screen:      screen,
+		scenes:      scenes,
+		time:        time,
+		world:       world,
+		renderables: make([]*donburi.Entry, 0, 100),
 	}
 }
 
@@ -175,10 +177,9 @@ func (g *game) Draw(screen *ebiten.Image) {
 		viewMatrix := g.camera.View()
 		viewport := g.camera.Viewport()
 
-		if err := g.scenes.render(g.ecs, g.screen.buffer, viewport, viewMatrix); err != nil {
-			g.logger.Error("scene render pipeline: %v", err)
-			return
-		}
+		g.renderables = g.world.QueryInto(g.ecs, viewport, g.renderables[:0])
+		g.renderer.render(g.renderables, g.screen.buffer, viewport, viewMatrix)
+		g.scenes.render(g.renderables, g.screen.buffer, viewport, viewMatrix)
 
 		screen.DrawImage(g.screen.buffer, g.screen.options)
 	}

@@ -72,6 +72,8 @@ func (a *renderingAdapter) releaseBuffer(handle uint64) {
 
 func (a *renderingAdapter) GetJobs(
 	entry *donburi.Entry,
+	renderer *rendering.RendererModel,
+	bounds geom.AABB,
 	viewport geom.AABB,
 	viewMatrix ebiten.GeoM,
 	pool engine.RenderingJobPool) []*engine.RenderingJob {
@@ -105,7 +107,6 @@ func (a *renderingAdapter) GetJobs(
 		a.lastMinX, a.lastMaxX, a.lastMinY, a.lastMaxY = minTileX, maxTileX, minTileY, maxTileY
 	}
 
-	renderer := rendering.GetRenderer(entry)
 	for i := range tilemap.layers {
 		if !tmx.Layers[i].Visible {
 			continue

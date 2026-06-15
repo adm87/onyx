@@ -12,21 +12,19 @@ type World interface {
 	Remove(entry *donburi.Entry)
 	Update(entry *donburi.Entry)
 
-	QueryInto(ecs donburi.World, region geom.AABB, results []donburi.Entity) []donburi.Entity
+	QueryInto(ecs donburi.World, region geom.AABB, results []*donburi.Entry) []*donburi.Entry
 	QueryRegion(ecs donburi.World, region geom.AABB, callback func(entry *donburi.Entry))
 }
 
 type world struct {
-	entities     *spatialhash.SpatialHash[donburi.Entity]
-	queryResults []*donburi.Entry
+	entities *spatialhash.HashGrid[donburi.Entity]
 }
 
 var worldIndexing = donburi.NewComponentType[uint64]()
 
 func newWorld() *world {
 	return &world{
-		entities:     spatialhash.New[donburi.Entity](16, spatialhash.Padding{}),
-		queryResults: make([]*donburi.Entry, 0, 100),
+		entities: spatialhash.NewHashGrid[donburi.Entity](16, spatialhash.Padding{}),
 	}
 }
 
@@ -54,8 +52,11 @@ func (w *world) UpdateBounds(entry *donburi.Entry, bounds geom.AABB) {
 	w.entities.Update(*index, bounds)
 }
 
-func (w *world) QueryInto(ecs donburi.World, region geom.AABB, results []donburi.Entity) []donburi.Entity {
-	return w.entities.QueryInto(region, results)
+func (w *world) QueryInto(ecs donburi.World, region geom.AABB, results []*donburi.Entry) []*donburi.Entry {
+	w.entities.Query(region, func(entity donburi.Entity) {
+		results = append(results, ecs.Entry(entity))
+	})
+	return results
 }
 
 func (w *world) QueryRegion(ecs donburi.World, region geom.AABB, callback func(entry *donburi.Entry)) {

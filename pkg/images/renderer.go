@@ -23,13 +23,14 @@ func newRenderingAdapter(assetAdapter *assetAdapter) *renderingAdapter {
 
 func (a *renderingAdapter) GetJobs(
 	entry *donburi.Entry,
+	renderer *rendering.RendererModel,
+	bounds geom.AABB,
 	viewport geom.AABB,
 	viewMatrix ebiten.GeoM,
 	pool engine.RenderingJobPool) []*engine.RenderingJob {
 	a.jobs = a.jobs[:0]
 
 	image := GetImage(entry)
-	renderer := rendering.GetRenderer(entry)
 	trans := transform.GetTransform(entry)
 	matrix := transform.GetMatrix(entry)
 
