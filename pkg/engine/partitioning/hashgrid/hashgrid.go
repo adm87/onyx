@@ -1,4 +1,4 @@
-package spatialhash
+package hashgrid
 
 import (
 	"math"
@@ -28,7 +28,7 @@ type HashGrid[T comparable] struct {
 	padding    Padding
 }
 
-func NewHashGrid[T comparable](resolution int, padding Padding) *HashGrid[T] {
+func New[T comparable](resolution int, padding Padding) *HashGrid[T] {
 	return &HashGrid[T]{
 		store:      slotmap.New[T](0),
 		cellCache:  make([]uint64, 0),

@@ -3,7 +3,7 @@ package engine
 import (
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
-	"github.com/adm87/onyx/pkg/engine/partitioning/spatialhash"
+	"github.com/adm87/onyx/pkg/engine/partitioning/hashgrid"
 	"github.com/yohamta/donburi"
 )
 
@@ -17,14 +17,14 @@ type World interface {
 }
 
 type world struct {
-	entities *spatialhash.HashGrid[donburi.Entity]
+	entities *hashgrid.HashGrid[donburi.Entity]
 }
 
 var worldIndexing = donburi.NewComponentType[uint64]()
 
 func newWorld() *world {
 	return &world{
-		entities: spatialhash.NewHashGrid[donburi.Entity](16, spatialhash.Padding{}),
+		entities: hashgrid.New[donburi.Entity](16, hashgrid.Padding{}),
 	}
 }
 
