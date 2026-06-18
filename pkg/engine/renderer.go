@@ -59,8 +59,7 @@ type renderer struct {
 	adapters *slotmap.SlotMap[RenderingAdapter]
 	jobPool  *renderingJobPool
 
-	jobs    []*RenderingJob
-	entries []*donburi.Entry
+	jobs []*RenderingJob
 }
 
 func newRenderer(logger Logger) *renderer {
@@ -70,8 +69,7 @@ func newRenderer(logger Logger) *renderer {
 		jobPool: &renderingJobPool{
 			pool: make([]*RenderingJob, 0, 100),
 		},
-		jobs:    make([]*RenderingJob, 0, 100),
-		entries: make([]*donburi.Entry, 0, 100),
+		jobs: make([]*RenderingJob, 0, 100),
 	}
 }
 
@@ -80,7 +78,6 @@ func (r *renderer) AddRenderingAdapter(adapter RenderingAdapter) uint64 {
 }
 
 func (r *renderer) render(entries []*donburi.Entry, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) {
-	r.entries = r.entries[:0]
 	r.jobs = r.jobs[:0]
 	r.jobPool.i = 0
 
@@ -97,18 +94,13 @@ func (r *renderer) render(entries []*donburi.Entry, screen *ebiten.Image, viewpo
 			continue
 		}
 
-		rendererID := rendering.GetRendererID(entry)
-		adapter, exists := r.adapters.Get(rendererID)
-
+		adapter, exists := r.adapters.Get(renderer.ID)
 		if !exists {
-			r.logger.Warn("renderer adapter not found for entry renderer: %v", rendererID)
+			r.logger.Warn("renderer adapter not found for entry renderer: %v", renderer.ID)
 			continue
 		}
 
-		jobs := adapter.GetJobs(entry, renderer, aabb, viewport, viewMatrix, r.jobPool)
-
-		r.jobs = append(r.jobs, jobs...)
-		r.entries = append(r.entries, entry)
+		r.jobs = append(r.jobs, adapter.GetJobs(entry, renderer, aabb, viewport, viewMatrix, r.jobPool)...)
 	}
 
 	slices.SortFunc(r.jobs, func(a, b *RenderingJob) int {
