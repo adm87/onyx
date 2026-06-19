@@ -1,10 +1,10 @@
 package onyx
 
 import (
-	"github.com/adm87/onyx/pkg/aseprite"
 	"github.com/adm87/onyx/pkg/engine"
-	"github.com/adm87/onyx/pkg/images"
-	"github.com/adm87/onyx/pkg/tiled"
+	"github.com/adm87/onyx/pkg/plugins/aseprite"
+	"github.com/adm87/onyx/pkg/plugins/images"
+	"github.com/adm87/onyx/pkg/plugins/tiled"
 )
 
 const (

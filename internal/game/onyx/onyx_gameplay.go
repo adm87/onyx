@@ -6,16 +6,16 @@ import (
 	"time"
 
 	"github.com/adm87/onyx/content"
-	"github.com/adm87/onyx/pkg/aseprite"
-	asepritemodule "github.com/adm87/onyx/pkg/aseprite"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/engine/geom"
-	"github.com/adm87/onyx/pkg/images"
-	tiledmodule "github.com/adm87/onyx/pkg/tiled"
+	"github.com/adm87/onyx/pkg/plugins/aseprite"
+	asepritemodule "github.com/adm87/onyx/pkg/plugins/aseprite"
+	"github.com/adm87/onyx/pkg/plugins/images"
+	tiledmodule "github.com/adm87/onyx/pkg/plugins/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -152,10 +152,8 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 		},
 		OnLateUpdate: func(ecs donburi.World, dt float64) error {
 			d := time.Duration(float64(time.Second) * dt)
-			o.game.World().QueryRegion(ecs, o.game.Camera().Viewport(), func(entry *donburi.Entry) {
-				if aseprite.IsPlaying(entry) {
-					o.aseprite.UpdateAnimation(entry, d)
-				}
+			o.game.World().Query(o.game.Camera().Viewport(), func(entry *donburi.Entry) {
+				o.aseprite.UpdateAnimation(entry, d)
 			})
 			return nil
 		},

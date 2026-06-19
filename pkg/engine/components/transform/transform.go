@@ -37,6 +37,7 @@ var (
 var (
 	Transform = donburi.NewComponentType[TransformModel]()
 	Bounds    = donburi.NewComponentType[geom.AABB](geom.AABB{})
+	Indexing  = donburi.NewComponentType[uint64]()
 	matrix    = donburi.NewComponentType[transformMatrix](defaultMatrix)
 )
 
@@ -77,6 +78,8 @@ func NewTransform(ecs donburi.World, options ...Option) *donburi.Entry {
 	return AddTransform(ecs.Entry(
 		ecs.Create(
 			Transform,
+			Indexing,
+			Bounds,
 			matrix,
 		),
 	), options...)
@@ -240,4 +243,15 @@ func GetWorldBounds(entry *donburi.Entry) geom.AABB {
 
 	t := Transform.Get(entry)
 	return Bounds.Get(entry).Translate(t.X, t.Y)
+}
+
+func GetIndexing(entry *donburi.Entry) uint64 {
+	if !entry.HasComponent(Indexing) {
+		return 0
+	}
+	return *Indexing.Get(entry)
+}
+
+func SetIndexing(entry *donburi.Entry, id uint64) {
+	donburi.Add(entry, Indexing, &id)
 }

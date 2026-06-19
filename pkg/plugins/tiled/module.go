@@ -9,7 +9,7 @@ import (
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/engine/geom"
-	"github.com/adm87/onyx/pkg/images"
+	"github.com/adm87/onyx/pkg/plugins/images"
 	"github.com/yohamta/donburi"
 )
 

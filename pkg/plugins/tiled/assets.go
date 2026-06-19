@@ -10,7 +10,7 @@ import (
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/engine/storage/slotmap"
-	"github.com/adm87/onyx/pkg/images"
+	"github.com/adm87/onyx/pkg/plugins/images"
 )
 
 var tiledExtensions = []file.FileExt{".tmx", ".tsx"}

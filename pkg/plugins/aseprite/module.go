@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/adm87/onyx/pkg/engine/assert"
-	"github.com/adm87/onyx/pkg/images"
+	"github.com/adm87/onyx/pkg/plugins/images"
 	"github.com/yohamta/donburi"
 )
 

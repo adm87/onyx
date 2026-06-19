@@ -71,8 +71,6 @@ func NewGame(opts ...Option) Game {
 		logger,
 	)
 
-	world := newWorld()
-
 	scenes := newScenes(
 		cfg.InitialScene,
 		renderer,
@@ -81,6 +79,10 @@ func NewGame(opts ...Option) Game {
 
 	time := newTime(
 		cfg.FPS,
+	)
+
+	world := newWorld(
+		ecs,
 	)
 
 	camera := newCamera(
@@ -177,7 +179,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 		viewMatrix := g.camera.View()
 		viewport := g.camera.Viewport()
 
-		g.renderables = g.world.QueryInto(g.ecs, viewport, g.renderables[:0])
+		g.renderables = g.world.queryInto(viewport, g.renderables[:0])
 		g.renderer.render(g.renderables, g.screen.buffer, viewport, viewMatrix)
 		g.scenes.render(g.renderables, g.screen.buffer, viewport, viewMatrix)
 

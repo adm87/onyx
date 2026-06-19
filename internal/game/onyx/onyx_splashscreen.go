@@ -9,7 +9,7 @@ import (
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
-	"github.com/adm87/onyx/pkg/images"
+	"github.com/adm87/onyx/pkg/plugins/images"
 	"github.com/tanema/gween"
 	"github.com/tanema/gween/ease"
 	"github.com/yohamta/donburi"

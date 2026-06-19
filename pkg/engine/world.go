@@ -11,56 +11,63 @@ type World interface {
 	Add(entry *donburi.Entry)
 	Remove(entry *donburi.Entry)
 	Update(entry *donburi.Entry)
-
-	QueryInto(ecs donburi.World, region geom.AABB, results []*donburi.Entry) []*donburi.Entry
-	QueryRegion(ecs donburi.World, region geom.AABB, callback func(entry *donburi.Entry))
+	Query(region geom.AABB, callback func(*donburi.Entry))
 }
 
 type world struct {
+	ecs      donburi.World
 	entities *hashgrid.HashGrid[donburi.Entity]
 }
 
-var worldIndexing = donburi.NewComponentType[uint64]()
-
-func newWorld() *world {
+func newWorld(ecs donburi.World) *world {
 	return &world{
-		entities: hashgrid.New[donburi.Entity](16, hashgrid.Padding{}),
+		ecs:      ecs,
+		entities: hashgrid.New[donburi.Entity](32, hashgrid.Padding{}),
 	}
 }
 
 func (w *world) Add(entry *donburi.Entry) {
-	aabb := transform.GetWorldBounds(entry)
-	entity := entry.Entity()
-	index := w.entities.Insert(entity, aabb)
-	donburi.Add(entry, worldIndexing, &index)
+	if transform.GetIndexing(entry) != 0 {
+		return
+	}
+
+	bounds := transform.GetWorldBounds(entry)
+	id := w.entities.Insert(entry.Entity(), bounds)
+
+	transform.SetIndexing(entry, id)
 }
 
 func (w *world) Remove(entry *donburi.Entry) {
-	index := worldIndexing.Get(entry)
-	w.entities.Remove(*index)
-	entry.Remove()
+	id := transform.GetIndexing(entry)
+	if id == 0 {
+		return
+	}
+
+	w.entities.Remove(id)
+	transform.SetIndexing(entry, 0)
 }
 
 func (w *world) Update(entry *donburi.Entry) {
-	index := worldIndexing.Get(entry)
-	aabb := transform.GetWorldBounds(entry)
-	w.entities.Update(*index, aabb)
+	id := transform.GetIndexing(entry)
+	if id == 0 {
+		return
+	}
+
+	bounds := transform.GetWorldBounds(entry)
+	w.entities.Update(id, bounds)
 }
 
-func (w *world) UpdateBounds(entry *donburi.Entry, bounds geom.AABB) {
-	index := worldIndexing.Get(entry)
-	w.entities.Update(*index, bounds)
-}
-
-func (w *world) QueryInto(ecs donburi.World, region geom.AABB, results []*donburi.Entry) []*donburi.Entry {
+func (w *world) Query(region geom.AABB, callback func(*donburi.Entry)) {
 	w.entities.Query(region, func(entity donburi.Entity) {
-		results = append(results, ecs.Entry(entity))
+		entry := w.ecs.Entry(entity)
+		callback(entry)
 	})
-	return results
 }
 
-func (w *world) QueryRegion(ecs donburi.World, region geom.AABB, callback func(entry *donburi.Entry)) {
+func (w *world) queryInto(region geom.AABB, result []*donburi.Entry) []*donburi.Entry {
 	w.entities.Query(region, func(entity donburi.Entity) {
-		callback(ecs.Entry(entity))
+		entry := w.ecs.Entry(entity)
+		result = append(result, entry)
 	})
+	return result
 }

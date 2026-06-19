@@ -7,11 +7,11 @@ import (
 	"github.com/adm87/onyx/content"
 	"github.com/adm87/onyx/internal/game/cli"
 	"github.com/adm87/onyx/internal/game/onyx"
-	"github.com/adm87/onyx/pkg/aseprite"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
-	"github.com/adm87/onyx/pkg/images"
-	"github.com/adm87/onyx/pkg/tiled"
+	"github.com/adm87/onyx/pkg/plugins/aseprite"
+	"github.com/adm87/onyx/pkg/plugins/images"
+	"github.com/adm87/onyx/pkg/plugins/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
