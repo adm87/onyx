@@ -4,18 +4,13 @@ import (
 	"image"
 
 	"github.com/adm87/onyx/pkg/engine"
-	"github.com/adm87/onyx/pkg/engine/assert"
-	"github.com/adm87/onyx/pkg/engine/components/rendering"
-	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/file"
-	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
 
 type ImagesPlugin struct {
-	assetAdapter     *assetAdapter
-	renderingAdapter *renderingAdapter
+	assetAdapter *assetAdapter
 
 	assetAdapterHandle     uint64
 	renderingAdapterHandle uint64
@@ -23,12 +18,9 @@ type ImagesPlugin struct {
 
 func NewImagesPlugin(assets engine.Assets, renderer engine.Renderer) *ImagesPlugin {
 	assetAdapter := newAssetAdapter(assets)
-	renderingAdapter := newRenderingAdapter(assetAdapter)
 	return &ImagesPlugin{
-		assetAdapter:           assetAdapter,
-		renderingAdapter:       renderingAdapter,
-		assetAdapterHandle:     assets.AddAssetAdapter(assetAdapter),
-		renderingAdapterHandle: renderer.AddRenderingAdapter(renderingAdapter),
+		assetAdapter:       assetAdapter,
+		assetAdapterHandle: assets.AddAssetAdapter(assetAdapter),
 	}
 }
 
@@ -84,18 +76,6 @@ func (m *ImagesPlugin) CreateImageEntity(ecs donburi.World, opts ...Option) *don
 	img.Frame = options.Frame
 	img.Handle = options.Handle
 	img.Color = options.Color
-
-	width, height, ok := m.GetFrameSize(options.Handle, options.Frame)
-	assert.True(ok, "failed to get image size for the provided handle")
-
-	transform.AddTransform(entry, transform.WithBounds(geom.AABB{
-		Min: geom.Vec2{X: 0, Y: 0},
-		Max: geom.Vec2{X: float64(width), Y: float64(height)},
-	}))
-
-	rendering.AddRenderer(entry,
-		rendering.WithRendererID(m.renderingAdapterHandle),
-	)
 
 	return entry
 }

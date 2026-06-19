@@ -1,10 +1,6 @@
 package engine
 
 import (
-	"slices"
-
-	"github.com/adm87/onyx/pkg/engine/components/rendering"
-	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/engine/storage/slotmap"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -25,7 +21,6 @@ type RenderingJobPool interface {
 type RenderingAdapter interface {
 	GetJobs(
 		entry *donburi.Entry,
-		renderer *rendering.RendererModel,
 		bounds geom.AABB,
 		viewport geom.AABB,
 		viewMatrix ebiten.GeoM,
@@ -80,39 +75,4 @@ func (r *renderer) AddRenderingAdapter(adapter RenderingAdapter) uint64 {
 func (r *renderer) render(entries []*donburi.Entry, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) {
 	r.jobs = r.jobs[:0]
 	r.jobPool.i = 0
-
-	for i := range entries {
-		entry := entries[i]
-
-		renderer := rendering.GetRenderer(entry)
-		if !renderer.Visible {
-			continue
-		}
-
-		aabb := transform.GetWorldBounds(entry)
-		if !aabb.Intersects(viewport) {
-			continue
-		}
-
-		adapter, exists := r.adapters.Get(renderer.ID)
-		if !exists {
-			r.logger.Warn("renderer adapter not found for entry renderer: %v", renderer.ID)
-			continue
-		}
-
-		r.jobs = append(r.jobs, adapter.GetJobs(entry, renderer, aabb, viewport, viewMatrix, r.jobPool)...)
-	}
-
-	slices.SortFunc(r.jobs, func(a, b *RenderingJob) int {
-		if a.Layer == b.Layer {
-			return a.ZIndex - b.ZIndex
-		}
-		return a.Layer - b.Layer
-	})
-
-	for _, job := range r.jobs {
-		if job.Buffer != nil {
-			screen.DrawImage(job.Buffer, &job.Options)
-		}
-	}
 }

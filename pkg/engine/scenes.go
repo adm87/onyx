@@ -5,7 +5,6 @@ import (
 
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/yohamta/donburi"
 )
 
 type (
@@ -19,12 +18,12 @@ type Scenes interface {
 }
 
 type SceneState struct {
-	OnEnter       func(ecs donburi.World) error
-	OnExit        func(ecs donburi.World) error
-	OnUpdate      func(ecs donburi.World, dt float64) (SceneExitCode, error)
-	OnFixedUpdate func(ecs donburi.World, dt float64) error
-	OnLateUpdate  func(ecs donburi.World, dt float64) error
-	OnRender      func(entries []*donburi.Entry, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error
+	OnEnter       func() error
+	OnExit        func() error
+	OnUpdate      func(dt float64) (SceneExitCode, error)
+	OnFixedUpdate func(dt float64) error
+	OnLateUpdate  func(dt float64) error
+	OnRender      func(screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error
 }
 
 type scenes struct {
@@ -66,12 +65,12 @@ func (s *scenes) AddScene(id SceneID, state SceneState, transitions SceneTransit
 	s.transitions[id] = transitions
 }
 
-func (s *scenes) update(ecs donburi.World, steps int, deltaTime float64, fixedDeltaTime float64) error {
+func (s *scenes) update(steps int, deltaTime float64, fixedDeltaTime float64) error {
 	if s.currentScene == SceneIDNone && s.nextScene == SceneIDNone {
 		return nil
 	}
 	if s.nextScene != SceneIDNone {
-		return s.transitionToNext(ecs)
+		return s.transitionToNext()
 	}
 
 	currentState, ok := s.scenes[s.currentScene]
@@ -79,28 +78,28 @@ func (s *scenes) update(ecs donburi.World, steps int, deltaTime float64, fixedDe
 		return fmt.Errorf("scene with ID '%s' not found", s.currentScene)
 	}
 
-	exitCode, err := s.updateCurrent(ecs, currentState, deltaTime)
+	exitCode, err := s.updateCurrent(currentState, deltaTime)
 	if err != nil {
 		return err
 	}
 	if exitCode != SceneExitNone {
 		return s.setupNextTransition(exitCode)
 	}
-	if err := s.fixedUpdateCurrent(ecs, currentState, fixedDeltaTime, steps); err != nil {
+	if err := s.fixedUpdateCurrent(currentState, fixedDeltaTime, steps); err != nil {
 		return err
 	}
-	return s.lateUpdateCurrent(ecs, currentState, deltaTime)
+	return s.lateUpdateCurrent(currentState, deltaTime)
 }
 
-func (s *scenes) render(entries []*donburi.Entry, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
-	return s.renderCurrent(entries, screen, viewport, viewMatrix)
+func (s *scenes) render(screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
+	return s.renderCurrent(screen, viewport, viewMatrix)
 }
 
-func (s *scenes) transitionToNext(ecs donburi.World) error {
-	if err := s.exitCurrent(ecs); err != nil {
+func (s *scenes) transitionToNext() error {
+	if err := s.exitCurrent(); err != nil {
 		return err
 	}
-	if err := s.enterNext(ecs); err != nil {
+	if err := s.enterNext(); err != nil {
 		return err
 	}
 
@@ -125,7 +124,7 @@ func (s *scenes) setupNextTransition(exitCode SceneExitCode) error {
 	return nil
 }
 
-func (s *scenes) exitCurrent(ecs donburi.World) error {
+func (s *scenes) exitCurrent() error {
 	if s.currentScene == SceneIDNone {
 		return nil
 	}
@@ -135,12 +134,12 @@ func (s *scenes) exitCurrent(ecs donburi.World) error {
 		return fmt.Errorf("scene with ID '%s' not found", s.currentScene)
 	}
 	if currentState.OnExit != nil {
-		return currentState.OnExit(ecs)
+		return currentState.OnExit()
 	}
 	return nil
 }
 
-func (s *scenes) enterNext(ecs donburi.World) error {
+func (s *scenes) enterNext() error {
 	if s.nextScene == SceneIDNone {
 		return nil
 	}
@@ -150,28 +149,28 @@ func (s *scenes) enterNext(ecs donburi.World) error {
 		return fmt.Errorf("scene with ID '%s' not found", s.nextScene)
 	}
 	if nextState.OnEnter != nil {
-		return nextState.OnEnter(ecs)
+		return nextState.OnEnter()
 	}
 	return nil
 }
 
-func (s *scenes) updateCurrent(ecs donburi.World, currentState SceneState, dt float64) (SceneExitCode, error) {
+func (s *scenes) updateCurrent(currentState SceneState, dt float64) (SceneExitCode, error) {
 	if s.currentScene == SceneIDNone {
 		return SceneExitNone, nil
 	}
 	if currentState.OnUpdate != nil {
-		return currentState.OnUpdate(ecs, dt)
+		return currentState.OnUpdate(dt)
 	}
 	return SceneExitNone, nil
 }
 
-func (s *scenes) fixedUpdateCurrent(ecs donburi.World, currentState SceneState, dt float64, steps int) error {
+func (s *scenes) fixedUpdateCurrent(currentState SceneState, dt float64, steps int) error {
 	if s.currentScene == SceneIDNone {
 		return nil
 	}
 	for range steps {
 		if currentState.OnFixedUpdate != nil {
-			if err := currentState.OnFixedUpdate(ecs, dt); err != nil {
+			if err := currentState.OnFixedUpdate(dt); err != nil {
 				return err
 			}
 		}
@@ -179,17 +178,17 @@ func (s *scenes) fixedUpdateCurrent(ecs donburi.World, currentState SceneState, 
 	return nil
 }
 
-func (s *scenes) lateUpdateCurrent(ecs donburi.World, currentState SceneState, dt float64) error {
+func (s *scenes) lateUpdateCurrent(currentState SceneState, dt float64) error {
 	if s.currentScene == SceneIDNone {
 		return nil
 	}
 	if currentState.OnLateUpdate != nil {
-		return currentState.OnLateUpdate(ecs, dt)
+		return currentState.OnLateUpdate(dt)
 	}
 	return nil
 }
 
-func (s *scenes) renderCurrent(entries []*donburi.Entry, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
+func (s *scenes) renderCurrent(screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
 	if s.currentScene == SceneIDNone {
 		return nil
 	}
@@ -199,7 +198,7 @@ func (s *scenes) renderCurrent(entries []*donburi.Entry, screen *ebiten.Image, v
 		return fmt.Errorf("scene with ID '%s' not found", s.currentScene)
 	}
 	if currentState.OnRender != nil {
-		return currentState.OnRender(entries, screen, viewport, viewMatrix)
+		return currentState.OnRender(screen, viewport, viewMatrix)
 	}
 	return nil
 }

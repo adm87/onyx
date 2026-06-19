@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 
-	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
@@ -13,29 +12,23 @@ type Game interface {
 	Start() error
 	WithContext(ctx context.Context) Game
 
-	ECS() donburi.World
 	Assets() Assets
-	Camera() Camera
 	Logger() Logger
 	Renderer() Renderer
 	Scenes() Scenes
 	Screen() Screen
 	Time() Time
-	World() World
 }
 
 type game struct {
 	ctx context.Context
-	ecs donburi.World
 
 	assets   *assets
-	camera   *camera
 	logger   *logger
 	renderer *renderer
 	scenes   *scenes
 	screen   *screen
 	time     *time
-	world    *world
 
 	renderables []*donburi.Entry
 }
@@ -49,8 +42,6 @@ func NewGame(opts ...Option) Game {
 	cfg := applyOptions(opts...)
 
 	setupWindow(cfg.Title, cfg.Width, cfg.Height)
-
-	ecs := donburi.NewWorld()
 
 	logger := newLogger(os.Stdout)
 
@@ -81,37 +72,20 @@ func NewGame(opts ...Option) Game {
 		cfg.FPS,
 	)
 
-	world := newWorld(
-		ecs,
-	)
-
-	camera := newCamera(
-		ecs,
-		screen,
-		transform.NewTransform(ecs).Entity(),
-	)
-
 	return &game{
 		ctx:         context.Background(),
-		ecs:         ecs,
 		assets:      assets,
-		camera:      camera,
 		logger:      logger,
 		renderer:    renderer,
 		screen:      screen,
 		scenes:      scenes,
 		time:        time,
-		world:       world,
 		renderables: make([]*donburi.Entry, 0, 100),
 	}
 }
 
 func (g *game) Assets() Assets {
 	return g.assets
-}
-
-func (g *game) Camera() Camera {
-	return g.camera
 }
 
 func (g *game) Logger() Logger {
@@ -134,14 +108,6 @@ func (g *game) Time() Time {
 	return g.time
 }
 
-func (g *game) World() World {
-	return g.world
-}
-
-func (g *game) ECS() donburi.World {
-	return g.ecs
-}
-
 func (g *game) WithContext(ctx context.Context) Game {
 	if g.ctx == nil {
 		return g
@@ -161,7 +127,6 @@ func (g *game) Update() error {
 	default:
 		g.time.tick()
 		return g.scenes.update(
-			g.ecs,
 			g.time.fixedSteps,
 			g.time.deltaTime.Seconds(),
 			g.time.fixedDeltaTime.Seconds(),
@@ -175,13 +140,6 @@ func (g *game) Draw(screen *ebiten.Image) {
 		return
 	default:
 		g.screen.buffer.Fill(g.screen.backgroundColor)
-
-		viewMatrix := g.camera.View()
-		viewport := g.camera.Viewport()
-
-		g.renderables = g.world.queryInto(viewport, g.renderables[:0])
-		g.renderer.render(g.renderables, g.screen.buffer, viewport, viewMatrix)
-		g.scenes.render(g.renderables, g.screen.buffer, viewport, viewMatrix)
 
 		screen.DrawImage(g.screen.buffer, g.screen.options)
 	}

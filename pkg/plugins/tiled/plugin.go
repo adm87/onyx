@@ -5,17 +5,13 @@ import (
 
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
-	"github.com/adm87/onyx/pkg/engine/components/rendering"
-	"github.com/adm87/onyx/pkg/engine/components/transform"
 	"github.com/adm87/onyx/pkg/engine/file"
-	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/plugins/images"
 	"github.com/yohamta/donburi"
 )
 
 type TiledPlugin struct {
-	assetsAdapter    *assetAdapter
-	renderingAdapter *renderingAdapter
+	assetsAdapter *assetAdapter
 
 	assetAdapterHandle     uint64
 	renderingAdapterHandle uint64
@@ -28,12 +24,9 @@ func NewTiledPlugin(
 	imagesPlugin *images.ImagesPlugin) *TiledPlugin {
 
 	assetsAdapter := newAssetsAdapter(assets, imagesPlugin)
-	renderingAdapter := newRenderingAdapter(screen, imagesPlugin, assetsAdapter)
 	return &TiledPlugin{
-		assetsAdapter:          assetsAdapter,
-		renderingAdapter:       renderingAdapter,
-		assetAdapterHandle:     assets.AddAssetAdapter(assetsAdapter),
-		renderingAdapterHandle: renderer.AddRenderingAdapter(renderingAdapter),
+		assetsAdapter:      assetsAdapter,
+		assetAdapterHandle: assets.AddAssetAdapter(assetsAdapter),
 	}
 }
 
@@ -49,7 +42,6 @@ func (m *TiledPlugin) BuildTilemap(handle uint64) (*Tilemap, uint64) {
 
 func (m *TiledPlugin) ReleaseTilemap(handle uint64) {
 	m.assetsAdapter.tilemapStore.Delete(handle)
-	m.renderingAdapter.releaseBuffer(handle)
 }
 
 func (m *TiledPlugin) GetTilemapSize(handle uint64) (int, int, bool) {
@@ -93,18 +85,6 @@ func (m *TiledPlugin) CreateTilemapEntity(ecs donburi.World, opts ...TilemapOpti
 	}
 
 	SetTilemapHandle(entry, options.Handle)
-
-	width, height, ok := m.GetTilemapSize(options.Handle)
-	assert.True(ok, "failed to get tilemap size for the provided handle")
-
-	rendering.AddRenderer(entry,
-		rendering.WithRendererID(m.renderingAdapterHandle),
-	)
-
-	transform.AddTransform(entry, transform.WithBounds(geom.AABB{
-		Min: geom.Vec2{X: 0, Y: 0},
-		Max: geom.Vec2{X: float64(width), Y: float64(height)},
-	}))
 
 	return entry
 }
