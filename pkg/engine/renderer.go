@@ -4,7 +4,6 @@ import (
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/engine/storage/slotmap"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/yohamta/donburi"
 )
 
 type RenderingJob struct {
@@ -20,7 +19,6 @@ type RenderingJobPool interface {
 
 type RenderingAdapter interface {
 	GetJobs(
-		entry *donburi.Entry,
 		bounds geom.AABB,
 		viewport geom.AABB,
 		viewMatrix ebiten.GeoM,
@@ -72,7 +70,7 @@ func (r *renderer) AddRenderingAdapter(adapter RenderingAdapter) uint64 {
 	return r.adapters.Insert(adapter)
 }
 
-func (r *renderer) render(entries []*donburi.Entry, screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) {
+func (r *renderer) render(screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) {
 	r.jobs = r.jobs[:0]
 	r.jobPool.i = 0
 }

@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/yohamta/donburi"
 )
 
 type Game interface {
@@ -29,8 +28,6 @@ type game struct {
 	scenes   *scenes
 	screen   *screen
 	time     *time
-
-	renderables []*donburi.Entry
 }
 
 func setupWindow(title string, width, height int) {
@@ -73,14 +70,13 @@ func NewGame(opts ...Option) Game {
 	)
 
 	return &game{
-		ctx:         context.Background(),
-		assets:      assets,
-		logger:      logger,
-		renderer:    renderer,
-		screen:      screen,
-		scenes:      scenes,
-		time:        time,
-		renderables: make([]*donburi.Entry, 0, 100),
+		ctx:      context.Background(),
+		assets:   assets,
+		logger:   logger,
+		renderer: renderer,
+		screen:   screen,
+		scenes:   scenes,
+		time:     time,
 	}
 }
 
