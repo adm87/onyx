@@ -13,7 +13,7 @@ import (
 
 type renderingAdapter struct {
 	screen             engine.Screen
-	imageModule        *images.ImageModule
+	images             *images.ImagesPlugin
 	tiledAssets        *assetAdapter
 	drawOpts           ebiten.DrawImageOptions
 	buffers            map[uint64][]*ebiten.Image
@@ -24,11 +24,11 @@ type renderingAdapter struct {
 
 func newRenderingAdapter(
 	screen engine.Screen,
-	imageModule *images.ImageModule,
+	imagesPlugin *images.ImagesPlugin,
 	tiledAssets *assetAdapter) *renderingAdapter {
 	return &renderingAdapter{
 		screen:      screen,
-		imageModule: imageModule,
+		images:      imagesPlugin,
 		tiledAssets: tiledAssets,
 		jobs:        make([]*engine.RenderingJob, 0, 100),
 		buffers:     make(map[uint64][]*ebiten.Image),
@@ -187,7 +187,7 @@ func (a *renderingAdapter) drawTilemapLayer(
 
 			tileID := tile.ID() - uint32(tilesets[j].FirstGID)
 
-			frame, exists := a.imageModule.GetFrameImage(tsx.Image.Handle, int(tileID))
+			frame, exists := a.images.GetFrameImage(tsx.Image.Handle, int(tileID))
 			if !exists {
 				continue
 			}

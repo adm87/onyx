@@ -19,16 +19,16 @@ const (
 type Onyx struct {
 	game engine.Game
 
-	images   *images.ImageModule
-	tiled    *tiled.TiledModule
-	aseprite *aseprite.AsepriteModule
+	images   *images.ImagesPlugin
+	tiled    *tiled.TiledPlugin
+	aseprite *aseprite.AsepritePlugin
 }
 
 func NewGame(
 	game engine.Game,
-	images *images.ImageModule,
-	tiled *tiled.TiledModule,
-	aseprite *aseprite.AsepriteModule) *Onyx {
+	images *images.ImagesPlugin,
+	tiled *tiled.TiledPlugin,
+	aseprite *aseprite.AsepritePlugin) *Onyx {
 
 	o := &Onyx{
 		game:     game,

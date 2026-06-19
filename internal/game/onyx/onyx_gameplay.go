@@ -13,9 +13,9 @@ import (
 	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/plugins/aseprite"
-	asepritemodule "github.com/adm87/onyx/pkg/plugins/aseprite"
+	asepriteplugin "github.com/adm87/onyx/pkg/plugins/aseprite"
 	"github.com/adm87/onyx/pkg/plugins/images"
-	tiledmodule "github.com/adm87/onyx/pkg/plugins/tiled"
+	tiledplugin "github.com/adm87/onyx/pkg/plugins/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -37,7 +37,7 @@ var gameplayManifest = []file.FilePath{
 func (o *Onyx) GameplayScene() engine.SceneState {
 	var tilemapEntry *donburi.Entry
 	var spriteEntry *donburi.Entry
-	var tilemap *tiledmodule.Tilemap
+	var tilemap *tiledplugin.Tilemap
 	var path vector.Path
 	var move geom.Vec2
 	var tilemapHandle uint64
@@ -59,7 +59,7 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			assert.True(exists, "failed to get handle for tiled map")
 
 			tilemap, tilemapHandle = t.BuildTilemap(tmxHandle)
-			tilemapEntry = t.CreateTilemapEntity(ecs, tiledmodule.WithTilemapHandle(tilemapHandle))
+			tilemapEntry = t.CreateTilemapEntity(ecs, tiledplugin.WithTilemapHandle(tilemapHandle))
 
 			playerImgHandle, exists := i.GetAssetHandle(content.AssetsAsepriteCaptainImg)
 			assert.True(exists, "failed to get handle for player image")
@@ -73,9 +73,9 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			as.BuildAnimations(playerImgHandle, playerData)
 
 			spriteEntry = as.CreateSpriteEntity(ecs,
-				asepritemodule.WithImageHandle(playerImgHandle),
-				asepritemodule.WithClip("Run"),
-				asepritemodule.Playing(),
+				asepriteplugin.WithImageHandle(playerImgHandle),
+				asepriteplugin.WithClip("Run"),
+				asepriteplugin.Playing(),
 			)
 			images.SetAnchor(spriteEntry, 0.5, 1.0)
 			rendering.SetLayer(spriteEntry, 6)

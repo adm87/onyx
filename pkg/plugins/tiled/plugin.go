@@ -13,7 +13,7 @@ import (
 	"github.com/yohamta/donburi"
 )
 
-type TiledModule struct {
+type TiledPlugin struct {
 	assetsAdapter    *assetAdapter
 	renderingAdapter *renderingAdapter
 
@@ -21,15 +21,15 @@ type TiledModule struct {
 	renderingAdapterHandle uint64
 }
 
-func NewModule(
+func NewTiledPlugin(
 	assets engine.Assets,
 	renderer engine.Renderer,
 	screen engine.Screen,
-	imageModule *images.ImageModule) *TiledModule {
+	imagesPlugin *images.ImagesPlugin) *TiledPlugin {
 
-	assetsAdapter := newAssetsAdapter(assets, imageModule)
-	renderingAdapter := newRenderingAdapter(screen, imageModule, assetsAdapter)
-	return &TiledModule{
+	assetsAdapter := newAssetsAdapter(assets, imagesPlugin)
+	renderingAdapter := newRenderingAdapter(screen, imagesPlugin, assetsAdapter)
+	return &TiledPlugin{
 		assetsAdapter:          assetsAdapter,
 		renderingAdapter:       renderingAdapter,
 		assetAdapterHandle:     assets.AddAssetAdapter(assetsAdapter),
@@ -37,7 +37,7 @@ func NewModule(
 	}
 }
 
-func (m *TiledModule) BuildTilemap(handle uint64) (*Tilemap, uint64) {
+func (m *TiledPlugin) BuildTilemap(handle uint64) (*Tilemap, uint64) {
 	tmx, ok := m.assetsAdapter.tmxStore.Get(handle)
 	assert.True(ok, fmt.Sprintf("TMX asset with handle %d not found", handle))
 
@@ -47,12 +47,12 @@ func (m *TiledModule) BuildTilemap(handle uint64) (*Tilemap, uint64) {
 	return tilemap, m.assetsAdapter.tilemapStore.Insert(tilemap)
 }
 
-func (m *TiledModule) ReleaseTilemap(handle uint64) {
+func (m *TiledPlugin) ReleaseTilemap(handle uint64) {
 	m.assetsAdapter.tilemapStore.Delete(handle)
 	m.renderingAdapter.releaseBuffer(handle)
 }
 
-func (m *TiledModule) GetTilemapSize(handle uint64) (int, int, bool) {
+func (m *TiledPlugin) GetTilemapSize(handle uint64) (int, int, bool) {
 	tilemap, ok := m.assetsAdapter.tilemapStore.Get(handle)
 	if !ok {
 		return 0, 0, false
@@ -61,30 +61,30 @@ func (m *TiledModule) GetTilemapSize(handle uint64) (int, int, bool) {
 	return int(width), int(height), true
 }
 
-func (m *TiledModule) GetTmxHandle(path file.FilePath) (uint64, bool) {
+func (m *TiledPlugin) GetTmxHandle(path file.FilePath) (uint64, bool) {
 	return m.assetsAdapter.tmxStore.GetHandle(path)
 }
 
-func (m *TiledModule) GetTsxHandle(path file.FilePath) (uint64, bool) {
+func (m *TiledPlugin) GetTsxHandle(path file.FilePath) (uint64, bool) {
 	return m.assetsAdapter.tsxStore.GetHandle(path)
 }
 
-func (m *TiledModule) GetTilemap(handle uint64) (*Tilemap, bool) {
+func (m *TiledPlugin) GetTilemap(handle uint64) (*Tilemap, bool) {
 	tilemap, ok := m.assetsAdapter.tilemapStore.Get(handle)
 	return tilemap, ok
 }
 
-func (m *TiledModule) GetTmx(handle uint64) (*Tmx, bool) {
+func (m *TiledPlugin) GetTmx(handle uint64) (*Tmx, bool) {
 	tmx, ok := m.assetsAdapter.tmxStore.Get(handle)
 	return tmx, ok
 }
 
-func (m *TiledModule) GetTsx(handle uint64) (*Tsx, bool) {
+func (m *TiledPlugin) GetTsx(handle uint64) (*Tsx, bool) {
 	tsx, ok := m.assetsAdapter.tsxStore.Get(handle)
 	return tsx, ok
 }
 
-func (m *TiledModule) CreateTilemapEntity(ecs donburi.World, opts ...TilemapOption) *donburi.Entry {
+func (m *TiledPlugin) CreateTilemapEntity(ecs donburi.World, opts ...TilemapOption) *donburi.Entry {
 	entry := ecs.Entry(ecs.Create(TilemapHandle))
 
 	options := defaultTilemapOptions()

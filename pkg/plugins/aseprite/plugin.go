@@ -11,19 +11,19 @@ import (
 	"github.com/yohamta/donburi"
 )
 
-type AsepriteModule struct {
-	imageModule *images.ImageModule
-	animations  map[uint64]*AnimationData
+type AsepritePlugin struct {
+	imagesPlugin *images.ImagesPlugin
+	animations   map[uint64]*AnimationData
 }
 
-func NewAsepriteModule(imageModule *images.ImageModule) *AsepriteModule {
-	return &AsepriteModule{
-		imageModule: imageModule,
-		animations:  make(map[uint64]*AnimationData),
+func NewAsepritePlugin(imagesPlugin *images.ImagesPlugin) *AsepritePlugin {
+	return &AsepritePlugin{
+		imagesPlugin: imagesPlugin,
+		animations:   make(map[uint64]*AnimationData),
 	}
 }
 
-func (m *AsepriteModule) BuildAnimations(imgHandle uint64, data []byte) *AnimationData {
+func (m *AsepritePlugin) BuildAnimations(imgHandle uint64, data []byte) *AnimationData {
 	var animations *AnimationData
 
 	err := json.Unmarshal(data, &animations)
@@ -45,17 +45,17 @@ func (m *AsepriteModule) BuildAnimations(imgHandle uint64, data []byte) *Animati
 		)
 	}
 
-	m.imageModule.ExtractFrames(imgHandle, rects)
+	m.imagesPlugin.ExtractFrames(imgHandle, rects)
 	m.animations[imgHandle] = animations
 
 	return animations
 }
 
-func (m *AsepriteModule) DeleteAnimations(handle uint64) {
+func (m *AsepritePlugin) DeleteAnimations(handle uint64) {
 	delete(m.animations, handle)
 }
 
-func (m *AsepriteModule) UpdateAnimation(entry *donburi.Entry, dt time.Duration) {
+func (m *AsepritePlugin) UpdateAnimation(entry *donburi.Entry, dt time.Duration) {
 	animator := GetAnimator(entry)
 	if animator == nil {
 		return
@@ -114,7 +114,7 @@ func (m *AsepriteModule) UpdateAnimation(entry *donburi.Entry, dt time.Duration)
 	}
 }
 
-func (m *AsepriteModule) getNextFrame(current int, animator *AnimatorModel, frameCount int) (int, bool) {
+func (m *AsepritePlugin) getNextFrame(current int, animator *AnimatorModel, frameCount int) (int, bool) {
 	current += animator.direction
 
 	loopComplete := current >= frameCount || current < 0
@@ -144,18 +144,18 @@ func (m *AsepriteModule) getNextFrame(current int, animator *AnimatorModel, fram
 	return current, false
 }
 
-func (m *AsepriteModule) getLibrary(entry *donburi.Entry) (*AnimationData, bool) {
+func (m *AsepritePlugin) getLibrary(entry *donburi.Entry) (*AnimationData, bool) {
 	library, exists := m.animations[images.GetHandle(entry)]
 	return library, exists
 }
 
-func (m *AsepriteModule) CreateSpriteEntity(ecs donburi.World, opts ...SpriteOption) *donburi.Entry {
+func (m *AsepritePlugin) CreateSpriteEntity(ecs donburi.World, opts ...SpriteOption) *donburi.Entry {
 	options := defaultSpriteOptions()
 	for _, opt := range opts {
 		opt(options)
 	}
 
-	entry := m.imageModule.CreateImageEntity(ecs,
+	entry := m.imagesPlugin.CreateImageEntity(ecs,
 		images.WithHandle(options.ImageHandle),
 	)
 

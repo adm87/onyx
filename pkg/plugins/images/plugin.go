@@ -13,7 +13,7 @@ import (
 	"github.com/yohamta/donburi"
 )
 
-type ImageModule struct {
+type ImagesPlugin struct {
 	assetAdapter     *assetAdapter
 	renderingAdapter *renderingAdapter
 
@@ -21,10 +21,10 @@ type ImageModule struct {
 	renderingAdapterHandle uint64
 }
 
-func NewModule(assets engine.Assets, renderer engine.Renderer) *ImageModule {
+func NewImagesPlugin(assets engine.Assets, renderer engine.Renderer) *ImagesPlugin {
 	assetAdapter := newAssetAdapter(assets)
 	renderingAdapter := newRenderingAdapter(assetAdapter)
-	return &ImageModule{
+	return &ImagesPlugin{
 		assetAdapter:           assetAdapter,
 		renderingAdapter:       renderingAdapter,
 		assetAdapterHandle:     assets.AddAssetAdapter(assetAdapter),
@@ -32,11 +32,11 @@ func NewModule(assets engine.Assets, renderer engine.Renderer) *ImageModule {
 	}
 }
 
-func (m *ImageModule) GetAssetHandle(path file.FilePath) (uint64, bool) {
+func (m *ImagesPlugin) GetAssetHandle(path file.FilePath) (uint64, bool) {
 	return m.assetAdapter.store.GetHandle(path)
 }
 
-func (m *ImageModule) GetImageSize(handle uint64) (int, int, bool) {
+func (m *ImagesPlugin) GetImageSize(handle uint64) (int, int, bool) {
 	img, exists := m.assetAdapter.store.Get(handle)
 	if !exists {
 		return 0, 0, false
@@ -44,7 +44,7 @@ func (m *ImageModule) GetImageSize(handle uint64) (int, int, bool) {
 	return img.Bounds().Dx(), img.Bounds().Dy(), true
 }
 
-func (m *ImageModule) GetFrameSize(handle uint64, frame int) (int, int, bool) {
+func (m *ImagesPlugin) GetFrameSize(handle uint64, frame int) (int, int, bool) {
 	img, exists := m.assetAdapter.getFrame(handle, frame)
 	if !exists {
 		return 0, 0, false
@@ -52,23 +52,23 @@ func (m *ImageModule) GetFrameSize(handle uint64, frame int) (int, int, bool) {
 	return img.Bounds().Dx(), img.Bounds().Dy(), true
 }
 
-func (m *ImageModule) GetImage(handle uint64) (*ebiten.Image, bool) {
+func (m *ImagesPlugin) GetImage(handle uint64) (*ebiten.Image, bool) {
 	return m.assetAdapter.store.Get(handle)
 }
 
-func (m *ImageModule) GetFrameImage(handle uint64, index int) (*ebiten.Image, bool) {
+func (m *ImagesPlugin) GetFrameImage(handle uint64, index int) (*ebiten.Image, bool) {
 	return m.assetAdapter.getFrame(handle, index)
 }
 
-func (m *ImageModule) ExtractUniformFrames(handle uint64, frameWidth, frameHeight int) {
+func (m *ImagesPlugin) ExtractUniformFrames(handle uint64, frameWidth, frameHeight int) {
 	m.assetAdapter.extractUniformFrames(handle, frameWidth, frameHeight)
 }
 
-func (m *ImageModule) ExtractFrames(handle uint64, rects []image.Rectangle) {
+func (m *ImagesPlugin) ExtractFrames(handle uint64, rects []image.Rectangle) {
 	m.assetAdapter.extractFrames(handle, rects)
 }
 
-func (m *ImageModule) CreateImageEntity(ecs donburi.World, opts ...Option) *donburi.Entry {
+func (m *ImagesPlugin) CreateImageEntity(ecs donburi.World, opts ...Option) *donburi.Entry {
 	options := defaultImageOptions()
 	for _, opt := range opts {
 		opt(options)

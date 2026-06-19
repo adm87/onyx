@@ -22,16 +22,16 @@ type assetAdapter struct {
 	tsxStore file.FileStore[*Tsx]
 
 	tilemapStore *slotmap.SlotMap[*Tilemap]
-	imageModule  *images.ImageModule
+	images       *images.ImagesPlugin
 }
 
-func newAssetsAdapter(assets engine.Assets, imageModule *images.ImageModule) *assetAdapter {
+func newAssetsAdapter(assets engine.Assets, imagesPlugin *images.ImagesPlugin) *assetAdapter {
 	return &assetAdapter{
 		assets:       assets,
 		tmxStore:     file.NewFileStore[*Tmx](0),
 		tsxStore:     file.NewFileStore[*Tsx](0),
 		tilemapStore: slotmap.New[*Tilemap](0),
-		imageModule:  imageModule,
+		images:       imagesPlugin,
 	}
 }
 
@@ -117,11 +117,11 @@ func (a *assetAdapter) importTsx(fileSystem fs.FS, path file.FilePath, raw []byt
 	err = a.assets.Load(fileSystem, imgPath)
 	assert.Fatal(err)
 
-	imgHandle, exists := a.imageModule.GetAssetHandle(imgPath)
+	imgHandle, exists := a.images.GetAssetHandle(imgPath)
 	assert.True(exists, fmt.Sprintf("Failed to load image asset for TSX at path %s", imgPath))
 
 	tsx.Image.Handle = imgHandle
-	a.imageModule.ExtractUniformFrames(imgHandle, tsx.TileWidth, tsx.TileHeight)
+	a.images.ExtractUniformFrames(imgHandle, tsx.TileWidth, tsx.TileHeight)
 
 	return nil
 }

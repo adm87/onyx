@@ -40,23 +40,23 @@ func Boot() error {
 	renderer := g.Renderer()
 	screen := g.Screen()
 
-	imageModule := images.NewModule(
+	imagesPlugin := images.NewImagesPlugin(
 		assets,
 		renderer,
 	)
-	tiledModule := tiled.NewModule(
+	tiledPlugin := tiled.NewTiledPlugin(
 		assets,
 		renderer,
 		screen,
-		imageModule,
+		imagesPlugin,
 	)
-	asepriteModule := aseprite.NewAsepriteModule(
-		imageModule,
+	asepritePlugin := aseprite.NewAsepritePlugin(
+		imagesPlugin,
 	)
 
 	return onyx.NewGame(g,
-		imageModule,
-		tiledModule,
-		asepriteModule,
+		imagesPlugin,
+		tiledPlugin,
+		asepritePlugin,
 	).Start()
 }
