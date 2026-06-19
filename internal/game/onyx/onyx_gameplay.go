@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/adm87/onyx/content"
+	"github.com/adm87/onyx/pkg/debug"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/engine/components/rendering"
@@ -26,6 +27,7 @@ import (
 var (
 	debugEntityInfo   = false
 	debugColliderInfo = true
+	debugWorldGrid    = false
 )
 
 var gameplayManifest = []file.FilePath{
@@ -104,6 +106,9 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			if inpututil.IsKeyJustPressed(ebiten.KeyF) {
 				ebiten.SetFullscreen(!ebiten.IsFullscreen())
 			}
+			if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
+				debugWorldGrid = !debugWorldGrid
+			}
 			if inpututil.IsKeyJustPressed(ebiten.KeyF3) {
 				debugEntityInfo = !debugEntityInfo
 			}
@@ -163,6 +168,11 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			if debugEntityInfo {
 				path.Reset()
 				drawDebugInfo(&path, camera, entries, img)
+			}
+
+			if debugWorldGrid {
+				aabb := transform.GetWorldBounds(spriteEntry)
+				debug.DrawWorldGrid(img, o.game.World(), camera, aabb, viewMatrix)
 			}
 
 			min := o.game.Screen().SafeArea().Min

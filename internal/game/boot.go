@@ -10,6 +10,7 @@ import (
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/plugins/aseprite"
+	"github.com/adm87/onyx/pkg/plugins/collision"
 	"github.com/adm87/onyx/pkg/plugins/images"
 	"github.com/adm87/onyx/pkg/plugins/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -39,17 +40,24 @@ func Boot() error {
 	assets := g.Assets()
 	renderer := g.Renderer()
 	screen := g.Screen()
+	world := g.World()
+
+	collisionPlugin := collision.NewCollisionPlugin(
+		world,
+	)
 
 	imagesPlugin := images.NewImagesPlugin(
 		assets,
 		renderer,
 	)
+
 	tiledPlugin := tiled.NewTiledPlugin(
 		assets,
 		renderer,
 		screen,
 		imagesPlugin,
 	)
+
 	asepritePlugin := aseprite.NewAsepritePlugin(
 		imagesPlugin,
 	)
@@ -58,5 +66,6 @@ func Boot() error {
 		imagesPlugin,
 		tiledPlugin,
 		asepritePlugin,
+		collisionPlugin,
 	).Start()
 }

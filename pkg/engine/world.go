@@ -71,3 +71,7 @@ func (w *world) queryInto(region geom.AABB, result []*donburi.Entry) []*donburi.
 	})
 	return result
 }
+
+func (w *world) GetHashCells(region geom.AABB) []geom.AABB {
+	return w.entities.GetCellsWithin(region)
+}

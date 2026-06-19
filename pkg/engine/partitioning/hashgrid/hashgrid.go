@@ -127,6 +127,27 @@ func (sh *HashGrid[T]) Query(area geom.AABB, fn func(item T)) {
 	}
 }
 
+func (sh *HashGrid[T]) GetCellsWithin(area geom.AABB) []geom.AABB {
+	sh.cacheCells(area)
+	cells := make([]geom.AABB, 0, len(sh.cellCache))
+	for _, cell := range sh.cellCache {
+		cellX := int(int32(cell >> 32))
+		cellY := int(int32(cell & 0xFFFFFFFF))
+
+		cells = append(cells, geom.AABB{
+			Min: geom.Vec2{
+				X: float64(cellX * sh.resolution),
+				Y: float64(cellY * sh.resolution),
+			},
+			Max: geom.Vec2{
+				X: float64((cellX + 1) * sh.resolution),
+				Y: float64((cellY + 1) * sh.resolution),
+			},
+		})
+	}
+	return cells
+}
+
 func (sh *HashGrid[T]) cacheCells(area geom.AABB) {
 	sh.cellCache = sh.cellCache[:0]
 
