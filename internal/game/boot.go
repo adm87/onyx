@@ -10,6 +10,7 @@ import (
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/plugins/aseprite"
+	"github.com/adm87/onyx/pkg/plugins/ecs"
 	"github.com/adm87/onyx/pkg/plugins/images"
 	"github.com/adm87/onyx/pkg/plugins/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -32,33 +33,42 @@ func Boot() error {
 		engine.WithScreenSize(1280, 720),
 		engine.WithScreenScale(engine.ScreenScaleFill),
 		engine.WithFullscreen(args.Fullscreen),
-		engine.WithInitialScene(onyx.GameplaySceneID),
+		engine.WithInitialScene(onyx.SplashScreenSceneID),
 		engine.WithFilter(ebiten.FilterNearest),
 	).WithContext(ctx)
 
 	assets := g.Assets()
-	renderer := g.Renderer()
 	screen := g.Screen()
-
-	imagesPlugin := images.NewImagesPlugin(
-		assets,
-		renderer,
-	)
-
-	tiledPlugin := tiled.NewTiledPlugin(
-		assets,
-		renderer,
-		screen,
-		imagesPlugin,
-	)
+	logger := g.Logger()
+	renderer := g.Renderer()
 
 	asepritePlugin := aseprite.NewAsepritePlugin(
-		imagesPlugin,
+		logger,
 	)
 
+	imagePlugin := images.NewImagePlugin()
+
+	tiledPlugin := tiled.NewTiledPlugin(
+		logger,
+		imagePlugin.Assets(),
+	)
+
+	ecsPlugin := ecs.NewDonburiECSPlugin(
+		screen,
+		logger,
+		imagePlugin.Assets(),
+		tiledPlugin.Assets(),
+	)
+
+	assets.AddAssetAdapter(imagePlugin.Assets())
+	assets.AddAssetAdapter(tiledPlugin.Assets())
+
+	renderer.UsePipeline(ecsPlugin.RenderPipeline())
+
 	return onyx.NewGame(g,
-		imagesPlugin,
-		tiledPlugin,
 		asepritePlugin,
+		ecsPlugin,
+		imagePlugin,
+		tiledPlugin,
 	).Start()
 }

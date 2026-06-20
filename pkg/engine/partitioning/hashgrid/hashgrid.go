@@ -20,12 +20,13 @@ type Padding struct {
 
 type HashGrid[T comparable] struct {
 	store      *slotmap.SlotMap[T]
+	queryGen   uint32
+	resolution int
+	padding    Padding
 	cellCache  []uint64
 	grid       map[uint64][]uint64
 	cells      map[uint64][]uint64
-	querySeen  map[uint64]struct{}
-	resolution int
-	padding    Padding
+	querySeen  map[uint64]uint32
 }
 
 func New[T comparable](resolution int, padding Padding) *HashGrid[T] {
@@ -34,7 +35,7 @@ func New[T comparable](resolution int, padding Padding) *HashGrid[T] {
 		cellCache:  make([]uint64, 0),
 		grid:       make(map[uint64][]uint64),
 		cells:      make(map[uint64][]uint64),
-		querySeen:  make(map[uint64]struct{}),
+		querySeen:  make(map[uint64]uint32),
 		resolution: resolution,
 		padding:    padding,
 	}
@@ -52,15 +53,17 @@ func (sh *HashGrid[T]) Insert(item T, area geom.AABB) uint64 {
 	return id
 }
 
-func (sh *HashGrid[T]) Remove(id uint64) {
-	_, exists := sh.store.Get(id)
+func (sh *HashGrid[T]) Remove(id uint64) (T, bool) {
+	item, exists := sh.store.Get(id)
 	if !exists {
-		return
+		var zero T
+		return zero, false
 	}
 
 	cells, exists := sh.cells[id]
 	if !exists {
-		return
+		var zero T
+		return zero, false
 	}
 
 	for _, cell := range cells {
@@ -75,6 +78,8 @@ func (sh *HashGrid[T]) Remove(id uint64) {
 
 	delete(sh.cells, id)
 	sh.store.Delete(id)
+
+	return item, true
 }
 
 func (sh *HashGrid[T]) Update(id uint64, area geom.AABB) {
@@ -104,7 +109,7 @@ func (sh *HashGrid[T]) Update(id uint64, area geom.AABB) {
 
 func (sh *HashGrid[T]) Query(area geom.AABB, fn func(item T)) {
 	sh.cacheCells(area)
-	clear(sh.querySeen)
+	sh.queryGen++
 	for _, cell := range sh.cellCache {
 		ids, exists := sh.grid[cell]
 		if !exists {
@@ -112,10 +117,10 @@ func (sh *HashGrid[T]) Query(area geom.AABB, fn func(item T)) {
 		}
 
 		for _, id := range ids {
-			if _, alreadySeen := sh.querySeen[id]; alreadySeen {
+			if sh.querySeen[id] == sh.queryGen {
 				continue
 			}
-			sh.querySeen[id] = struct{}{}
+			sh.querySeen[id] = sh.queryGen
 
 			item, exists := sh.store.Get(id)
 			if !exists {

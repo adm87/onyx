@@ -5,5 +5,9 @@ import (
 )
 
 func (o *Onyx) GameplayScene() engine.SceneState {
-	return engine.SceneState{}
+	return engine.SceneState{
+		OnEnter: func() error {
+			return nil
+		},
+	}
 }

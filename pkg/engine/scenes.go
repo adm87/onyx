@@ -3,7 +3,6 @@ package engine
 import (
 	"fmt"
 
-	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -23,7 +22,7 @@ type SceneState struct {
 	OnUpdate      func(dt float64) (SceneExitCode, error)
 	OnFixedUpdate func(dt float64) error
 	OnLateUpdate  func(dt float64) error
-	OnRender      func(screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error
+	OnRender      func(screen *ebiten.Image) error
 }
 
 type scenes struct {
@@ -41,7 +40,7 @@ const (
 	SceneIDNone   SceneID       = ""
 )
 
-func newScenes(initialScene SceneID, renderer *renderer, logger *logger) *scenes {
+func newScenes(initialScene SceneID, logger *logger) *scenes {
 	return &scenes{
 		logger:       logger,
 		currentScene: SceneIDNone,
@@ -91,8 +90,8 @@ func (s *scenes) update(steps int, deltaTime float64, fixedDeltaTime float64) er
 	return s.lateUpdateCurrent(currentState, deltaTime)
 }
 
-func (s *scenes) render(screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
-	return s.renderCurrent(screen, viewport, viewMatrix)
+func (s *scenes) render(screen *ebiten.Image) error {
+	return s.renderCurrent(screen)
 }
 
 func (s *scenes) transitionToNext() error {
@@ -188,7 +187,7 @@ func (s *scenes) lateUpdateCurrent(currentState SceneState, dt float64) error {
 	return nil
 }
 
-func (s *scenes) renderCurrent(screen *ebiten.Image, viewport geom.AABB, viewMatrix ebiten.GeoM) error {
+func (s *scenes) renderCurrent(screen *ebiten.Image) error {
 	if s.currentScene == SceneIDNone {
 		return nil
 	}
@@ -198,7 +197,7 @@ func (s *scenes) renderCurrent(screen *ebiten.Image, viewport geom.AABB, viewMat
 		return fmt.Errorf("scene with ID '%s' not found", s.currentScene)
 	}
 	if currentState.OnRender != nil {
-		return currentState.OnRender(screen, viewport, viewMatrix)
+		return currentState.OnRender(screen)
 	}
 	return nil
 }

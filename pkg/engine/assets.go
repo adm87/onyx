@@ -3,7 +3,6 @@ package engine
 import (
 	"io/fs"
 
-	"github.com/adm87/onyx/pkg/engine/data"
 	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/engine/storage/slotmap"
 )
@@ -11,7 +10,7 @@ import (
 type AdapterID string
 
 type AssetAdapter interface {
-	ImportAsset(fileSystem fs.FS, path file.FilePath, raw []byte) error
+	ImportAsset(assets Assets, fileSystem fs.FS, path file.FilePath, raw []byte) error
 	DeleteAsset(path file.FilePath) bool
 	SupportedExtensions() []file.FileExt
 }
@@ -32,7 +31,7 @@ type assets struct {
 	store  *slotmap.SlotMap[AssetAdapter]
 
 	adaptersByExt map[file.FileExt]uint64
-	dataAssets    *data.DataAssets
+	dataAssets    *DataAssets
 }
 
 func newAssets(logger *logger) *assets {
@@ -40,7 +39,7 @@ func newAssets(logger *logger) *assets {
 		logger:        logger,
 		store:         slotmap.New[AssetAdapter](0),
 		adaptersByExt: make(map[file.FileExt]uint64),
-		dataAssets:    data.NewAssetAdapter(),
+		dataAssets:    NewAssetAdapter(),
 	}
 	a.AddAssetAdapter(a.dataAssets)
 	return a
@@ -74,7 +73,7 @@ func (a *assets) Load(fileSystem fs.FS, paths ...file.FilePath) error {
 			continue
 		}
 
-		if err := adapter.ImportAsset(fileSystem, path, raw); err != nil {
+		if err := adapter.ImportAsset(a, fileSystem, path, raw); err != nil {
 			a.logger.Error("Failed to import asset '%s': %v", path, err)
 			continue
 		}

@@ -6,7 +6,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-type Config struct {
+type Options struct {
 	Title string
 
 	Width      int
@@ -21,59 +21,59 @@ type Config struct {
 	InitialScene SceneID
 }
 
-type Option func(*Config)
+type Option func(*Options)
 
 func WithFullscreen(fullscreen bool) Option {
-	return func(c *Config) {
+	return func(c *Options) {
 		c.Fullscreen = fullscreen
 	}
 }
 
 func WithFilter(filter ebiten.Filter) Option {
-	return func(c *Config) {
+	return func(c *Options) {
 		c.Filter = filter
 	}
 }
 
 func WithScreenScale(mode ScreenScaleMode) Option {
-	return func(c *Config) {
+	return func(c *Options) {
 		c.ScreenScale = mode
 	}
 }
 
 func WithTitle(title string) Option {
-	return func(c *Config) {
+	return func(c *Options) {
 		c.Title = title
 	}
 }
 
 func WithScreenSize(width, height int) Option {
-	return func(c *Config) {
+	return func(c *Options) {
 		c.Width = width
 		c.Height = height
 	}
 }
 
 func WithFPS(fps int) Option {
-	return func(c *Config) {
+	return func(c *Options) {
 		c.FPS = fps
 	}
 }
 
 func WithBackgroundColor(color color.RGBA) Option {
-	return func(c *Config) {
+	return func(c *Options) {
 		c.BackgroundColor = color
 	}
 }
 
 func WithInitialScene(id SceneID) Option {
-	return func(c *Config) {
+	return func(c *Options) {
 		c.InitialScene = id
 	}
 }
 
-func defaultConfig() *Config {
-	return &Config{
+func defaultConfig() *Options {
+	return &Options{
 		Title:       "Untitled",
 		Width:       800,
 		Height:      600,
@@ -91,7 +91,7 @@ func defaultConfig() *Config {
 	}
 }
 
-func applyOptions(opts ...Option) *Config {
+func applyOptions(opts ...Option) *Options {
 	cfg := defaultConfig()
 	for _, opt := range opts {
 		opt(cfg)

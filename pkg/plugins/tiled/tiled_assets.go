@@ -9,53 +9,64 @@ import (
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/engine/file"
-	"github.com/adm87/onyx/pkg/engine/storage/slotmap"
 	"github.com/adm87/onyx/pkg/plugins/images"
 )
 
-var tiledExtensions = []file.FileExt{".tmx", ".tsx"}
-
-type assetAdapter struct {
-	assets engine.Assets
+type TiledAssets struct {
+	supportedExtensions []file.FileExt
 
 	tmxStore file.FileStore[*Tmx]
 	tsxStore file.FileStore[*Tsx]
 
-	tilemapStore *slotmap.SlotMap[*Tilemap]
-	images       *images.ImagesPlugin
+	imageAssets *images.ImageAssets
 }
 
-func newAssetsAdapter(assets engine.Assets, imagesPlugin *images.ImagesPlugin) *assetAdapter {
-	return &assetAdapter{
-		assets:       assets,
-		tmxStore:     file.NewFileStore[*Tmx](0),
-		tsxStore:     file.NewFileStore[*Tsx](0),
-		tilemapStore: slotmap.New[*Tilemap](0),
-		images:       imagesPlugin,
+func NewTiledAssets(images *images.ImageAssets) *TiledAssets {
+	return &TiledAssets{
+		supportedExtensions: []file.FileExt{".tmx", ".tsx"},
+		tmxStore:            file.NewFileStore[*Tmx](0),
+		tsxStore:            file.NewFileStore[*Tsx](0),
+		imageAssets:         images,
 	}
 }
 
-func (a *assetAdapter) ImportAsset(fileSystem fs.FS, path file.FilePath, raw []byte) error {
+func (a *TiledAssets) GetTmx(handle uint64) (*Tmx, bool) {
+	return a.tmxStore.Get(handle)
+}
+
+func (a *TiledAssets) GetTsx(handle uint64) (*Tsx, bool) {
+	return a.tsxStore.Get(handle)
+}
+
+func (a *TiledAssets) GetTmxHandle(path file.FilePath) (uint64, bool) {
+	return a.tmxStore.GetHandle(path)
+}
+
+func (a *TiledAssets) GetTsxHandle(path file.FilePath) (uint64, bool) {
+	return a.tsxStore.GetHandle(path)
+}
+
+func (a *TiledAssets) ImportAsset(assets engine.Assets, fileSystem fs.FS, path file.FilePath, raw []byte) error {
 	switch path.Ext() {
 	case ".tmx":
-		return a.importTmx(fileSystem, path, raw)
+		return a.importTmx(assets, fileSystem, path, raw)
 	case ".tsx":
-		return a.importTsx(fileSystem, path, raw)
+		return a.importTsx(assets, fileSystem, path, raw)
 	default:
 		return nil
 	}
 }
 
-func (a *assetAdapter) DeleteAsset(path file.FilePath) bool {
+func (a *TiledAssets) DeleteAsset(path file.FilePath) bool {
 	// TODO - implement this
 	return true
 }
 
-func (a *assetAdapter) SupportedExtensions() []file.FileExt {
-	return tiledExtensions
+func (a *TiledAssets) SupportedExtensions() []file.FileExt {
+	return a.supportedExtensions
 }
 
-func (a *assetAdapter) importTmx(fileSystem fs.FS, path file.FilePath, raw []byte) error {
+func (a *TiledAssets) importTmx(assets engine.Assets, fileSystem fs.FS, path file.FilePath, raw []byte) error {
 	if _, exists := a.tmxStore.GetHandle(path); exists {
 		return nil
 	}
@@ -80,7 +91,7 @@ func (a *assetAdapter) importTmx(fileSystem fs.FS, path file.FilePath, raw []byt
 			tsxPath := file.ResolvedPath(dir, tileset.Source)
 			tileset.Source = tsxPath.String()
 
-			err := a.assets.Load(fileSystem, tsxPath)
+			err := assets.Load(fileSystem, tsxPath)
 			assert.Fatal(err)
 
 			handle, exists := a.tsxStore.GetHandle(tsxPath)
@@ -93,7 +104,7 @@ func (a *assetAdapter) importTmx(fileSystem fs.FS, path file.FilePath, raw []byt
 	return nil
 }
 
-func (a *assetAdapter) importTsx(fileSystem fs.FS, path file.FilePath, raw []byte) error {
+func (a *TiledAssets) importTsx(assets engine.Assets, fileSystem fs.FS, path file.FilePath, raw []byte) error {
 	if _, exists := a.tsxStore.GetHandle(path); exists {
 		return nil
 	}
@@ -114,14 +125,14 @@ func (a *assetAdapter) importTsx(fileSystem fs.FS, path file.FilePath, raw []byt
 	imgPath := file.ResolvedPath(dir, tsx.Image.Source)
 	tsx.Image.Source = imgPath.String()
 
-	err = a.assets.Load(fileSystem, imgPath)
+	err = assets.Load(fileSystem, imgPath)
 	assert.Fatal(err)
 
-	imgHandle, exists := a.images.GetAssetHandle(imgPath)
+	imgHandle, exists := a.imageAssets.GetHandle(imgPath)
 	assert.True(exists, fmt.Sprintf("Failed to load image asset for TSX at path %s", imgPath))
 
 	tsx.Image.Handle = imgHandle
-	a.images.ExtractUniformFrames(imgHandle, tsx.TileWidth, tsx.TileHeight)
+	a.imageAssets.ExtractUniformFrames(imgHandle, tsx.TileWidth, tsx.TileHeight)
 
 	return nil
 }

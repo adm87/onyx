@@ -1,4 +1,4 @@
-package images
+package image
 
 import (
 	"image/color"
@@ -66,6 +66,15 @@ func WithColor(color color.RGBA) Option {
 	return func(opts *Options) {
 		opts.Color = color
 	}
+}
+
+func NewImage(world donburi.World, opts ...Option) *donburi.Entry {
+	return AddImage(world.Entry(world.Create(Image)), opts...)
+}
+
+func AddImage(entry *donburi.Entry, options ...Option) *donburi.Entry {
+	SetImage(entry, options...)
+	return entry
 }
 
 func GetImage(entry *donburi.Entry) *ImageModel {

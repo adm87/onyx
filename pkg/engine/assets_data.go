@@ -1,4 +1,4 @@
-package data
+package engine
 
 import (
 	"io/fs"
@@ -26,7 +26,7 @@ func (d *DataAssets) GetDataHandle(path file.FilePath) (uint64, bool) {
 	return d.store.GetHandle(path)
 }
 
-func (d *DataAssets) ImportAsset(fileSystem fs.FS, path file.FilePath, raw []byte) error {
+func (d *DataAssets) ImportAsset(_ Assets, _fileSystem fs.FS, path file.FilePath, raw []byte) error {
 	d.store.Insert(path, raw)
 	return nil
 }

@@ -1,21 +1,79 @@
 package ecs
 
-import "github.com/yohamta/donburi"
+import (
+	"github.com/adm87/onyx/pkg/engine"
+	"github.com/adm87/onyx/pkg/engine/partitioning/hashgrid"
+	"github.com/adm87/onyx/pkg/plugins/ecs/image"
+	"github.com/adm87/onyx/pkg/plugins/ecs/tiled"
+	"github.com/adm87/onyx/pkg/plugins/ecs/transform"
+	"github.com/yohamta/donburi"
 
-type ECS interface {
-	NewEntity(components ...donburi.IComponentType) *donburi.Entry
+	imageplugin "github.com/adm87/onyx/pkg/plugins/images"
+	tiledplugin "github.com/adm87/onyx/pkg/plugins/tiled"
+)
+
+type DonburiECSPlugin struct {
+	world  donburi.World
+	logger engine.Logger
+
+	factory        *ECSFactory
+	renderPipeline *ECSRenderPipeline
+	partitioner    *ECSPartitioner
 }
 
-type donburiESC struct {
-	world donburi.World
-}
+func NewDonburiECSPlugin(
+	screen engine.Screen,
+	logger engine.Logger,
+	imageAssets *imageplugin.ImageAssets,
+	tiledAssets *tiledplugin.TiledAssets) *DonburiECSPlugin {
 
-func NewDonburiESC() ECS {
-	return &donburiESC{
-		world: donburi.NewWorld(),
+	world := donburi.NewWorld()
+	partitioner := NewECSPartitioner(
+		256,
+		hashgrid.Padding{},
+	)
+	renderPipeline := NewECSRenderPipeline(
+		world,
+		screen,
+		logger,
+		partitioner,
+	)
+
+	return &DonburiECSPlugin{
+		logger:         logger,
+		world:          world,
+		partitioner:    partitioner,
+		renderPipeline: renderPipeline,
+		factory: &ECSFactory{
+			imageAssets: imageAssets,
+			tiledAssets: tiledAssets,
+			imageRendererType: renderPipeline.AddAdapter(image.NewImageRenderer(
+				imageAssets,
+			)),
+			tiledRendererType: renderPipeline.AddAdapter(tiled.NewTiledRenderer(
+				imageAssets,
+				tiledAssets,
+			)),
+			partitioner: partitioner,
+		},
 	}
 }
 
-func (d *donburiESC) NewEntity(components ...donburi.IComponentType) *donburi.Entry {
-	return d.world.Entry(d.world.Create(components...))
+func (d *DonburiECSPlugin) World() donburi.World {
+	return d.world
+}
+
+func (d *DonburiECSPlugin) RenderPipeline() *ECSRenderPipeline {
+	return d.renderPipeline
+}
+
+func (d *DonburiECSPlugin) Factory() *ECSFactory {
+	return d.factory
+}
+
+func (d *DonburiECSPlugin) Update(entries ...*donburi.Entry) {
+	for i := range entries {
+		aabb := transform.GetWorldBounds(entries[i])
+		d.partitioner.Update(entries[i].Entity(), aabb)
+	}
 }

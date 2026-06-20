@@ -46,22 +46,21 @@ func NewGame(opts ...Option) Game {
 		logger,
 	)
 
-	screen := newScreen(
-		cfg.Width,
-		cfg.Height,
-		cfg.ScreenScale,
-		cfg.Filter,
-		cfg.BackgroundColor,
-		logger,
-	)
-
 	renderer := newRenderer(
 		logger,
 	)
 
 	scenes := newScenes(
 		cfg.InitialScene,
-		renderer,
+		logger,
+	)
+
+	screen := newScreen(
+		cfg.Width,
+		cfg.Height,
+		cfg.ScreenScale,
+		cfg.Filter,
+		cfg.BackgroundColor,
 		logger,
 	)
 
@@ -73,10 +72,10 @@ func NewGame(opts ...Option) Game {
 		ctx:      context.Background(),
 		assets:   assets,
 		logger:   logger,
-		renderer: renderer,
 		screen:   screen,
 		scenes:   scenes,
 		time:     time,
+		renderer: renderer,
 	}
 }
 
@@ -122,11 +121,12 @@ func (g *game) Update() error {
 		return g.ctx.Err()
 	default:
 		g.time.tick()
-		return g.scenes.update(
-			g.time.fixedSteps,
-			g.time.deltaTime.Seconds(),
-			g.time.fixedDeltaTime.Seconds(),
-		)
+
+		dt := g.time.deltaTime.Seconds()
+		fdt := g.time.fixedDeltaTime.Seconds()
+		steps := g.time.fixedSteps
+
+		return g.scenes.update(steps, dt, fdt)
 	}
 }
 
@@ -135,7 +135,13 @@ func (g *game) Draw(screen *ebiten.Image) {
 	case <-g.ctx.Done():
 		return
 	default:
+		if g.renderer == nil {
+			g.logger.Warn("No renderer set. Skipping rendering.")
+			return
+		}
+
 		g.screen.buffer.Fill(g.screen.backgroundColor)
+		g.renderer.render(g.screen.buffer)
 
 		screen.DrawImage(g.screen.buffer, g.screen.options)
 	}
