@@ -142,6 +142,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 
 		g.screen.buffer.Fill(g.screen.backgroundColor)
 		g.renderer.render(g.screen.buffer)
+		g.scenes.render(g.screen.buffer)
 
 		screen.DrawImage(g.screen.buffer, g.screen.options)
 	}

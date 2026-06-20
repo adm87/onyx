@@ -33,7 +33,7 @@ func Boot() error {
 		engine.WithScreenSize(1280, 720),
 		engine.WithScreenScale(engine.ScreenScaleFill),
 		engine.WithFullscreen(args.Fullscreen),
-		engine.WithInitialScene(onyx.SplashScreenSceneID),
+		engine.WithInitialScene(onyx.GameplaySceneID),
 		engine.WithFilter(ebiten.FilterNearest),
 	).WithContext(ctx)
 

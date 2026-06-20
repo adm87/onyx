@@ -2,6 +2,7 @@ package ecs
 
 import (
 	"github.com/adm87/onyx/pkg/engine"
+	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/engine/partitioning/hashgrid"
 	"github.com/adm87/onyx/pkg/plugins/ecs/image"
 	"github.com/adm87/onyx/pkg/plugins/ecs/tiled"
@@ -71,9 +72,36 @@ func (d *DonburiECSPlugin) Factory() *ECSFactory {
 	return d.factory
 }
 
+func (d *DonburiECSPlugin) Add(entries ...*donburi.Entry) {
+	for i := range entries {
+		aabb := transform.GetWorldBounds(entries[i])
+
+		index, ok := d.partitioner.Add(entries[i].Entity(), aabb)
+		if !ok {
+			d.logger.Warn("Entity already exists in partitioner, skipping addition.")
+			continue
+		}
+
+		transform.SetIndex(entries[i], index)
+
+	}
+}
+
 func (d *DonburiECSPlugin) Update(entries ...*donburi.Entry) {
 	for i := range entries {
 		aabb := transform.GetWorldBounds(entries[i])
 		d.partitioner.Update(entries[i].Entity(), aabb)
 	}
+}
+
+func (d *DonburiECSPlugin) Remove(entries ...*donburi.Entry) {
+	for i := range entries {
+		entity := entries[i].Entity()
+		d.partitioner.Remove(entity)
+		d.world.Remove(entity)
+	}
+}
+
+func (d *DonburiECSPlugin) Query(area geom.AABB, callback func(entity donburi.Entity)) {
+	d.partitioner.entities.Query(area, callback)
 }

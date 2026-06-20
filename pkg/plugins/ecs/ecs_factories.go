@@ -49,13 +49,8 @@ func (f *ECSFactory) CreateImage(world donburi.World, opts ...image.Option) *don
 		}
 	}
 
-	// Note: By default entities are positioned at the world origin, so we can use the bounds as-is
-	// without needing to offset them by the entity's position.
-	idx, _ := f.partitioner.Add(entry.Entity(), bounds)
-
 	transform.AddTransform(entry,
 		transform.WithBounds(bounds.Min, bounds.Max),
-		transform.WithIndex(idx),
 	)
 
 	renderer.AddRenderer(entry,
