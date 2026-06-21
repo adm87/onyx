@@ -2,16 +2,15 @@ package game
 
 import (
 	"context"
-	"image/color"
 	"path/filepath"
 
 	"github.com/adm87/onyx/content"
 	"github.com/adm87/onyx/internal/game/cli"
 	"github.com/adm87/onyx/internal/game/onyx"
+	"github.com/adm87/onyx/pkg/ecs"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/plugins/aseprite"
-	"github.com/adm87/onyx/pkg/plugins/ecs"
 	"github.com/adm87/onyx/pkg/plugins/images"
 	"github.com/adm87/onyx/pkg/plugins/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -36,7 +35,6 @@ func Boot() error {
 		engine.WithFullscreen(args.Fullscreen),
 		engine.WithInitialScene(onyx.GameplaySceneID),
 		engine.WithFilter(ebiten.FilterNearest),
-		engine.WithBackgroundColor(color.RGBA{R: 100, G: 149, B: 237, A: 255}),
 	).WithContext(ctx)
 
 	assets := g.Assets()
@@ -51,18 +49,21 @@ func Boot() error {
 	imagePlugin := images.NewImagePlugin()
 
 	tiledPlugin := tiled.NewTiledPlugin(
+		screen,
 		imagePlugin.Assets(),
 	)
 
 	ecsPlugin := ecs.NewDonburiECSPlugin(
 		screen,
 		logger,
-		imagePlugin.Assets(),
-		tiledPlugin.Assets(),
+	)
+	ecsPlugin.RenderPipeline().AddAdapters(
+		imagePlugin.Renderer(),
+		tiledPlugin.Renderer(),
 	)
 
-	assets.AddAssetAdapter(imagePlugin.Assets())
-	assets.AddAssetAdapter(tiledPlugin.Assets())
+	assets.AddAdapters(imagePlugin.Assets())
+	assets.AddAdapters(tiledPlugin.Assets())
 
 	renderer.UsePipeline(ecsPlugin.RenderPipeline())
 

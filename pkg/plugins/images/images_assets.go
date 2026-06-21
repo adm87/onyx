@@ -120,10 +120,25 @@ func (a *ImageAssets) GetHandle(path file.FilePath) (uint64, bool) {
 func (a *ImageAssets) GetFrame(handle uint64, index int) (*ebiten.Image, bool) {
 	frames, exists := a.frames[handle]
 	if !exists || index < 0 || index >= len(frames) {
-		if img, exists := a.cache.Get(handle); exists {
-			return img, true
-		}
-		return nil, false
+		return a.Get(handle)
 	}
 	return frames[index], true
+}
+
+func (a *ImageAssets) GetImageSize(handle uint64) (int, int, bool) {
+	img, exists := a.cache.Get(handle)
+	if !exists {
+		return 0, 0, false
+	}
+	bounds := img.Bounds()
+	return bounds.Dx(), bounds.Dy(), true
+}
+
+func (a *ImageAssets) GetFrameSize(handle uint64) (int, int, bool) {
+	frames, exists := a.frames[handle]
+	if !exists || len(frames) == 0 {
+		return a.GetImageSize(handle)
+	}
+	bounds := frames[0].Bounds()
+	return bounds.Dx(), bounds.Dy(), true
 }

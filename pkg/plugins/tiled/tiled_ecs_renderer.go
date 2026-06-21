@@ -3,18 +3,17 @@ package tiled
 import (
 	"math"
 
+	"github.com/adm87/onyx/pkg/ecs/renderer"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/geom"
-	"github.com/adm87/onyx/pkg/plugins/ecs/renderer"
 	imageplugin "github.com/adm87/onyx/pkg/plugins/images"
-	tiledplugin "github.com/adm87/onyx/pkg/plugins/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
 
-type TiledRenderer struct {
+type TiledECSRenderer struct {
 	imageAssets *imageplugin.ImageAssets
-	tiledAssets *tiledplugin.TiledAssets
+	tiledAssets *TiledAssets
 
 	screen engine.Screen
 
@@ -23,22 +22,29 @@ type TiledRenderer struct {
 
 	tasks    []*engine.RenderingTask
 	drawOpts *ebiten.DrawImageOptions
+
+	adapterIndex uint64
 }
 
-func NewTiledRenderer(
+func NewTiledECSRenderer(
 	screen engine.Screen,
 	imageAssets *imageplugin.ImageAssets,
-	tiledAssets *tiledplugin.TiledAssets) *TiledRenderer {
-	return &TiledRenderer{
-		screen:      screen,
-		imageAssets: imageAssets,
-		tiledAssets: tiledAssets,
-		tasks:       make([]*engine.RenderingTask, 0, 10),
-		drawOpts:    &ebiten.DrawImageOptions{},
+	tiledAssets *TiledAssets) *TiledECSRenderer {
+	return &TiledECSRenderer{
+		screen:       screen,
+		imageAssets:  imageAssets,
+		tiledAssets:  tiledAssets,
+		tasks:        make([]*engine.RenderingTask, 0, 10),
+		drawOpts:     &ebiten.DrawImageOptions{},
+		adapterIndex: 0,
 	}
 }
 
-func (r *TiledRenderer) PrepareRenderingTasks(
+func (r *TiledECSRenderer) SetAdapterIndex(index uint64) {
+	r.adapterIndex = index
+}
+
+func (r *TiledECSRenderer) PrepareRenderingTasks(
 	entry *donburi.Entry,
 	renderer *renderer.RendererModel,
 	pool *engine.RenderingPool,
@@ -102,14 +108,14 @@ func (r *TiledRenderer) PrepareRenderingTasks(
 	return r.tasks
 }
 
-func (a *TiledRenderer) drawTilemapLayer(
+func (a *TiledECSRenderer) drawTilemapLayer(
 	target *ebiten.Image,
-	tilemap *tiledplugin.Tilemap,
+	tilemap *Tilemap,
 	layerIndex int,
 	cellWidth, cellHeight int,
 	minTileX, maxTileX int,
 	minTileY, maxTileY int,
-	tilesets []tiledplugin.TmxTileset,
+	tilesets []TmxTileset,
 	viewMatrix ebiten.GeoM) {
 
 	for y := minTileY; y <= maxTileY; y++ {

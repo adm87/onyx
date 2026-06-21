@@ -1,9 +1,9 @@
 package onyx
 
 import (
+	"github.com/adm87/onyx/pkg/ecs"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/plugins/aseprite"
-	"github.com/adm87/onyx/pkg/plugins/ecs"
 	"github.com/adm87/onyx/pkg/plugins/images"
 	"github.com/adm87/onyx/pkg/plugins/tiled"
 )
@@ -22,7 +22,7 @@ type Onyx struct {
 
 	animations *aseprite.AsepritePlugin
 	ecs        *ecs.DonburiECSPlugin
-	image      *images.ImagePlugin
+	images     *images.ImagePlugin
 	tiled      *tiled.TiledPlugin
 }
 
@@ -34,10 +34,11 @@ func NewGame(
 	tiled *tiled.TiledPlugin) *Onyx {
 
 	o := &Onyx{
-		game:  game,
-		ecs:   ecs,
-		image: image,
-		tiled: tiled,
+		game:       game,
+		animations: animations,
+		ecs:        ecs,
+		images:     image,
+		tiled:      tiled,
 	}
 
 	o.AddScenes()

@@ -1,28 +1,33 @@
-package image
+package images
 
 import (
+	"github.com/adm87/onyx/pkg/ecs/renderer"
+	"github.com/adm87/onyx/pkg/ecs/transform"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/geom"
-	"github.com/adm87/onyx/pkg/plugins/ecs/renderer"
-	"github.com/adm87/onyx/pkg/plugins/ecs/transform"
-	"github.com/adm87/onyx/pkg/plugins/images"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
 
-type ImageRenderer struct {
-	imageAssets *images.ImageAssets
+type ImageECSRenderer struct {
+	imageAssets *ImageAssets
 	tasks       []*engine.RenderingTask
+
+	adapterID uint64
 }
 
-func NewImageRenderer(imageAssets *images.ImageAssets) *ImageRenderer {
-	return &ImageRenderer{
+func NewImageECSRenderer(imageAssets *ImageAssets) *ImageECSRenderer {
+	return &ImageECSRenderer{
 		imageAssets: imageAssets,
 		tasks:       make([]*engine.RenderingTask, 0, 10),
 	}
 }
 
-func (r *ImageRenderer) PrepareRenderingTasks(
+func (r *ImageECSRenderer) SetAdapterIndex(index uint64) {
+	r.adapterID = index
+}
+
+func (r *ImageECSRenderer) PrepareRenderingTasks(
 	entry *donburi.Entry,
 	renderer *renderer.RendererModel,
 	pool *engine.RenderingPool,

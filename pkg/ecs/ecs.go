@@ -1,33 +1,22 @@
 package ecs
 
 import (
+	"github.com/adm87/onyx/pkg/ecs/transform"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/engine/partitioning/hashgrid"
-	"github.com/adm87/onyx/pkg/plugins/ecs/image"
-	"github.com/adm87/onyx/pkg/plugins/ecs/tiled"
-	"github.com/adm87/onyx/pkg/plugins/ecs/transform"
 	"github.com/yohamta/donburi"
-
-	imageplugin "github.com/adm87/onyx/pkg/plugins/images"
-	tiledplugin "github.com/adm87/onyx/pkg/plugins/tiled"
 )
 
 type DonburiECSPlugin struct {
 	world  donburi.World
 	logger engine.Logger
 
-	factory        *ECSFactory
 	renderPipeline *ECSRenderPipeline
 	partitioner    *ECSPartitioner
 }
 
-func NewDonburiECSPlugin(
-	screen engine.Screen,
-	logger engine.Logger,
-	imageAssets *imageplugin.ImageAssets,
-	tiledAssets *tiledplugin.TiledAssets) *DonburiECSPlugin {
-
+func NewDonburiECSPlugin(screen engine.Screen, logger engine.Logger) *DonburiECSPlugin {
 	world := donburi.NewWorld()
 	partitioner := NewECSPartitioner(
 		256,
@@ -45,19 +34,6 @@ func NewDonburiECSPlugin(
 		world:          world,
 		partitioner:    partitioner,
 		renderPipeline: renderPipeline,
-		factory: &ECSFactory{
-			imageAssets: imageAssets,
-			tiledAssets: tiledAssets,
-			imageRendererType: renderPipeline.AddAdapter(image.NewImageRenderer(
-				imageAssets,
-			)),
-			tiledRendererType: renderPipeline.AddAdapter(tiled.NewTiledRenderer(
-				screen,
-				imageAssets,
-				tiledAssets,
-			)),
-			partitioner: partitioner,
-		},
 	}
 }
 
@@ -67,10 +43,6 @@ func (d *DonburiECSPlugin) World() donburi.World {
 
 func (d *DonburiECSPlugin) RenderPipeline() *ECSRenderPipeline {
 	return d.renderPipeline
-}
-
-func (d *DonburiECSPlugin) Factory() *ECSFactory {
-	return d.factory
 }
 
 func (d *DonburiECSPlugin) Add(entries ...*donburi.Entry) {

@@ -1,10 +1,10 @@
 package debug
 
 import (
+	"github.com/adm87/onyx/pkg/ecs"
+	"github.com/adm87/onyx/pkg/ecs/camera"
+	"github.com/adm87/onyx/pkg/ecs/transform"
 	"github.com/adm87/onyx/pkg/engine/geom"
-	"github.com/adm87/onyx/pkg/plugins/ecs"
-	"github.com/adm87/onyx/pkg/plugins/ecs/camera"
-	"github.com/adm87/onyx/pkg/plugins/ecs/transform"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/yohamta/donburi"
