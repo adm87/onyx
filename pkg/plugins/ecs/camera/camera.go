@@ -38,6 +38,17 @@ func GetViewMatrix(entry *donburi.Entry, screenBounds geom.AABB) ebiten.GeoM {
 	return matrix
 }
 
+func GetZoom(entry *donburi.Entry) float64 {
+	t := transform.GetTransform(entry)
+	x, y := t.Scale()
+	return (x + y) * 0.5
+}
+
+func SetZoom(entry *donburi.Entry, zoom float64) {
+	t := transform.GetTransform(entry)
+	t.SetScale(zoom, zoom)
+}
+
 func ToWorld(entry *donburi.Entry, position geom.Vec2, screenBounds geom.AABB) geom.Vec2 {
 	viewMatrix := GetViewMatrix(entry, screenBounds)
 	viewMatrix.Invert()

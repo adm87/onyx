@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"image/color"
 	"path/filepath"
 
 	"github.com/adm87/onyx/content"
@@ -35,6 +36,7 @@ func Boot() error {
 		engine.WithFullscreen(args.Fullscreen),
 		engine.WithInitialScene(onyx.GameplaySceneID),
 		engine.WithFilter(ebiten.FilterNearest),
+		engine.WithBackgroundColor(color.RGBA{R: 100, G: 149, B: 237, A: 255}),
 	).WithContext(ctx)
 
 	assets := g.Assets()
@@ -49,7 +51,6 @@ func Boot() error {
 	imagePlugin := images.NewImagePlugin()
 
 	tiledPlugin := tiled.NewTiledPlugin(
-		logger,
 		imagePlugin.Assets(),
 	)
 

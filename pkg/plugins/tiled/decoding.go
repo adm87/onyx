@@ -141,7 +141,7 @@ func decodeLittleEndian(tileData []byte) ([]uint32, error) {
 func decodeTiles(tileData []uint32) ([]Tile, error) {
 	tiles := make([]Tile, len(tileData))
 	for i, gid := range tileData {
-		tiles[i] = Tile(gid)
+		tiles[i] = Tile{id: gid}
 	}
 	return tiles, nil
 }

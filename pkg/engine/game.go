@@ -46,21 +46,22 @@ func NewGame(opts ...Option) Game {
 		logger,
 	)
 
-	renderer := newRenderer(
-		logger,
-	)
-
-	scenes := newScenes(
-		cfg.InitialScene,
-		logger,
-	)
-
 	screen := newScreen(
 		cfg.Width,
 		cfg.Height,
 		cfg.ScreenScale,
 		cfg.Filter,
 		cfg.BackgroundColor,
+		logger,
+	)
+
+	renderer := newRenderer(
+		screen,
+		logger,
+	)
+
+	scenes := newScenes(
+		cfg.InitialScene,
 		logger,
 	)
 

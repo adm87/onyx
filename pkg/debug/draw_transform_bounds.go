@@ -18,6 +18,9 @@ func DrawTransformBounds(ecsPlugin *ecs.DonburiECSPlugin, cameraEntry *donburi.E
 		entry := ecsPlugin.World().Entry(entity)
 
 		bounds := transform.GetWorldBounds(entry)
+		if !bounds.Intersects(viewport) {
+			return
+		}
 
 		min := camera.ToScreen(cameraEntry, bounds.Min, screen)
 		max := camera.ToScreen(cameraEntry, bounds.Max, screen)

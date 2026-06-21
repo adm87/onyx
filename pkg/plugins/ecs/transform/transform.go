@@ -177,6 +177,48 @@ func SetIndex(entry *donburi.Entry, index uint64) {
 	donburi.Add(entry, TransformIndex, &index)
 }
 
+func GetPosition(entry *donburi.Entry) (float64, float64) {
+	if !entry.HasComponent(Transform) {
+		return 0, 0
+	}
+	return Transform.Get(entry).Position()
+}
+
+func SetPosition(entry *donburi.Entry, x, y float64) {
+	if !entry.HasComponent(Transform) {
+		return
+	}
+	Transform.Get(entry).SetPosition(x, y)
+}
+
+func GetScale(entry *donburi.Entry) (float64, float64) {
+	if !entry.HasComponent(Transform) {
+		return 1, 1
+	}
+	return Transform.Get(entry).Scale()
+}
+
+func SetScale(entry *donburi.Entry, sx, sy float64) {
+	if !entry.HasComponent(Transform) {
+		return
+	}
+	Transform.Get(entry).SetScale(sx, sy)
+}
+
+func GetRotation(entry *donburi.Entry) float64 {
+	if !entry.HasComponent(Transform) {
+		return 0
+	}
+	return Transform.Get(entry).Rotation()
+}
+
+func SetRotation(entry *donburi.Entry, r float64) {
+	if !entry.HasComponent(Transform) {
+		return
+	}
+	Transform.Get(entry).SetRotation(r)
+}
+
 func IsDirty(entry *donburi.Entry) bool {
 	if !entry.HasComponent(Transform) {
 		return false

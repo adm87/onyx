@@ -74,7 +74,13 @@ func (r *ECSRenderPipeline) GetRenderingTasks(pool *engine.RenderingPool) []*eng
 		}
 
 		if adapter, exists := r.adapters.Get(renderer.Type); exists {
-			tasks := adapter.PrepareRenderingTasks(entry, renderer, pool, viewport, viewMatrix)
+			tasks := adapter.PrepareRenderingTasks(
+				entry,
+				renderer,
+				pool,
+				viewport,
+				viewMatrix,
+			)
 			r.tasks = append(r.tasks, tasks...)
 		}
 	})

@@ -4,14 +4,21 @@ import (
 	"github.com/adm87/onyx/pkg/engine/geom"
 )
 
-type Tile uint64
+type Tile struct {
+	id      uint32
+	tileset int
+}
 
 func (t Tile) ID() uint32 {
-	return uint32(t & Tile(GidMask))
+	return uint32(t.id & GidMask)
+}
+
+func (t Tile) Tileset() int {
+	return t.tileset
 }
 
 func (t Tile) Flags() uint32 {
-	return uint32(t &^ Tile(GidMask))
+	return uint32(t.id &^ GidMask)
 }
 
 func (t Tile) FlippedHorizontally() bool {
@@ -35,7 +42,6 @@ type Tilemap struct {
 	bounds     geom.AABB
 	tileBounds geom.AABB
 	tiles      []Tile // Flattened array of tiles, ordered by layer and then by position
-	tilesets   []int  // Parallel array to tiles, storing the index of the tileset for each tile
 }
 
 func (t *Tilemap) GetTileIndex(layer, x, y int) int {
@@ -49,7 +55,7 @@ func (t *Tilemap) GetTile(layer, x, y int) (Tile, int, bool) {
 	wy := y - int(t.tileBounds.Min.Y)
 	w, h := int(t.tileBounds.Width()), int(t.tileBounds.Height())
 	if layer < 0 || layer >= t.layers || wx < 0 || wx >= w || wy < 0 || wy >= h {
-		return Tile(0), 0, false
+		return Tile{0, 0}, 0, false
 	}
 	index := t.GetTileIndex(layer, wx, wy)
 	return t.tiles[index], index, true
@@ -86,7 +92,6 @@ func buildTilemap(tmx *Tmx) (*Tilemap, error) {
 		bounds:     bounds,
 		layers:     len(tmx.Layers),
 		tiles:      make([]Tile, size*len(tmx.Layers)),
-		tilesets:   make([]int, 0, size*len(tmx.Layers)),
 	}
 	for i, layer := range tmx.Layers {
 		if err := buildTilemapLayer(layer, tilemap, tmx.Tilesets, i, size, tileBounds); err != nil {
@@ -108,6 +113,10 @@ func buildTilemapLayer(layer TmxLayer, tilemap *Tilemap, tilesets []TmxTileset, 
 			if err != nil {
 				return err
 			}
+			for i := range tiles {
+				_, j := NearestTileset(tilesets, tiles[i].ID())
+				tiles[i].tileset = j
+			}
 			chunkX := chunk.X - int(bounds.Min.X)
 			chunkY := chunk.Y - int(bounds.Min.Y)
 			chunkOffset := layerOffset + (chunkY * mapWidth) + chunkX
@@ -122,11 +131,11 @@ func buildTilemapLayer(layer TmxLayer, tilemap *Tilemap, tilesets []TmxTileset, 
 		if err != nil {
 			return err
 		}
+		for i := range tiles {
+			_, j := NearestTileset(tilesets, tiles[i].ID())
+			tiles[i].tileset = j
+		}
 		copy(tilemap.tiles[i*size:(i+1)*size], tiles)
-	}
-	for i := range tiles {
-		_, j := NearestTileset(tilesets, tiles[i].ID())
-		tilemap.tilesets = append(tilemap.tilesets, j)
 	}
 	return nil
 }

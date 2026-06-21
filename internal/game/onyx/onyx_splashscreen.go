@@ -12,7 +12,6 @@ import (
 )
 
 func (o *Onyx) SplashScreenScene() engine.SceneState {
-	var cameraEntry *donburi.Entry
 	var imageEntry *donburi.Entry
 	var sequence *gween.Sequence
 	var complete bool
@@ -20,6 +19,7 @@ func (o *Onyx) SplashScreenScene() engine.SceneState {
 	assets := o.game.Assets()
 	images := o.image.Assets()
 	screen := o.game.Screen()
+
 	ecs := o.ecs
 	return engine.SceneState{
 		OnEnter: func() error {
@@ -42,13 +42,13 @@ func (o *Onyx) SplashScreenScene() engine.SceneState {
 
 			screen.ResizeBuffer(img.Bounds().Dx(), img.Bounds().Dy())
 
-			cameraEntry = factory.CreateCamera(world)
+			factory.CreateCamera(world)
 			imageEntry = factory.CreateImage(world,
 				image.WithHandle(imgHandle),
 				image.WithAnchor(0.5, 0.5),
 			)
 			image.SetAlpha(imageEntry, 0)
-			ecs.Add(cameraEntry, imageEntry)
+			ecs.Add(imageEntry)
 
 			sequence = gween.NewSequence(
 				gween.New(0, 0, 0.1, ease.Linear),
@@ -72,7 +72,7 @@ func (o *Onyx) SplashScreenScene() engine.SceneState {
 			return engine.SceneExitNone, nil
 		},
 		OnExit: func() error {
-			ecs.Remove(cameraEntry, imageEntry)
+			ecs.Remove(imageEntry)
 			screen.RestoreBuffer()
 			return nil
 		},

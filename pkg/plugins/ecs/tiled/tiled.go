@@ -22,11 +22,26 @@ func WithTilemapHandle(handle uint64) TilemapOption {
 	}
 }
 
-func GetTilemapHandle(entry *donburi.Entry) (uint64, bool) {
-	if !entry.HasComponent(TilemapHandle) {
-		return 0, false
+func NewTilemap(world donburi.World, options ...TilemapOption) *donburi.Entry {
+	return AddTilemap(world.Entry(world.Create(TilemapHandle)), options...)
+}
+
+func AddTilemap(entry *donburi.Entry, options ...TilemapOption) *donburi.Entry {
+	opts := defaultTilemapOptions()
+	for _, option := range options {
+		option(opts)
 	}
-	return *TilemapHandle.Get(entry), true
+
+	donburi.Add(entry, TilemapHandle, &opts.Handle)
+
+	return entry
+}
+
+func GetTilemapHandle(entry *donburi.Entry) uint64 {
+	if !entry.HasComponent(TilemapHandle) {
+		return 0
+	}
+	return *TilemapHandle.Get(entry)
 }
 
 func SetTilemapHandle(entry *donburi.Entry, handle uint64) {

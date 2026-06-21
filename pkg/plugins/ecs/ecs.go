@@ -52,6 +52,7 @@ func NewDonburiECSPlugin(
 				imageAssets,
 			)),
 			tiledRendererType: renderPipeline.AddAdapter(tiled.NewTiledRenderer(
+				screen,
 				imageAssets,
 				tiledAssets,
 			)),
@@ -83,7 +84,6 @@ func (d *DonburiECSPlugin) Add(entries ...*donburi.Entry) {
 		}
 
 		transform.SetIndex(entries[i], index)
-
 	}
 }
 

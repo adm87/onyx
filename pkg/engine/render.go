@@ -36,6 +36,7 @@ func (p *RenderingPool) Get() *RenderingTask {
 }
 
 type renderer struct {
+	screen *screen
 	logger *logger
 
 	pool  *RenderingPool
@@ -44,8 +45,9 @@ type renderer struct {
 	pipeline RenderPipeline
 }
 
-func newRenderer(logger *logger) *renderer {
+func newRenderer(screen *screen, logger *logger) *renderer {
 	return &renderer{
+		screen: screen,
 		logger: logger,
 		pool: &RenderingPool{
 			pool: make([]*RenderingTask, 0, 100),

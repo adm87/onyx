@@ -10,13 +10,16 @@ import (
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/plugins/images"
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 type TiledAssets struct {
 	supportedExtensions []file.FileExt
 
-	tmxStore file.FileStore[*Tmx]
-	tsxStore file.FileStore[*Tsx]
+	tmxStore       file.FileStore[*Tmx]
+	tsxStore       file.FileStore[*Tsx]
+	tilemaps       map[uint64]*Tilemap
+	tilemapBuffers map[uint64][]*ebiten.Image
 
 	imageAssets *images.ImageAssets
 }
@@ -26,6 +29,8 @@ func NewTiledAssets(images *images.ImageAssets) *TiledAssets {
 		supportedExtensions: []file.FileExt{".tmx", ".tsx"},
 		tmxStore:            file.NewFileStore[*Tmx](0),
 		tsxStore:            file.NewFileStore[*Tsx](0),
+		tilemaps:            make(map[uint64]*Tilemap),
+		tilemapBuffers:      make(map[uint64][]*ebiten.Image),
 		imageAssets:         images,
 	}
 }
@@ -44,6 +49,61 @@ func (a *TiledAssets) GetTmxHandle(path file.FilePath) (uint64, bool) {
 
 func (a *TiledAssets) GetTsxHandle(path file.FilePath) (uint64, bool) {
 	return a.tsxStore.GetHandle(path)
+}
+
+func (t *TiledAssets) BuildTilemap(handle uint64) *Tilemap {
+	tmx, ok := t.tmxStore.Get(handle)
+	if !ok {
+		return nil
+	}
+
+	tilemap, err := buildTilemap(tmx)
+	if err != nil {
+		return nil
+	}
+
+	t.tilemaps[handle] = tilemap
+	return tilemap
+}
+
+func (t *TiledAssets) DeleteTilemap(handle uint64) {
+	delete(t.tilemaps, handle)
+	if buffers, exists := t.tilemapBuffers[handle]; exists {
+		for _, layer := range buffers {
+			layer.Deallocate()
+		}
+		delete(t.tilemapBuffers, handle)
+	}
+}
+
+func (t *TiledAssets) GetTilemap(handle uint64) (*Tilemap, bool) {
+	tilemap, ok := t.tilemaps[handle]
+	return tilemap, ok
+}
+
+// GetTilemapBuffer returns true if the buffer was resized
+func (t *TiledAssets) GetTilemapBuffer(handle uint64, width, height int, layer int) (*ebiten.Image, bool) {
+	buffers, exists := t.tilemapBuffers[handle]
+	if !exists {
+		buffers = make([]*ebiten.Image, 0)
+	}
+
+	for len(buffers) <= layer {
+		buffers = append(buffers, ebiten.NewImage(width, height))
+	}
+
+	t.tilemapBuffers[handle] = buffers
+	buffer := buffers[layer]
+
+	if buffer.Bounds().Dx() == width && buffer.Bounds().Dy() == height {
+		return buffer, false
+	}
+
+	buffer.Deallocate()
+	buffer = ebiten.NewImage(width, height)
+	buffers[layer] = buffer
+
+	return buffer, true
 }
 
 func (a *TiledAssets) ImportAsset(assets engine.Assets, fileSystem fs.FS, path file.FilePath, raw []byte) error {

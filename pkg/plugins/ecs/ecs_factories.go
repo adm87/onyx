@@ -5,6 +5,7 @@ import (
 	"github.com/adm87/onyx/pkg/plugins/ecs/camera"
 	"github.com/adm87/onyx/pkg/plugins/ecs/image"
 	"github.com/adm87/onyx/pkg/plugins/ecs/renderer"
+	"github.com/adm87/onyx/pkg/plugins/ecs/tiled"
 	"github.com/adm87/onyx/pkg/plugins/ecs/transform"
 	imageplugin "github.com/adm87/onyx/pkg/plugins/images"
 	tiledplugin "github.com/adm87/onyx/pkg/plugins/tiled"
@@ -55,6 +56,27 @@ func (f *ECSFactory) CreateImage(world donburi.World, opts ...image.Option) *don
 
 	renderer.AddRenderer(entry,
 		renderer.WithRendererType(f.imageRendererType),
+	)
+
+	return entry
+}
+
+func (f *ECSFactory) CreateTilemap(world donburi.World, opts ...tiled.TilemapOption) *donburi.Entry {
+	entry := tiled.NewTilemap(world, opts...)
+
+	var bounds geom.AABB
+
+	tilemapHandle := tiled.GetTilemapHandle(entry)
+	if tilemap, exists := f.tiledAssets.GetTilemap(tilemapHandle); exists {
+		bounds = tilemap.Bounds()
+	}
+
+	transform.AddTransform(entry,
+		transform.WithBounds(bounds.Min, bounds.Max),
+	)
+
+	renderer.AddRenderer(entry,
+		renderer.WithRendererType(f.tiledRendererType),
 	)
 
 	return entry
