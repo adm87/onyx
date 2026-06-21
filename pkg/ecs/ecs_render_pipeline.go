@@ -30,6 +30,10 @@ type ECSRenderPipeline struct {
 
 	adapters    *slotmap.SlotMap[ECSRenderAdapter]
 	partitioner *ECSPartitioner
+	pool        *engine.RenderingPool
+
+	viewport   geom.AABB
+	viewMatrix ebiten.GeoM
 
 	tasks []*engine.RenderingTask
 }
@@ -66,29 +70,11 @@ func (r *ECSRenderPipeline) GetRenderingTasks(pool *engine.RenderingPool) []*eng
 
 	safeArea := r.screen.SafeArea()
 
-	viewport := camera.GetViewport(mainCamera, safeArea)
-	viewMatrix := camera.GetViewMatrix(mainCamera, safeArea)
-
 	r.tasks = r.tasks[:0]
-	r.partitioner.Query(viewport, func(item donburi.Entity) {
-		entry := r.world.Entry(item)
-
-		renderer := renderer.GetRenderer(entry)
-		if renderer == nil || !renderer.Visible {
-			return
-		}
-
-		if adapter, exists := r.adapters.Get(renderer.Type); exists {
-			tasks := adapter.PrepareRenderingTasks(
-				entry,
-				renderer,
-				pool,
-				viewport,
-				viewMatrix,
-			)
-			r.tasks = append(r.tasks, tasks...)
-		}
-	})
+	r.pool = pool
+	r.viewport = camera.GetViewport(mainCamera, safeArea)
+	r.viewMatrix = camera.GetViewMatrix(mainCamera, safeArea)
+	r.partitioner.Query(r.viewport, r.getRenderingTasks)
 
 	slices.SortFunc(r.tasks, func(i, j *engine.RenderingTask) int {
 		if i.Layer != j.Layer {
@@ -98,4 +84,24 @@ func (r *ECSRenderPipeline) GetRenderingTasks(pool *engine.RenderingPool) []*eng
 	})
 
 	return r.tasks
+}
+
+func (r *ECSRenderPipeline) getRenderingTasks(item donburi.Entity) {
+	entry := r.world.Entry(item)
+
+	renderer := renderer.GetRenderer(entry)
+	if renderer == nil || !renderer.Visible {
+		return
+	}
+
+	if adapter, exists := r.adapters.Get(renderer.Type); exists {
+		tasks := adapter.PrepareRenderingTasks(
+			entry,
+			renderer,
+			r.pool,
+			r.viewport,
+			r.viewMatrix,
+		)
+		r.tasks = append(r.tasks, tasks...)
+	}
 }
