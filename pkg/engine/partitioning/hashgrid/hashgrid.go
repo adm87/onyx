@@ -41,6 +41,10 @@ func New[T comparable](resolution int, padding Padding) *HashGrid[T] {
 	}
 }
 
+func (sh *HashGrid[T]) Resolution() int {
+	return sh.resolution
+}
+
 func (sh *HashGrid[T]) Insert(item T, area geom.AABB) uint64 {
 	id := sh.store.Insert(item)
 

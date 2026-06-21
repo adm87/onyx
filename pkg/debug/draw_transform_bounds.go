@@ -10,12 +10,12 @@ import (
 	"github.com/yohamta/donburi"
 )
 
-func DrawTransformBounds(ecsPlugin *ecs.DonburiECSPlugin, cameraEntry *donburi.Entry, target *ebiten.Image, screen geom.AABB) {
+func DrawTransformBounds(donburiECS *ecs.DonburiECS, cameraEntry *donburi.Entry, target *ebiten.Image, screen geom.AABB) {
 	viewport := camera.GetViewport(cameraEntry, screen)
 
 	path := vector.Path{}
-	ecsPlugin.Query(viewport, func(entity donburi.Entity) {
-		entry := ecsPlugin.World().Entry(entity)
+	donburiECS.QueryAll(viewport, func(entity donburi.Entity) {
+		entry := donburiECS.World().Entry(entity)
 
 		bounds := transform.GetWorldBounds(entry)
 		if !bounds.Intersects(viewport) {

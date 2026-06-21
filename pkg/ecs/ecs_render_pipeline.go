@@ -70,7 +70,7 @@ func (r *ECSRenderPipeline) GetRenderingTasks(pool *engine.RenderingPool) []*eng
 	viewMatrix := camera.GetViewMatrix(mainCamera, safeArea)
 
 	r.tasks = r.tasks[:0]
-	r.partitioner.entities.Query(viewport, func(item donburi.Entity) {
+	r.partitioner.Query(viewport, func(item donburi.Entity) {
 		entry := r.world.Entry(item)
 
 		renderer := renderer.GetRenderer(entry)

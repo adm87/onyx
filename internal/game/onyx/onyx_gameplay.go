@@ -4,12 +4,14 @@ import (
 	"image/color"
 
 	"github.com/adm87/onyx/content"
+	"github.com/adm87/onyx/pkg/debug"
 	"github.com/adm87/onyx/pkg/ecs/camera"
 	"github.com/adm87/onyx/pkg/ecs/transform"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/plugins/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/yohamta/donburi"
 )
 
@@ -55,12 +57,21 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			o.ecs.Add(cameraEntry, tilemapEntry)
 			return nil
 		},
+		OnUpdate: func(dt float64) (engine.SceneExitCode, error) {
+			if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+				return engine.SceneExitNone, ebiten.Termination
+			}
+			if inpututil.IsKeyJustPressed(ebiten.KeyF) {
+				ebiten.SetFullscreen(!ebiten.IsFullscreen())
+			}
+			return engine.SceneExitNone, nil
+		},
 		OnExit: func() error {
 			o.ecs.Remove(cameraEntry, tilemapEntry)
 			return nil
 		},
 		OnRender: func(target *ebiten.Image) error {
-
+			debug.DrawTransformBounds(o.ecs, cameraEntry, target, o.game.Screen().SafeArea())
 			return nil
 		},
 	}

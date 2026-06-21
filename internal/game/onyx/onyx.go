@@ -21,15 +21,15 @@ type Onyx struct {
 	game engine.Game
 
 	animations *aseprite.AsepritePlugin
-	ecs        *ecs.DonburiECSPlugin
+	ecs        *ecs.DonburiECS
 	images     *images.ImagePlugin
 	tiled      *tiled.TiledPlugin
 }
 
 func NewGame(
 	game engine.Game,
+	ecs *ecs.DonburiECS,
 	animations *aseprite.AsepritePlugin,
-	ecs *ecs.DonburiECSPlugin,
 	image *images.ImagePlugin,
 	tiled *tiled.TiledPlugin) *Onyx {
 

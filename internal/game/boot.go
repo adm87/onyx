@@ -42,6 +42,11 @@ func Boot() error {
 	logger := g.Logger()
 	renderer := g.Renderer()
 
+	donburiECS := ecs.NewDonburiECS(
+		screen,
+		logger,
+	)
+
 	asepritePlugin := aseprite.NewAsepritePlugin(
 		logger,
 	)
@@ -52,12 +57,7 @@ func Boot() error {
 		screen,
 		imagePlugin.Assets(),
 	)
-
-	ecsPlugin := ecs.NewDonburiECSPlugin(
-		screen,
-		logger,
-	)
-	ecsPlugin.RenderPipeline().AddAdapters(
+	donburiECS.RenderPipeline().AddAdapters(
 		imagePlugin.Renderer(),
 		tiledPlugin.Renderer(),
 	)
@@ -65,11 +65,10 @@ func Boot() error {
 	assets.AddAdapters(imagePlugin.Assets())
 	assets.AddAdapters(tiledPlugin.Assets())
 
-	renderer.UsePipeline(ecsPlugin.RenderPipeline())
+	renderer.UsePipeline(donburiECS.RenderPipeline())
 
-	return onyx.NewGame(g,
+	return onyx.NewGame(g, donburiECS,
 		asepritePlugin,
-		ecsPlugin,
 		imagePlugin,
 		tiledPlugin,
 	).Start()
