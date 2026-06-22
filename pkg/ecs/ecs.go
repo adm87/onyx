@@ -24,7 +24,6 @@ func NewDonburiECS(screen engine.Screen, logger engine.Logger) *DonburiECS {
 		logger,
 		partitioner,
 	)
-
 	return &DonburiECS{
 		logger:         logger,
 		world:          world,
@@ -39,6 +38,10 @@ func (d *DonburiECS) World() donburi.World {
 
 func (d *DonburiECS) RenderPipeline() *ECSRenderPipeline {
 	return d.renderPipeline
+}
+
+func (d *DonburiECS) Partitioner() *ECSPartitioner {
+	return d.partitioner
 }
 
 func (d *DonburiECS) Add(entries ...*donburi.Entry) {
@@ -67,7 +70,6 @@ func (d *DonburiECS) QueryAll(area geom.AABB, fn func(entity donburi.Entity)) {
 }
 
 func (d *DonburiECS) QueryResolution(area geom.AABB, fn func(entity donburi.Entity)) {
-	resolution := int(max(area.Width(), area.Height()))
-	partition, _ := d.partitioner.nearestPartition(resolution)
+	partition, _ := d.partitioner.nearestPartition(area)
 	partition.Query(area, fn)
 }

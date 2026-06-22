@@ -35,9 +35,7 @@ func (p *ECSPartitioner) Insert(entity donburi.Entity, area geom.AABB) uint64 {
 	if index, exists := p.indexing[entity]; exists {
 		return index.idx
 	}
-
-	resolution := int(max(area.Width(), area.Height()))
-	partition, i := p.nearestPartition(resolution)
+	partition, i := p.nearestPartition(area)
 
 	id := partition.Insert(entity, area)
 	p.indexing[entity] = partitionIndex{
@@ -75,7 +73,7 @@ func (p *ECSPartitioner) Update(entity donburi.Entity, area geom.AABB) uint64 {
 	}
 
 	currentPartition.Remove(index.idx)
-	partition, i := p.nearestPartition(resolution)
+	partition, i := p.nearestPartition(area)
 
 	id := partition.Insert(entity, area)
 	p.indexing[entity] = partitionIndex{
@@ -99,7 +97,8 @@ func (p *ECSPartitioner) Query(area geom.AABB, callback func(donburi.Entity)) {
 	}
 }
 
-func (p *ECSPartitioner) nearestPartition(resolution int) (*hashgrid.HashGrid[donburi.Entity], int) {
+func (p *ECSPartitioner) nearestPartition(aabb geom.AABB) (*hashgrid.HashGrid[donburi.Entity], int) {
+	resolution := int(max(aabb.Width(), aabb.Height()))
 	for i, partition := range p.partitions {
 		if resolution <= partition.Resolution() {
 			return partition, i
