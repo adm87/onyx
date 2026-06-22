@@ -108,6 +108,8 @@ func AddTransform(entry *donburi.Entry, opts ...TransformOption) *donburi.Entry 
 		options.Index,
 	)
 
+	entry.AddComponent(TransformMatrix)
+
 	return entry
 }
 
@@ -148,9 +150,6 @@ func GetWorldBounds(entry *donburi.Entry) geom.AABB {
 }
 
 func GetMatrix(entry *donburi.Entry) ebiten.GeoM {
-	if !entry.HasComponent(TransformMatrix) || !entry.HasComponent(Transform) {
-		return ebiten.GeoM{}
-	}
 
 	t := Transform.Get(entry)
 	m := TransformMatrix.Get(entry)
@@ -181,42 +180,52 @@ func GetPosition(entry *donburi.Entry) (float64, float64) {
 	if !entry.HasComponent(Transform) {
 		return 0, 0
 	}
-	return Transform.Get(entry).Position()
+	t := Transform.Get(entry)
+	return t.x, t.y
 }
 
 func SetPosition(entry *donburi.Entry, x, y float64) {
 	if !entry.HasComponent(Transform) {
 		return
 	}
-	Transform.Get(entry).SetPosition(x, y)
+	t := Transform.Get(entry)
+	t.x = x
+	t.y = y
+	t.isDirty = true
 }
 
 func GetScale(entry *donburi.Entry) (float64, float64) {
 	if !entry.HasComponent(Transform) {
 		return 1, 1
 	}
-	return Transform.Get(entry).Scale()
+	t := Transform.Get(entry)
+	return t.sx, t.sy
 }
 
 func SetScale(entry *donburi.Entry, sx, sy float64) {
 	if !entry.HasComponent(Transform) {
 		return
 	}
-	Transform.Get(entry).SetScale(sx, sy)
+	t := Transform.Get(entry)
+	t.sx = sx
+	t.sy = sy
+	t.isDirty = true
 }
 
 func GetRotation(entry *donburi.Entry) float64 {
 	if !entry.HasComponent(Transform) {
 		return 0
 	}
-	return Transform.Get(entry).Rotation()
+	return Transform.Get(entry).r
 }
 
 func SetRotation(entry *donburi.Entry, r float64) {
 	if !entry.HasComponent(Transform) {
 		return
 	}
-	Transform.Get(entry).SetRotation(r)
+	t := Transform.Get(entry)
+	t.r = r
+	t.isDirty = true
 }
 
 func IsDirty(entry *donburi.Entry) bool {
@@ -224,39 +233,4 @@ func IsDirty(entry *donburi.Entry) bool {
 		return false
 	}
 	return Transform.Get(entry).isDirty
-}
-
-func (t *TransformModel) Position() (float64, float64) {
-	return t.x, t.y
-}
-
-func (t *TransformModel) SetPosition(x, y float64) {
-	if t.x != x || t.y != y {
-		t.x = x
-		t.y = y
-		t.isDirty = true
-	}
-}
-
-func (t *TransformModel) Scale() (float64, float64) {
-	return t.sx, t.sy
-}
-
-func (t *TransformModel) SetScale(sx, sy float64) {
-	if t.sx != sx || t.sy != sy {
-		t.sx = sx
-		t.sy = sy
-		t.isDirty = true
-	}
-}
-
-func (t *TransformModel) Rotation() float64 {
-	return t.r
-}
-
-func (t *TransformModel) SetRotation(r float64) {
-	if t.r != r {
-		t.r = r
-		t.isDirty = true
-	}
 }

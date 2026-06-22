@@ -81,3 +81,48 @@ func SetRenderer(entry *donburi.Entry, options ...Option) {
 		Visible: opts.Visible,
 	})
 }
+
+func GetLayer(entry *donburi.Entry) int {
+	if !entry.HasComponent(Renderer) {
+		return 0
+	}
+	return Renderer.Get(entry).Layer
+}
+
+func SetLayer(entry *donburi.Entry, layer int) {
+	if !entry.HasComponent(Renderer) {
+		return
+	}
+	renderer := Renderer.Get(entry)
+	renderer.Layer = layer
+}
+
+func GetZIndex(entry *donburi.Entry) int {
+	if !entry.HasComponent(Renderer) {
+		return 0
+	}
+	return Renderer.Get(entry).ZIndex
+}
+
+func SetZIndex(entry *donburi.Entry, zIndex int) {
+	if !entry.HasComponent(Renderer) {
+		return
+	}
+	renderer := Renderer.Get(entry)
+	renderer.ZIndex = zIndex
+}
+
+func SetVisibility(entry *donburi.Entry, visible bool) {
+	if !entry.HasComponent(Renderer) {
+		return
+	}
+	renderer := Renderer.Get(entry)
+	renderer.Visible = visible
+}
+
+func IsVisible(entry *donburi.Entry) bool {
+	if !entry.HasComponent(Renderer) {
+		return false
+	}
+	return Renderer.Get(entry).Visible
+}

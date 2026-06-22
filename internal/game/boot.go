@@ -47,16 +47,17 @@ func Boot() error {
 		logger,
 	)
 
-	asepritePlugin := aseprite.NewAsepritePlugin(
-		logger,
-	)
-
 	imagePlugin := images.NewImagePlugin()
+
+	asepritePlugin := aseprite.NewAsepritePlugin(
+		imagePlugin,
+	)
 
 	tiledPlugin := tiled.NewTiledPlugin(
 		screen,
 		imagePlugin.Assets(),
 	)
+
 	donburiECS.RenderPipeline().AddAdapters(
 		imagePlugin.Renderer(),
 		tiledPlugin.Renderer(),

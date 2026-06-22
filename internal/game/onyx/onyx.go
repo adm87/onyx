@@ -20,10 +20,10 @@ const (
 type Onyx struct {
 	game engine.Game
 
-	animations *aseprite.AsepritePlugin
-	ecs        *ecs.DonburiECS
-	images     *images.ImagePlugin
-	tiled      *tiled.TiledPlugin
+	aseprite *aseprite.AsepritePlugin
+	ecs      *ecs.DonburiECS
+	images   *images.ImagePlugin
+	tiled    *tiled.TiledPlugin
 }
 
 func NewGame(
@@ -34,11 +34,11 @@ func NewGame(
 	tiled *tiled.TiledPlugin) *Onyx {
 
 	o := &Onyx{
-		game:       game,
-		animations: animations,
-		ecs:        ecs,
-		images:     image,
-		tiled:      tiled,
+		game:     game,
+		aseprite: animations,
+		ecs:      ecs,
+		images:   image,
+		tiled:    tiled,
 	}
 
 	o.AddScenes()

@@ -3,6 +3,7 @@ package aseprite
 import (
 	"time"
 
+	"github.com/adm87/onyx/pkg/plugins/images"
 	"github.com/yohamta/donburi"
 )
 
@@ -18,11 +19,12 @@ type AnimatorModel struct {
 }
 
 type SpriteOptions struct {
-	State       State
-	ImageHandle uint64
-	Loops       int
-	Frame       int
-	Clip        string
+	*images.ImageOptions
+
+	State State
+	Loops int
+	Frame int
+	Clip  string
 }
 
 type SpriteOption func(*SpriteOptions)
@@ -34,13 +36,13 @@ const (
 
 var Animator = donburi.NewComponentType[AnimatorModel]()
 
-func defaultSpriteOptions() *SpriteOptions {
+func DefaultSpriteOptions() *SpriteOptions {
 	return &SpriteOptions{
-		State:       AnimationStateStopped,
-		ImageHandle: 0,
-		Loops:       -1, // -1 for infinite loops
-		Frame:       0,
-		Clip:        "",
+		ImageOptions: images.DefaultImageOptions(),
+		State:        AnimationStateStopped,
+		Loops:        -1, // -1 for infinite loops
+		Frame:        0,
+		Clip:         "",
 	}
 }
 
@@ -56,12 +58,6 @@ func WithAnimationFrame(frame int) SpriteOption {
 	}
 }
 
-func WithImageHandle(handle uint64) SpriteOption {
-	return func(opts *SpriteOptions) {
-		opts.ImageHandle = handle
-	}
-}
-
 func WithLoops(loops int) SpriteOption {
 	return func(opts *SpriteOptions) {
 		opts.Loops = loops
@@ -71,6 +67,14 @@ func WithLoops(loops int) SpriteOption {
 func WithClip(clip string) SpriteOption {
 	return func(opts *SpriteOptions) {
 		opts.Clip = clip
+	}
+}
+
+func WithImageOptions(imageOpts ...images.Option) SpriteOption {
+	return func(opts *SpriteOptions) {
+		for _, opt := range imageOpts {
+			opt(opts.ImageOptions)
+		}
 	}
 }
 

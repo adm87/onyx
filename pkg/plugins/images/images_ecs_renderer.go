@@ -46,7 +46,7 @@ func (r *ImageECSRenderer) PrepareRenderingTasks(
 		filter := GetFilter(entry)
 
 		matrix := transform.GetMatrix(entry)
-		scaleX, scaleY := transform.GetTransform(entry).Scale()
+		scaleX, scaleY := transform.GetScale(entry)
 
 		aX := anchor.X * float64(width) * scaleX
 		aY := anchor.Y * float64(height) * scaleY

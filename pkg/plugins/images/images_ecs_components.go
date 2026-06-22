@@ -8,7 +8,7 @@ import (
 	"github.com/yohamta/donburi"
 )
 
-type Options struct {
+type ImageOptions struct {
 	Handle uint64
 	Frame  int
 	Anchor geom.Vec2
@@ -16,7 +16,7 @@ type Options struct {
 	Color  color.RGBA
 }
 
-type Option func(*Options)
+type Option func(*ImageOptions)
 
 type ImageModel struct {
 	Handle uint64
@@ -28,8 +28,8 @@ type ImageModel struct {
 
 var Image = donburi.NewComponentType[ImageModel]()
 
-func defaultImageOptions() *Options {
-	return &Options{
+func DefaultImageOptions() *ImageOptions {
+	return &ImageOptions{
 		Handle: 0,
 		Frame:  0,
 		Anchor: geom.Vec2{X: 0, Y: 0},
@@ -39,31 +39,31 @@ func defaultImageOptions() *Options {
 }
 
 func WithHandle(handle uint64) Option {
-	return func(opts *Options) {
+	return func(opts *ImageOptions) {
 		opts.Handle = handle
 	}
 }
 
 func WithFrame(frame int) Option {
-	return func(opts *Options) {
+	return func(opts *ImageOptions) {
 		opts.Frame = frame
 	}
 }
 
 func WithAnchor(x, y float64) Option {
-	return func(opts *Options) {
+	return func(opts *ImageOptions) {
 		opts.Anchor = geom.Vec2{X: x, Y: y}
 	}
 }
 
 func WithFilter(filter ebiten.Filter) Option {
-	return func(opts *Options) {
+	return func(opts *ImageOptions) {
 		opts.Filter = filter
 	}
 }
 
 func WithColor(color color.RGBA) Option {
-	return func(opts *Options) {
+	return func(opts *ImageOptions) {
 		opts.Color = color
 	}
 }
@@ -85,7 +85,7 @@ func GetImage(entry *donburi.Entry) *ImageModel {
 }
 
 func SetImage(entry *donburi.Entry, options ...Option) {
-	opts := defaultImageOptions()
+	opts := DefaultImageOptions()
 	for _, option := range options {
 		option(opts)
 	}
@@ -130,7 +130,7 @@ func SetHandle(entry *donburi.Entry, handle uint64) {
 
 func GetAnchor(entry *donburi.Entry) geom.Vec2 {
 	if !entry.HasComponent(Image) {
-		return defaultImageOptions().Anchor
+		return DefaultImageOptions().Anchor
 	}
 	return Image.Get(entry).Anchor
 }
@@ -145,7 +145,7 @@ func SetAnchor(entry *donburi.Entry, x, y float64) {
 
 func GetFilter(entry *donburi.Entry) ebiten.Filter {
 	if !entry.HasComponent(Image) {
-		return defaultImageOptions().Filter
+		return DefaultImageOptions().Filter
 	}
 	return Image.Get(entry).Filter
 }
@@ -160,7 +160,7 @@ func SetFilter(entry *donburi.Entry, filter ebiten.Filter) {
 
 func GetColor(entry *donburi.Entry) color.RGBA {
 	if !entry.HasComponent(Image) {
-		return defaultImageOptions().Color
+		return DefaultImageOptions().Color
 	}
 	return Image.Get(entry).Color
 }
@@ -175,7 +175,7 @@ func SetColor(entry *donburi.Entry, color color.RGBA) {
 
 func GetAlpha(entry *donburi.Entry) uint8 {
 	if !entry.HasComponent(Image) {
-		return defaultImageOptions().Color.A
+		return DefaultImageOptions().Color.A
 	}
 	return Image.Get(entry).Color.A
 }

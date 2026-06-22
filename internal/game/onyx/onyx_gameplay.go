@@ -2,13 +2,17 @@ package onyx
 
 import (
 	"image/color"
+	"time"
 
 	"github.com/adm87/onyx/content"
 	"github.com/adm87/onyx/pkg/debug"
 	"github.com/adm87/onyx/pkg/ecs/camera"
+	"github.com/adm87/onyx/pkg/ecs/renderer"
 	"github.com/adm87/onyx/pkg/ecs/transform"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/file"
+	"github.com/adm87/onyx/pkg/plugins/aseprite"
+	"github.com/adm87/onyx/pkg/plugins/images"
 	"github.com/adm87/onyx/pkg/plugins/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -24,28 +28,33 @@ var gameplayManifest = []file.FilePath{
 func (o *Onyx) GameplayScene() engine.SceneState {
 	var cameraEntry *donburi.Entry
 	var tilemapEntry *donburi.Entry
+	var spriteEntry *donburi.Entry
 	return engine.SceneState{
 		OnEnter: func() error {
 			assets := o.game.Assets()
 			screen := o.game.Screen()
 			tiledAssets := o.tiled.Assets()
+			imageAssets := o.images.Assets()
+			asepriteLibrary := o.aseprite.Library()
 
 			screen.SetBackgroundColor(color.RGBA{R: 100, G: 149, B: 237, A: 255})
 
 			if err := assets.Load(content.AssetsFS(), gameplayManifest...); err != nil {
 				return err
 			}
-
-			tmxHandle, found := tiledAssets.GetTmxHandle(content.AssetsTiledGym04)
-			if !found {
-				return engine.ErrAssetNotFound{Path: content.AssetsTiledGym04.String()}
+			imgHandle, err := buildAnimations(assets, imageAssets, asepriteLibrary)
+			if err != nil {
+				return err
 			}
 
-			tilemap := tiledAssets.BuildTilemap(tmxHandle)
+			tilemap, tilemapHandle, err := buildTilemap(tiledAssets, content.AssetsTiledGym04)
+			if err != nil {
+				return err
+			}
 			tilemapCenter := tilemap.Bounds().Center()
 
 			tilemapEntry = o.tiled.CreateTilemap(o.ecs.World(),
-				tiled.WithTilemapHandle(tmxHandle),
+				tiled.WithTilemapHandle(tilemapHandle),
 			)
 
 			cameraEntry = transform.NewTransform(o.ecs.World())
@@ -54,7 +63,22 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			transform.SetPosition(cameraEntry, tilemapCenter.X, tilemapCenter.Y)
 			camera.SetZoom(cameraEntry, 0.25)
 
-			o.ecs.Add(cameraEntry, tilemapEntry)
+			spriteEntry = o.aseprite.CreateSprite(o.ecs.World(),
+				aseprite.WithImageOptions(
+					images.WithHandle(imgHandle),
+					images.WithAnchor(0.5, 1),
+				),
+				aseprite.WithClip("Idle"),
+				aseprite.Playing(),
+			)
+			renderer.SetLayer(spriteEntry, 1)
+			transform.SetPosition(spriteEntry, tilemapCenter.X, tilemapCenter.Y)
+
+			o.ecs.Add(
+				cameraEntry,
+				tilemapEntry,
+				spriteEntry,
+			)
 			return nil
 		},
 		OnUpdate: func(dt float64) (engine.SceneExitCode, error) {
@@ -64,10 +88,25 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			if inpututil.IsKeyJustPressed(ebiten.KeyF) {
 				ebiten.SetFullscreen(!ebiten.IsFullscreen())
 			}
+
 			return engine.SceneExitNone, nil
 		},
+		OnLateUpdate: func(dt float64) error {
+			asepriteSystems := o.aseprite.Systems()
+
+			viewport := camera.GetViewport(cameraEntry, o.game.Screen().SafeArea())
+			o.ecs.QueryAll(viewport, func(entity donburi.Entity) {
+				entry := o.ecs.World().Entry(entity)
+				asepriteSystems.UpdateAnimation(entry, time.Duration(dt*float64(time.Second)))
+			})
+			return nil
+		},
 		OnExit: func() error {
-			o.ecs.Remove(cameraEntry, tilemapEntry)
+			o.ecs.Remove(
+				cameraEntry,
+				tilemapEntry,
+				spriteEntry,
+			)
 			return nil
 		},
 		OnRender: func(target *ebiten.Image) error {
@@ -75,4 +114,31 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			return nil
 		},
 	}
+}
+
+func buildAnimations(assets engine.Assets, imageAssets *images.ImageAssets, asepriteLibrary *aseprite.AsepriteLibrary) (uint64, error) {
+	animationDataHandle, found := assets.GetDataHandle(content.AssetsAsepriteCaptainJson)
+	if !found {
+		return 0, engine.ErrAssetNotFound{Path: content.AssetsAsepriteCaptainJson.String()}
+	}
+
+	animationImageHandle, found := imageAssets.GetHandle(content.AssetsAsepriteCaptainImg)
+	if !found {
+		return 0, engine.ErrAssetNotFound{Path: content.AssetsAsepriteCaptainImg.String()}
+	}
+
+	animationData, _ := assets.GetData(animationDataHandle)
+	asepriteLibrary.BuildAnimations(animationImageHandle, animationData)
+
+	return animationImageHandle, nil
+}
+
+func buildTilemap(tiledAssets *tiled.TiledAssets, tmxPath file.FilePath) (*tiled.Tilemap, uint64, error) {
+	tmxHandle, found := tiledAssets.GetTmxHandle(tmxPath)
+	if !found {
+		return nil, 0, engine.ErrAssetNotFound{Path: tmxPath.String()}
+	}
+
+	tilemap := tiledAssets.BuildTilemap(tmxHandle)
+	return tilemap, tmxHandle, nil
 }
