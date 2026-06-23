@@ -11,7 +11,9 @@ import (
 	"github.com/adm87/onyx/pkg/ecs/transform"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/file"
+	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/plugins/aseprite"
+	"github.com/adm87/onyx/pkg/plugins/collision"
 	"github.com/adm87/onyx/pkg/plugins/images"
 	"github.com/adm87/onyx/pkg/plugins/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -74,7 +76,19 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			renderer.SetLayer(spriteEntry, 1)
 			transform.SetPosition(spriteEntry, tilemapCenter.X, tilemapCenter.Y)
 
-			o.ecs.Add(
+			bounds := transform.GetBounds(spriteEntry)
+			width := bounds.Width() * 0.6
+			height := bounds.Height() * 0.75
+
+			collision.AddCollision(spriteEntry,
+				collision.WithCollisionType(collision.CollisionTypeDynamic),
+				collision.WithCollisionBounds(geom.AABB{
+					Min: geom.Vec2{X: -width / 2, Y: -height},
+					Max: geom.Vec2{X: width / 2, Y: 0},
+				}),
+			)
+
+			o.Add(
 				cameraEntry,
 				tilemapEntry,
 				spriteEntry,
@@ -87,6 +101,26 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			}
 			if inpututil.IsKeyJustPressed(ebiten.KeyF) {
 				ebiten.SetFullscreen(!ebiten.IsFullscreen())
+			}
+
+			move := geom.Vec2{}
+			if ebiten.IsKeyPressed(ebiten.KeyW) {
+				move.Y -= 1
+			}
+			if ebiten.IsKeyPressed(ebiten.KeyS) {
+				move.Y += 1
+			}
+			if ebiten.IsKeyPressed(ebiten.KeyA) {
+				move.X -= 1
+			}
+			if ebiten.IsKeyPressed(ebiten.KeyD) {
+				move.X += 1
+			}
+
+			if move.X != 0 || move.Y != 0 {
+				move = move.Normalize().Mul(100 * dt)
+				transform.Translate(spriteEntry, move.X, move.Y)
+				o.Update(spriteEntry)
 			}
 
 			return engine.SceneExitNone, nil
@@ -102,7 +136,7 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			return nil
 		},
 		OnExit: func() error {
-			o.ecs.Remove(
+			o.Remove(
 				cameraEntry,
 				tilemapEntry,
 				spriteEntry,
@@ -111,6 +145,7 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 		},
 		OnRender: func(target *ebiten.Image) error {
 			debug.DrawTransformBounds(o.ecs, cameraEntry, target, o.game.Screen().SafeArea())
+			debug.DrawColliders(o.ecs.World(), o.collision.World(), cameraEntry, target, o.game.Screen().SafeArea())
 			return nil
 		},
 	}

@@ -234,3 +234,13 @@ func IsDirty(entry *donburi.Entry) bool {
 	}
 	return Transform.Get(entry).isDirty
 }
+
+func Translate(entry *donburi.Entry, dx, dy float64) {
+	if !entry.HasComponent(Transform) {
+		return
+	}
+	t := Transform.Get(entry)
+	t.x += dx
+	t.y += dy
+	t.isDirty = true
+}

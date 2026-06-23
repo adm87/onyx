@@ -43,8 +43,6 @@ func (o *Onyx) SplashScreenScene() engine.SceneState {
 			cameraEntry = transform.NewTransform(o.ecs.World())
 			cameraEntry.AddComponent(camera.MainCamera)
 
-			o.ecs.Add(imageEntry, cameraEntry)
-
 			sequence = gween.NewSequence(
 				gween.New(0, 0, 0.25, ease.Linear),
 				gween.New(0, 1, 1.0, ease.InCubic),
@@ -52,6 +50,8 @@ func (o *Onyx) SplashScreenScene() engine.SceneState {
 				gween.New(1, 0, 1.0, ease.OutCubic),
 				gween.New(0, 0, 0.25, ease.Linear),
 			)
+
+			o.Add(imageEntry, cameraEntry)
 			return nil
 		},
 		OnUpdate: func(delta float64) (engine.SceneExitCode, error) {
@@ -69,7 +69,7 @@ func (o *Onyx) SplashScreenScene() engine.SceneState {
 		},
 		OnExit: func() error {
 			o.game.Screen().RestoreBuffer()
-			o.ecs.Remove(imageEntry, cameraEntry)
+			o.Remove(imageEntry, cameraEntry)
 			return nil
 		},
 	}

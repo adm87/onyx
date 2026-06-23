@@ -46,23 +46,35 @@ func (d *DonburiECS) Partitioner() *ECSPartitioner {
 
 func (d *DonburiECS) Add(entries ...*donburi.Entry) {
 	for _, entry := range entries {
-		aabb := transform.GetWorldBounds(entry)
-		transform.SetIndex(entry, d.partitioner.Insert(entry.Entity(), aabb))
+		d.AddEntry(entry)
 	}
+}
+
+func (d *DonburiECS) AddEntry(entry *donburi.Entry) {
+	aabb := transform.GetWorldBounds(entry)
+	transform.SetIndex(entry, d.partitioner.Insert(entry.Entity(), aabb))
 }
 
 func (d *DonburiECS) Remove(entries ...*donburi.Entry) {
 	for _, entry := range entries {
-		d.partitioner.Remove(entry.Entity())
+		d.RemoveEntry(entry)
 	}
+}
+
+func (d *DonburiECS) RemoveEntry(entry *donburi.Entry) {
+	d.partitioner.Remove(entry.Entity())
 }
 
 func (d *DonburiECS) Update(entries ...*donburi.Entry) {
 	for _, entry := range entries {
-		aabb := transform.GetWorldBounds(entry)
-		index := d.partitioner.Update(entry.Entity(), aabb)
-		transform.SetIndex(entry, index)
+		d.UpdateEntry(entry)
 	}
+}
+
+func (d *DonburiECS) UpdateEntry(entry *donburi.Entry) {
+	aabb := transform.GetWorldBounds(entry)
+	index := d.partitioner.Update(entry.Entity(), aabb)
+	transform.SetIndex(entry, index)
 }
 
 func (d *DonburiECS) QueryAll(area geom.AABB, fn func(entity donburi.Entity)) {

@@ -11,6 +11,7 @@ import (
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/plugins/aseprite"
+	"github.com/adm87/onyx/pkg/plugins/collision"
 	"github.com/adm87/onyx/pkg/plugins/images"
 	"github.com/adm87/onyx/pkg/plugins/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -58,6 +59,8 @@ func Boot() error {
 		imagePlugin.Assets(),
 	)
 
+	collisionPlugin := collision.NewCollisionPlugin()
+
 	donburiECS.RenderPipeline().AddAdapters(
 		imagePlugin.Renderer(),
 		tiledPlugin.Renderer(),
@@ -72,5 +75,6 @@ func Boot() error {
 		asepritePlugin,
 		imagePlugin,
 		tiledPlugin,
+		collisionPlugin,
 	).Start()
 }
