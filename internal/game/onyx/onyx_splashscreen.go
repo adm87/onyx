@@ -51,7 +51,7 @@ func (o *Onyx) SplashScreenScene() engine.SceneState {
 				gween.New(0, 0, 0.25, ease.Linear),
 			)
 
-			o.Add(imageEntry, cameraEntry)
+			o.AddEntries(imageEntry, cameraEntry)
 			return nil
 		},
 		OnUpdate: func(delta float64) (engine.SceneExitCode, error) {
@@ -69,7 +69,7 @@ func (o *Onyx) SplashScreenScene() engine.SceneState {
 		},
 		OnExit: func() error {
 			o.game.Screen().RestoreBuffer()
-			o.Remove(imageEntry, cameraEntry)
+			o.RemoveEntries(imageEntry, cameraEntry)
 			return nil
 		},
 	}

@@ -64,16 +64,14 @@ func (p *ECSPartitioner) Update(entity donburi.Entity, area geom.AABB) uint64 {
 		return p.Insert(entity, area)
 	}
 
-	resolution := int(max(area.Width(), area.Height()))
-	currentPartition := p.partitions[index.partition]
-
-	if resolution == currentPartition.Resolution() {
-		currentPartition.Update(index.idx, area)
+	partition, i := p.nearestPartition(area)
+	if i == index.partition {
+		partition.Update(index.idx, area)
 		return index.idx
 	}
 
-	currentPartition.Remove(index.idx)
-	partition, i := p.nearestPartition(area)
+	oldPartition := p.partitions[index.partition]
+	oldPartition.Remove(index.idx)
 
 	id := partition.Insert(entity, area)
 	p.indexing[entity] = partitionIndex{

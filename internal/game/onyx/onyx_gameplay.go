@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/adm87/onyx/content"
+	"github.com/adm87/onyx/internal/game/components/movement"
 	"github.com/adm87/onyx/pkg/debug"
 	"github.com/adm87/onyx/pkg/ecs/camera"
 	"github.com/adm87/onyx/pkg/ecs/renderer"
@@ -26,6 +27,11 @@ var gameplayManifest = []file.FilePath{
 	content.AssetsAsepriteCaptainJson,
 	content.AssetsTiledGym04,
 }
+
+var (
+	debugDrawTransformBounds = false
+	debugDrawColliders       = false
+)
 
 func (o *Onyx) GameplayScene() engine.SceneState {
 	var cameraEntry *donburi.Entry
@@ -88,7 +94,11 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 				}),
 			)
 
-			o.Add(
+			movement.AddMovement(spriteEntry,
+				movement.WithSpeed(100),
+			)
+
+			o.AddEntries(
 				cameraEntry,
 				tilemapEntry,
 				spriteEntry,
@@ -102,30 +112,60 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			if inpututil.IsKeyJustPressed(ebiten.KeyF) {
 				ebiten.SetFullscreen(!ebiten.IsFullscreen())
 			}
+			if inpututil.IsKeyJustPressed(ebiten.KeyF1) {
+				debugDrawTransformBounds = !debugDrawTransformBounds
+			}
+			if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
+				debugDrawColliders = !debugDrawColliders
+			}
 
-			move := geom.Vec2{}
+			var moveX, moveY float64
+
+			movement.ClearDirection(spriteEntry)
 			if ebiten.IsKeyPressed(ebiten.KeyW) {
-				move.Y -= 1
+				moveY -= 1
 			}
 			if ebiten.IsKeyPressed(ebiten.KeyS) {
-				move.Y += 1
+				moveY += 1
 			}
 			if ebiten.IsKeyPressed(ebiten.KeyA) {
-				move.X -= 1
+				moveX -= 1
 			}
 			if ebiten.IsKeyPressed(ebiten.KeyD) {
-				move.X += 1
+				moveX += 1
 			}
-
-			if move.X != 0 || move.Y != 0 {
-				move = move.Normalize().Mul(100 * dt)
-				transform.Translate(spriteEntry, move.X, move.Y)
-				o.Update(spriteEntry)
-			}
+			movement.SetDirection(spriteEntry, moveX, moveY)
 
 			return engine.SceneExitNone, nil
 		},
+		OnFixedUpdate: func(dt float64) error {
+			movement.ApplyMovement(o.ecs.World(), dt)
+			if movement.IsMoving(spriteEntry) {
+				direction := movement.GetDirection(spriteEntry)
+				if direction.X < 0 {
+					transform.SetScale(spriteEntry, -1, 1)
+				} else if direction.X > 0 {
+					transform.SetScale(spriteEntry, 1, 1)
+				}
+				o.UpdateEntries(spriteEntry)
+			}
+
+			collisionSystems := o.collision.Systems()
+
+			spriteCollider := collision.GetWorldCollider(spriteEntry)
+			if infos, ok := collisionSystems.CheckStaticCollision(o.ecs.World(), spriteCollider); ok {
+				_ = infos
+			}
+			return nil
+		},
 		OnLateUpdate: func(dt float64) error {
+			direction := movement.GetDirection(spriteEntry)
+			if direction.X == 0 {
+				aseprite.SetClip(spriteEntry, "Idle")
+			} else {
+				aseprite.SetClip(spriteEntry, "Run")
+			}
+
 			asepriteSystems := o.aseprite.Systems()
 
 			viewport := camera.GetViewport(cameraEntry, o.game.Screen().SafeArea())
@@ -136,7 +176,7 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			return nil
 		},
 		OnExit: func() error {
-			o.Remove(
+			o.RemoveEntries(
 				cameraEntry,
 				tilemapEntry,
 				spriteEntry,
@@ -144,8 +184,12 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			return nil
 		},
 		OnRender: func(target *ebiten.Image) error {
-			debug.DrawTransformBounds(o.ecs, cameraEntry, target, o.game.Screen().SafeArea())
-			debug.DrawColliders(o.ecs.World(), o.collision.World(), cameraEntry, target, o.game.Screen().SafeArea())
+			if debugDrawTransformBounds {
+				debug.DrawTransformBounds(o.ecs, cameraEntry, target, o.game.Screen().SafeArea())
+			}
+			if debugDrawColliders {
+				debug.DrawColliders(o.ecs.World(), o.collision.World(), cameraEntry, target, o.game.Screen().SafeArea())
+			}
 			return nil
 		},
 	}

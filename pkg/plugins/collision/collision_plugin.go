@@ -3,17 +3,24 @@ package collision
 import "github.com/yohamta/donburi"
 
 type CollisionPlugin struct {
-	world *CollisionWorld
+	world   *CollisionWorld
+	systems *CollisionSystem
 }
 
 func NewCollisionPlugin() *CollisionPlugin {
+	world := NewCollisionWorld()
 	return &CollisionPlugin{
-		world: NewCollisionWorld(),
+		world:   world,
+		systems: NewCollisionSystem(world),
 	}
 }
 
 func (c *CollisionPlugin) World() *CollisionWorld {
 	return c.world
+}
+
+func (c *CollisionPlugin) Systems() *CollisionSystem {
+	return c.systems
 }
 
 func (c *CollisionPlugin) Add(entries ...*donburi.Entry) {

@@ -150,7 +150,6 @@ func GetWorldBounds(entry *donburi.Entry) geom.AABB {
 }
 
 func GetMatrix(entry *donburi.Entry) ebiten.GeoM {
-
 	t := Transform.Get(entry)
 	m := TransformMatrix.Get(entry)
 

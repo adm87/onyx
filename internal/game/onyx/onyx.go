@@ -73,21 +73,21 @@ func (o *Onyx) AddScenes() {
 	)
 }
 
-func (o *Onyx) Add(entries ...*donburi.Entry) {
+func (o *Onyx) AddEntries(entries ...*donburi.Entry) {
 	for _, entry := range entries {
 		o.ecs.AddEntry(entry)
 		o.collision.AddEntry(entry)
 	}
 }
 
-func (o *Onyx) Remove(entries ...*donburi.Entry) {
+func (o *Onyx) RemoveEntries(entries ...*donburi.Entry) {
 	for _, entry := range entries {
 		o.ecs.RemoveEntry(entry)
 		o.collision.RemoveEntry(entry)
 	}
 }
 
-func (o *Onyx) Update(entries ...*donburi.Entry) {
+func (o *Onyx) UpdateEntries(entries ...*donburi.Entry) {
 	for _, entry := range entries {
 		o.ecs.UpdateEntry(entry)
 		o.collision.UpdateEntry(entry)
