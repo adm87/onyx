@@ -188,16 +188,39 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			return nil
 		},
 		OnRender: func(target *ebiten.Image) error {
+			safeArea := o.game.Screen().SafeArea()
 			if debugDrawTransformBounds {
-				debug.DrawTransformBounds(o.ecs, cameraEntry, target, o.game.Screen().SafeArea())
+				debug.DrawTransformBounds(o.ecs, cameraEntry, target, safeArea)
 			}
 			if debugDrawColliders {
-				debug.DrawColliders(o.ecs.World(), o.collision.World(), cameraEntry, target, o.game.Screen().SafeArea())
+				debug.DrawColliders(
+					o.ecs.World(),
+					camera.GetViewport(cameraEntry, safeArea),
+					o.collision.World(),
+					cameraEntry,
+					target,
+					safeArea,
+					color.RGBA{R: 255, A: 255},
+				)
 			}
 			if debugDrawNearestColliders {
 				aabb := collision.GetWorldCollider(spriteEntry)
-				debug.DrawStaticPartitioner(o.collision.World(), cameraEntry, target, aabb, o.game.Screen().SafeArea())
-				debug.DrawNearestColliders(o.ecs.World(), aabb, o.collision.World(), cameraEntry, target, o.game.Screen().SafeArea())
+				debug.DrawStaticPartitioner(
+					o.collision.World(),
+					cameraEntry,
+					target,
+					aabb,
+					safeArea,
+				)
+				debug.DrawColliders(
+					o.ecs.World(),
+					aabb,
+					o.collision.World(),
+					cameraEntry,
+					target,
+					safeArea,
+					color.RGBA{G: 255, A: 255},
+				)
 			}
 			return nil
 		},
