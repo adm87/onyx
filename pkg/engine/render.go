@@ -1,12 +1,17 @@
 package engine
 
 import (
+	"image/color"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
 type Renderer interface {
+	Enable()
+	Disable()
 	UsePipeline(RenderPipeline)
+	SetBackgroundColor(color.RGBA)
 }
 
 type RenderPipeline interface {
@@ -37,10 +42,13 @@ func (p *RenderingPool) Get() *RenderingTask {
 }
 
 type renderer struct {
+	enabled bool
+
 	screen *screen
 	logger *logger
 
 	pool  *RenderingPool
+	color color.RGBA
 	tasks []*RenderingTask
 
 	pipeline RenderPipeline
@@ -53,19 +61,38 @@ func newRenderer(screen *screen, logger *logger) *renderer {
 		pool: &RenderingPool{
 			pool: make([]*RenderingTask, 0, 100),
 		},
-		tasks: make([]*RenderingTask, 0, 100),
+		tasks:   make([]*RenderingTask, 0, 100),
+		enabled: true,
 	}
+}
+
+func (r *renderer) Enable() {
+	r.enabled = true
+}
+
+func (r *renderer) Disable() {
+	r.enabled = false
 }
 
 func (r *renderer) UsePipeline(p RenderPipeline) {
 	r.pipeline = p
 }
 
+func (r *renderer) SetBackgroundColor(color color.RGBA) {
+	r.color = color
+}
+
 func (r *renderer) render(target *ebiten.Image) {
+	if !r.enabled {
+		return
+	}
+
 	if r.pipeline == nil {
 		ebitenutil.DebugPrint(target, "No render pipeline set")
 		return
 	}
+
+	target.Fill(r.color)
 
 	r.tasks = r.tasks[:0]
 	r.pool.i = 0

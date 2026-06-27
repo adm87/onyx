@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"image/color"
 	"math"
 
 	"github.com/adm87/onyx/pkg/engine/geom"
@@ -20,7 +19,6 @@ type Screen interface {
 	RestoreBuffer()
 	Size() geom.Vec2
 	SafeArea() geom.AABB
-	SetBackgroundColor(color.RGBA)
 }
 
 type screen struct {
@@ -30,7 +28,6 @@ type screen struct {
 	scale                         float64
 	isDirty                       bool
 	scaleMode                     ScreenScaleMode
-	backgroundColor               color.RGBA
 	safeArea                      geom.AABB
 
 	options *ebiten.DrawImageOptions
@@ -42,16 +39,14 @@ func newScreen(
 	width, height int,
 	scaleMode ScreenScaleMode,
 	filter ebiten.Filter,
-	backgroundColor color.RGBA,
 	logger *logger,
 ) *screen {
 
 	return &screen{
-		originalWidth:   width,
-		originalHeight:  height,
-		scaleMode:       scaleMode,
-		backgroundColor: backgroundColor,
-		buffer:          ebiten.NewImage(width, height),
+		originalWidth:  width,
+		originalHeight: height,
+		scaleMode:      scaleMode,
+		buffer:         ebiten.NewImage(width, height),
 		options: &ebiten.DrawImageOptions{
 			Filter: filter,
 		},
@@ -97,10 +92,6 @@ func (s *screen) RestoreBuffer() {
 func (s *screen) Size() geom.Vec2 {
 	bufWidth, bufHeight := s.buffer.Bounds().Dx(), s.buffer.Bounds().Dy()
 	return geom.Vec2{X: float64(bufWidth), Y: float64(bufHeight)}
-}
-
-func (s *screen) SetBackgroundColor(color color.RGBA) {
-	s.backgroundColor = color
 }
 
 func (s *screen) calculateScreenScale(outsideWidth, outsideHeight int) {

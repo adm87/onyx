@@ -51,7 +51,6 @@ func NewGame(opts ...Option) Game {
 		cfg.Height,
 		cfg.ScreenScale,
 		cfg.Filter,
-		cfg.BackgroundColor,
 		logger,
 	)
 
@@ -136,12 +135,8 @@ func (g *game) Draw(screen *ebiten.Image) {
 	case <-g.ctx.Done():
 		return
 	default:
-		if g.renderer == nil {
-			g.logger.Warn("No renderer set. Skipping rendering.")
-			return
-		}
+		g.screen.buffer.Clear()
 
-		g.screen.buffer.Fill(g.screen.backgroundColor)
 		g.renderer.render(g.screen.buffer)
 		g.scenes.render(g.screen.buffer)
 

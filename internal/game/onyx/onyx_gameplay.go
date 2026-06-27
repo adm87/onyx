@@ -29,6 +29,7 @@ var gameplayManifest = []file.FilePath{
 }
 
 var (
+	debugToggleRendering      = true
 	debugDrawTransformBounds  = false
 	debugDrawColliders        = false
 	debugDrawNearestColliders = false
@@ -41,12 +42,11 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 	return engine.SceneState{
 		OnEnter: func() error {
 			assets := o.game.Assets()
-			screen := o.game.Screen()
 			tiledAssets := o.tiled.Assets()
 			imageAssets := o.images.Assets()
 			asepriteLibrary := o.aseprite.Library()
 
-			screen.SetBackgroundColor(color.RGBA{R: 100, G: 149, B: 237, A: 255})
+			o.game.Renderer().SetBackgroundColor(color.RGBA{R: 100, G: 149, B: 237, A: 255})
 
 			if err := assets.Load(content.AssetsFS(), gameplayManifest...); err != nil {
 				return err
@@ -112,6 +112,14 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			}
 			if inpututil.IsKeyJustPressed(ebiten.KeyF) {
 				ebiten.SetFullscreen(!ebiten.IsFullscreen())
+			}
+			if inpututil.IsKeyJustPressed(ebiten.KeyF4) {
+				debugToggleRendering = !debugToggleRendering
+				if debugToggleRendering {
+					o.game.Renderer().Enable()
+				} else {
+					o.game.Renderer().Disable()
+				}
 			}
 			if inpututil.IsKeyJustPressed(ebiten.KeyF1) {
 				debugDrawTransformBounds = !debugDrawTransformBounds
