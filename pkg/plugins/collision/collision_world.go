@@ -37,17 +37,11 @@ func (d *CollisionWorld) AddEntry(entry *donburi.Entry) {
 	if !entry.HasComponent(Collision) {
 		return
 	}
-	var aabb geom.AABB
-	if entry.HasComponent(Collision) {
-		aabb = GetWorldCollider(entry)
-	} else {
-		aabb = transform.GetWorldBounds(entry)
-	}
 	switch GetCollisionType(entry) {
 	case CollisionTypeStatic:
-		SetCollisionIndex(entry, d.staticPartitioner.Insert(entry.Entity(), aabb))
+		d.partitionEntry(entry, d.staticPartitioner.Insert)
 	case CollisionTypeDynamic:
-		SetCollisionIndex(entry, d.dynamicPartitioner.Insert(entry.Entity(), aabb))
+		d.partitionEntry(entry, d.dynamicPartitioner.Insert)
 	}
 }
 
@@ -79,21 +73,25 @@ func (d *CollisionWorld) UpdateEntry(entry *donburi.Entry) {
 	if !entry.HasComponent(Collision) {
 		return
 	}
-	var aabb geom.AABB
-	if entry.HasComponent(Collision) {
-		aabb = GetCollider(entry)
-	} else {
-		aabb = transform.GetWorldBounds(entry)
-	}
 	switch GetCollisionType(entry) {
 	case CollisionTypeStatic:
-		SetCollisionIndex(entry, d.staticPartitioner.Update(entry.Entity(), aabb))
+		d.partitionEntry(entry, d.staticPartitioner.Update)
 	case CollisionTypeDynamic:
-		SetCollisionIndex(entry, d.dynamicPartitioner.Update(entry.Entity(), aabb))
+		d.partitionEntry(entry, d.dynamicPartitioner.Update)
 	}
 }
 
 func (d *CollisionWorld) QueryAll(area geom.AABB, fn func(entity donburi.Entity)) {
 	d.staticPartitioner.Query(area, fn)
 	d.dynamicPartitioner.Query(area, fn)
+}
+
+func (d *CollisionWorld) partitionEntry(entry *donburi.Entry, partitionFn func(entity donburi.Entity, aabb geom.AABB) uint64) {
+	var aabb geom.AABB
+	if entry.HasComponent(Collision) {
+		aabb = GetWorldCollider(entry)
+	} else {
+		aabb = transform.GetWorldBounds(entry)
+	}
+	SetCollisionIndex(entry, partitionFn(entry.Entity(), aabb))
 }

@@ -112,12 +112,18 @@ func GetWorldCollider(entry *donburi.Entry) geom.AABB {
 	bounds := GetCollider(entry)
 	matrix := transform.GetMatrix(entry)
 
-	minX, minY := matrix.Apply(bounds.Min.X, bounds.Min.Y)
-	maxX, maxY := matrix.Apply(bounds.Max.X, bounds.Max.Y)
+	x1, y1 := matrix.Apply(bounds.Min.X, bounds.Min.Y)
+	x2, y2 := matrix.Apply(bounds.Max.X, bounds.Max.Y)
 
 	return geom.AABB{
-		Min: geom.Vec2{X: minX, Y: minY},
-		Max: geom.Vec2{X: maxX, Y: maxY},
+		Min: geom.Vec2{
+			X: min(x1, x2),
+			Y: min(y1, y2),
+		},
+		Max: geom.Vec2{
+			X: max(x1, x2),
+			Y: max(y1, y2),
+		},
 	}
 }
 
