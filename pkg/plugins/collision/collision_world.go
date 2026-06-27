@@ -14,8 +14,8 @@ type CollisionWorld struct {
 
 func NewCollisionWorld() *CollisionWorld {
 	return &CollisionWorld{
-		staticPartitioner:  ecs.NewECSPartitioner(32, 64, 128),
-		dynamicPartitioner: ecs.NewECSPartitioner(32, 64, 128),
+		staticPartitioner:  ecs.NewECSPartitioner(32),
+		dynamicPartitioner: ecs.NewECSPartitioner(32),
 	}
 }
 
@@ -25,13 +25,21 @@ func (d *CollisionWorld) Add(entries ...*donburi.Entry) {
 	}
 }
 
+func (d *CollisionWorld) Static() *ecs.ECSPartitioner {
+	return d.staticPartitioner
+}
+
+func (d *CollisionWorld) Dynamic() *ecs.ECSPartitioner {
+	return d.dynamicPartitioner
+}
+
 func (d *CollisionWorld) AddEntry(entry *donburi.Entry) {
 	if !entry.HasComponent(Collision) {
 		return
 	}
 	var aabb geom.AABB
 	if entry.HasComponent(Collision) {
-		aabb = GetCollider(entry)
+		aabb = GetWorldCollider(entry)
 	} else {
 		aabb = transform.GetWorldBounds(entry)
 	}

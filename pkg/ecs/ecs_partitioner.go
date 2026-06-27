@@ -22,13 +22,20 @@ type ECSPartitioner struct {
 func NewECSPartitioner(resolutions ...int) *ECSPartitioner {
 	partitions := make([]*hashgrid.HashGrid[donburi.Entity], len(resolutions))
 	for i, res := range resolutions {
-		partitions[i] = hashgrid.New[donburi.Entity](res, hashgrid.Padding{})
+		partitions[i] = hashgrid.New[donburi.Entity](res)
 	}
 	return &ECSPartitioner{
 		partitions: partitions,
 		indexing:   make(map[donburi.Entity]partitionIndex),
 		querySeen:  make(map[donburi.Entity]uint32),
 	}
+}
+
+func (p *ECSPartitioner) GetPartition(i int) *hashgrid.HashGrid[donburi.Entity] {
+	if i < 0 || i >= len(p.partitions) {
+		return nil
+	}
+	return p.partitions[i]
 }
 
 func (p *ECSPartitioner) Insert(entity donburi.Entity, area geom.AABB) uint64 {

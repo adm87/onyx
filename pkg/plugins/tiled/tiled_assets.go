@@ -51,19 +51,19 @@ func (a *TiledAssets) GetTsxHandle(path file.FilePath) (uint64, bool) {
 	return a.tsxStore.GetHandle(path)
 }
 
-func (t *TiledAssets) BuildTilemap(handle uint64) *Tilemap {
+func (t *TiledAssets) BuildTilemap(handle uint64) (*Tilemap, *Tmx) {
 	tmx, ok := t.tmxStore.Get(handle)
 	if !ok {
-		return nil
+		return nil, nil
 	}
 
 	tilemap, err := buildTilemap(tmx)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 
 	t.tilemaps[handle] = tilemap
-	return tilemap
+	return tilemap, tmx
 }
 
 func (t *TiledAssets) DeleteTilemap(handle uint64) {

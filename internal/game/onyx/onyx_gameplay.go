@@ -29,8 +29,9 @@ var gameplayManifest = []file.FilePath{
 }
 
 var (
-	debugDrawTransformBounds = false
-	debugDrawColliders       = false
+	debugDrawTransformBounds  = false
+	debugDrawColliders        = false
+	debugDrawNearestColliders = false
 )
 
 func (o *Onyx) GameplayScene() engine.SceneState {
@@ -55,7 +56,7 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 				return err
 			}
 
-			tilemap, tilemapHandle, err := buildTilemap(tiledAssets, content.AssetsTiledGym04)
+			tilemap, tilemapHandle, err := buildTilemap(o, tiledAssets, content.AssetsTiledGym04)
 			if err != nil {
 				return err
 			}
@@ -88,10 +89,10 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 
 			collision.AddCollision(spriteEntry,
 				collision.WithCollisionType(collision.CollisionTypeDynamic),
-				collision.WithCollisionBounds(geom.AABB{
-					Min: geom.Vec2{X: -width / 2, Y: -height},
-					Max: geom.Vec2{X: width / 2, Y: 0},
-				}),
+				collision.WithCollisionBounds(
+					geom.Vec2{X: -width / 2, Y: -height},
+					geom.Vec2{X: width / 2, Y: 0},
+				),
 			)
 
 			movement.AddMovement(spriteEntry,
@@ -117,6 +118,9 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			}
 			if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
 				debugDrawColliders = !debugDrawColliders
+			}
+			if inpututil.IsKeyJustPressed(ebiten.KeyF3) {
+				debugDrawNearestColliders = !debugDrawNearestColliders
 			}
 
 			var moveX, moveY float64
@@ -190,6 +194,11 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			if debugDrawColliders {
 				debug.DrawColliders(o.ecs.World(), o.collision.World(), cameraEntry, target, o.game.Screen().SafeArea())
 			}
+			if debugDrawNearestColliders {
+				aabb := collision.GetWorldCollider(spriteEntry)
+				debug.DrawStaticPartitioner(o.collision.World(), cameraEntry, target, aabb, o.game.Screen().SafeArea())
+				debug.DrawNearestColliders(o.ecs.World(), aabb, o.collision.World(), cameraEntry, target, o.game.Screen().SafeArea())
+			}
 			return nil
 		},
 	}
@@ -212,12 +221,28 @@ func buildAnimations(assets engine.Assets, imageAssets *images.ImageAssets, asep
 	return animationImageHandle, nil
 }
 
-func buildTilemap(tiledAssets *tiled.TiledAssets, tmxPath file.FilePath) (*tiled.Tilemap, uint64, error) {
+func buildTilemap(game *Onyx, tiledAssets *tiled.TiledAssets, tmxPath file.FilePath) (*tiled.Tilemap, uint64, error) {
 	tmxHandle, found := tiledAssets.GetTmxHandle(tmxPath)
 	if !found {
 		return nil, 0, engine.ErrAssetNotFound{Path: tmxPath.String()}
 	}
 
-	tilemap := tiledAssets.BuildTilemap(tmxHandle)
+	tilemap, tmx := tiledAssets.BuildTilemap(tmxHandle)
+	tmx.ObjectGroups.EachInGroup("collision", func(object *tiled.TmxObject) {
+		min := geom.Vec2{}
+		max := geom.Vec2{X: object.Width, Y: object.Height}
+
+		entry := transform.NewTransform(game.ecs.World(),
+			transform.WithPosition(object.X, object.Y),
+			transform.WithBounds(min, max),
+		)
+
+		collision.AddCollision(entry,
+			collision.WithCollisionBounds(min, max),
+		)
+
+		game.AddEntries(entry)
+	})
+
 	return tilemap, tmxHandle, nil
 }

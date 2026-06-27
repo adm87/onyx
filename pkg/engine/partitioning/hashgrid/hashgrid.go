@@ -11,25 +11,17 @@ func encodeCell(cellX, cellY int) uint64 {
 	return uint64(uint32(cellX))<<32 | uint64(uint32(cellY))
 }
 
-type Padding struct {
-	Left   int
-	Right  int
-	Top    int
-	Bottom int
-}
-
 type HashGrid[T comparable] struct {
 	store      *slotmap.SlotMap[T]
 	queryGen   uint32
 	resolution int
-	padding    Padding
 	cellCache  []uint64
 	grid       map[uint64][]uint64
 	cells      map[uint64][]uint64
 	querySeen  map[uint64]uint32
 }
 
-func New[T comparable](resolution int, padding Padding) *HashGrid[T] {
+func New[T comparable](resolution int) *HashGrid[T] {
 	return &HashGrid[T]{
 		store:      slotmap.New[T](0),
 		cellCache:  make([]uint64, 0),
@@ -37,7 +29,6 @@ func New[T comparable](resolution int, padding Padding) *HashGrid[T] {
 		cells:      make(map[uint64][]uint64),
 		querySeen:  make(map[uint64]uint32),
 		resolution: resolution,
-		padding:    padding,
 	}
 }
 
@@ -48,7 +39,7 @@ func (sh *HashGrid[T]) Resolution() int {
 func (sh *HashGrid[T]) Insert(item T, area geom.AABB) uint64 {
 	id := sh.store.Insert(item)
 
-	sh.cellCache = sh.cacheCells(area, sh.cellCache[:0])
+	sh.cellCache = sh.cacheCells(area, sh.cellCache[:0], false)
 	for _, cell := range sh.cellCache {
 		sh.grid[cell] = append(sh.grid[cell], id)
 		sh.cells[id] = append(sh.cells[id], cell)
@@ -104,7 +95,7 @@ func (sh *HashGrid[T]) Update(id uint64, area geom.AABB) {
 		}
 	}
 
-	sh.cellCache = sh.cacheCells(area, sh.cellCache[:0])
+	sh.cellCache = sh.cacheCells(area, sh.cellCache[:0], false)
 	sh.cells[id] = sh.cells[id][:0]
 
 	for _, cell := range sh.cellCache {
@@ -114,7 +105,7 @@ func (sh *HashGrid[T]) Update(id uint64, area geom.AABB) {
 }
 
 func (sh *HashGrid[T]) Query(area geom.AABB, fn func(item T)) {
-	sh.cellCache = sh.cacheCells(area, sh.cellCache[:0])
+	sh.cellCache = sh.cacheCells(area, sh.cellCache[:0], true)
 	sh.queryGen++
 	for _, cell := range sh.cellCache {
 		ids, exists := sh.grid[cell]
@@ -138,8 +129,8 @@ func (sh *HashGrid[T]) Query(area geom.AABB, fn func(item T)) {
 	}
 }
 
-func (sh *HashGrid[T]) GetCellsWithin(area geom.AABB) []geom.AABB {
-	sh.cellCache = sh.cacheCells(area, sh.cellCache[:0])
+func (sh *HashGrid[T]) GetCellRects(area geom.AABB) []geom.AABB {
+	sh.cellCache = sh.cacheCells(area, sh.cellCache[:0], false)
 	result := make([]geom.AABB, 0, len(sh.cellCache))
 	for _, cell := range sh.cellCache {
 		cellX := int(int32(cell >> 32))
@@ -159,11 +150,19 @@ func (sh *HashGrid[T]) GetCellsWithin(area geom.AABB) []geom.AABB {
 	return result
 }
 
-func (sh *HashGrid[T]) cacheCells(area geom.AABB, cells []uint64) []uint64 {
-	cellX1 := math.Floor(area.Min.X/float64(sh.resolution)) - float64(sh.padding.Left)
-	cellY1 := math.Floor(area.Min.Y/float64(sh.resolution)) - float64(sh.padding.Top)
-	cellX2 := math.Floor(area.Max.X/float64(sh.resolution)) + float64(sh.padding.Right)
-	cellY2 := math.Floor(area.Max.Y/float64(sh.resolution)) + float64(sh.padding.Bottom)
+func (sh *HashGrid[T]) cacheCells(area geom.AABB, cells []uint64, forQuery bool) []uint64 {
+	var cellX1, cellY1, cellX2, cellY2 float64
+
+	cellX1 = math.Floor(area.Min.X / float64(sh.resolution))
+	cellY1 = math.Floor(area.Min.Y / float64(sh.resolution))
+
+	if forQuery {
+		cellX2 = math.Ceil(area.Max.X / float64(sh.resolution))
+		cellY2 = math.Ceil(area.Max.Y / float64(sh.resolution))
+	} else {
+		cellX2 = math.Floor(area.Max.X / float64(sh.resolution))
+		cellY2 = math.Floor(area.Max.Y / float64(sh.resolution))
+	}
 
 	minX := min(int(cellX1), int(cellX2))
 	minY := min(int(cellY1), int(cellY2))

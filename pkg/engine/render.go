@@ -2,6 +2,7 @@ package engine
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
 type Renderer interface {
@@ -62,7 +63,7 @@ func (r *renderer) UsePipeline(p RenderPipeline) {
 
 func (r *renderer) render(target *ebiten.Image) {
 	if r.pipeline == nil {
-		r.logger.Warn("No render pipeline set. Skipping rendering.")
+		ebitenutil.DebugPrint(target, "No render pipeline set")
 		return
 	}
 

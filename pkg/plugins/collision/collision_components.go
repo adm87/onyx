@@ -44,9 +44,9 @@ func WithCollisionEnabled(enabled bool) CollisionOption {
 	}
 }
 
-func WithCollisionBounds(bounds geom.AABB) CollisionOption {
+func WithCollisionBounds(min, max geom.Vec2) CollisionOption {
 	return func(o *CollisionOptions) {
-		o.Bounds = &bounds
+		o.Bounds = &geom.AABB{Min: min, Max: max}
 	}
 }
 
