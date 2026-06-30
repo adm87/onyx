@@ -4,7 +4,6 @@ import (
 	"github.com/adm87/onyx/pkg/ecs"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/plugins/aseprite"
-	"github.com/adm87/onyx/pkg/plugins/collision"
 	"github.com/adm87/onyx/pkg/plugins/images"
 	"github.com/adm87/onyx/pkg/plugins/tiled"
 	"github.com/yohamta/donburi"
@@ -22,11 +21,10 @@ const (
 type Onyx struct {
 	game engine.Game
 
-	ecs       *ecs.DonburiECS
-	aseprite  *aseprite.AsepritePlugin
-	images    *images.ImagePlugin
-	tiled     *tiled.TiledPlugin
-	collision *collision.CollisionPlugin
+	ecs      *ecs.DonburiECS
+	aseprite *aseprite.AsepritePlugin
+	images   *images.ImagePlugin
+	tiled    *tiled.TiledPlugin
 }
 
 func NewGame(
@@ -34,16 +32,14 @@ func NewGame(
 	ecs *ecs.DonburiECS,
 	animations *aseprite.AsepritePlugin,
 	image *images.ImagePlugin,
-	tiled *tiled.TiledPlugin,
-	collision *collision.CollisionPlugin) *Onyx {
+	tiled *tiled.TiledPlugin) *Onyx {
 
 	o := &Onyx{
-		game:      game,
-		aseprite:  animations,
-		ecs:       ecs,
-		images:    image,
-		tiled:     tiled,
-		collision: collision,
+		game:     game,
+		aseprite: animations,
+		ecs:      ecs,
+		images:   image,
+		tiled:    tiled,
 	}
 
 	o.AddScenes()
@@ -76,20 +72,17 @@ func (o *Onyx) AddScenes() {
 func (o *Onyx) AddEntries(entries ...*donburi.Entry) {
 	for _, entry := range entries {
 		o.ecs.AddEntry(entry)
-		o.collision.AddEntry(entry)
 	}
 }
 
 func (o *Onyx) RemoveEntries(entries ...*donburi.Entry) {
 	for _, entry := range entries {
 		o.ecs.RemoveEntry(entry)
-		o.collision.RemoveEntry(entry)
 	}
 }
 
 func (o *Onyx) UpdateEntries(entries ...*donburi.Entry) {
 	for _, entry := range entries {
 		o.ecs.UpdateEntry(entry)
-		o.collision.UpdateEntry(entry)
 	}
 }

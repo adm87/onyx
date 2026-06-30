@@ -193,7 +193,12 @@ func SetPosition(entry *donburi.Entry, x, y float64) {
 	if !entry.HasComponent(Transform) {
 		return
 	}
+
 	t := Transform.Get(entry)
+	if t.x == x && t.y == y {
+		return
+	}
+
 	t.x = x
 	t.y = y
 	t.isDirty = true
@@ -211,7 +216,12 @@ func SetScale(entry *donburi.Entry, sx, sy float64) {
 	if !entry.HasComponent(Transform) {
 		return
 	}
+
 	t := Transform.Get(entry)
+	if t.sx == sx && t.sy == sy {
+		return
+	}
+
 	t.sx = sx
 	t.sy = sy
 	t.isDirty = true
@@ -228,7 +238,12 @@ func SetRotation(entry *donburi.Entry, r float64) {
 	if !entry.HasComponent(Transform) {
 		return
 	}
+
 	t := Transform.Get(entry)
+	if t.r == r {
+		return
+	}
+
 	t.r = r
 	t.isDirty = true
 }
@@ -241,11 +256,30 @@ func IsDirty(entry *donburi.Entry) bool {
 }
 
 func Translate(entry *donburi.Entry, dx, dy float64) {
-	if !entry.HasComponent(Transform) {
+	if !entry.HasComponent(Transform) || (dx == 0 && dy == 0) {
 		return
 	}
 	t := Transform.Get(entry)
 	t.x += dx
 	t.y += dy
+	t.isDirty = true
+}
+
+func Scale(entry *donburi.Entry, sx, sy float64) {
+	if !entry.HasComponent(Transform) || (sx == 1 && sy == 1) {
+		return
+	}
+	t := Transform.Get(entry)
+	t.sx *= sx
+	t.sy *= sy
+	t.isDirty = true
+}
+
+func Rotate(entry *donburi.Entry, dr float64) {
+	if !entry.HasComponent(Transform) || dr == 0 {
+		return
+	}
+	t := Transform.Get(entry)
+	t.r += dr
 	t.isDirty = true
 }

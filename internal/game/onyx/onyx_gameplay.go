@@ -14,7 +14,6 @@ import (
 	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/plugins/aseprite"
-	"github.com/adm87/onyx/pkg/plugins/collision"
 	"github.com/adm87/onyx/pkg/plugins/images"
 	"github.com/adm87/onyx/pkg/plugins/tiled"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -39,6 +38,7 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 	var cameraEntry *donburi.Entry
 	var tilemapEntry *donburi.Entry
 	var spriteEntry *donburi.Entry
+
 	return engine.SceneState{
 		OnEnter: func() error {
 			assets := o.game.Assets()
@@ -82,18 +82,6 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			)
 			renderer.SetLayer(spriteEntry, 1)
 			transform.SetPosition(spriteEntry, tilemapCenter.X, tilemapCenter.Y)
-
-			bounds := transform.GetBounds(spriteEntry)
-			width := bounds.Width() * 0.6
-			height := bounds.Height() * 0.75
-
-			collision.AddCollision(spriteEntry,
-				collision.WithCollisionType(collision.CollisionTypeDynamic),
-				collision.WithCollisionBounds(
-					geom.Vec2{X: -width / 2, Y: -height},
-					geom.Vec2{X: width / 2, Y: 0},
-				),
-			)
 
 			movement.AddMovement(spriteEntry,
 				movement.WithSpeed(100),
@@ -153,20 +141,7 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 		OnFixedUpdate: func(dt float64) error {
 			movement.ApplyMovement(o.ecs.World(), dt)
 			if movement.IsMoving(spriteEntry) {
-				direction := movement.GetDirection(spriteEntry)
-				if direction.X < 0 {
-					transform.SetScale(spriteEntry, -1, 1)
-				} else if direction.X > 0 {
-					transform.SetScale(spriteEntry, 1, 1)
-				}
 				o.UpdateEntries(spriteEntry)
-			}
-
-			collisionSystems := o.collision.Systems()
-
-			spriteCollider := collision.GetWorldCollider(spriteEntry)
-			if infos, ok := collisionSystems.CheckStaticCollision(o.ecs.World(), spriteCollider); ok {
-				_ = infos
 			}
 			return nil
 		},
@@ -175,6 +150,11 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			if direction.X == 0 {
 				aseprite.SetClip(spriteEntry, "Idle")
 			} else {
+				if direction.X < 0 {
+					transform.SetScale(spriteEntry, -1, 1)
+				} else if direction.X > 0 {
+					transform.SetScale(spriteEntry, 1, 1)
+				}
 				aseprite.SetClip(spriteEntry, "Run")
 			}
 
@@ -199,36 +179,6 @@ func (o *Onyx) GameplayScene() engine.SceneState {
 			safeArea := o.game.Screen().SafeArea()
 			if debugDrawTransformBounds {
 				debug.DrawTransformBounds(o.ecs, cameraEntry, target, safeArea)
-			}
-			if debugDrawColliders {
-				debug.DrawColliders(
-					o.ecs.World(),
-					camera.GetViewport(cameraEntry, safeArea),
-					o.collision.World(),
-					cameraEntry,
-					target,
-					safeArea,
-					color.RGBA{R: 255, A: 255},
-				)
-			}
-			if debugDrawNearestColliders {
-				aabb := collision.GetWorldCollider(spriteEntry)
-				debug.DrawStaticPartitioner(
-					o.collision.World(),
-					cameraEntry,
-					target,
-					aabb,
-					safeArea,
-				)
-				debug.DrawColliders(
-					o.ecs.World(),
-					aabb,
-					o.collision.World(),
-					cameraEntry,
-					target,
-					safeArea,
-					color.RGBA{G: 255, A: 255},
-				)
 			}
 			return nil
 		},
@@ -262,16 +212,10 @@ func buildTilemap(game *Onyx, tiledAssets *tiled.TiledAssets, tmxPath file.FileP
 	tmx.ObjectGroups.EachInGroup("collision", func(object *tiled.TmxObject) {
 		min := geom.Vec2{}
 		max := geom.Vec2{X: object.Width, Y: object.Height}
-
 		entry := transform.NewTransform(game.ecs.World(),
 			transform.WithPosition(object.X, object.Y),
 			transform.WithBounds(min, max),
 		)
-
-		collision.AddCollision(entry,
-			collision.WithCollisionBounds(min, max),
-		)
-
 		game.AddEntries(entry)
 	})
 
