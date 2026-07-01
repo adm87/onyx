@@ -24,9 +24,6 @@ type ECSRenderAdapter interface {
 type ECSRenderPipeline struct {
 	world donburi.World
 
-	screen engine.Screen
-	logger engine.Logger
-
 	adapters    *slotmap.SlotMap[ECSRenderAdapter]
 	partitioner *ECSGrid
 	pool        *engine.RenderingPool
@@ -53,16 +50,13 @@ func (r *ECSRenderPipeline) AddAdapter(adapter ECSRenderAdapter) uint64 {
 func (r *ECSRenderPipeline) GetRenderingTasks(pool *engine.RenderingPool) []*engine.RenderingTask {
 	mainCamera, found := camera.GetMainCamera(r.world)
 	if !found {
-		r.logger.Warn("No main camera found in the world.")
 		return nil
 	}
 
-	safeArea := r.screen.SafeArea()
-
+	r.viewport, r.viewMatrix = camera.GetView(mainCamera)
 	r.tasks = r.tasks[:0]
 	r.pool = pool
-	r.viewport = camera.GetViewport(mainCamera, safeArea)
-	r.viewMatrix = camera.GetViewMatrix(mainCamera, safeArea)
+
 	r.partitioner.Query(r.viewport, r.getRenderingTasks)
 
 	slices.SortFunc(r.tasks, func(i, j *engine.RenderingTask) int {

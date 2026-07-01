@@ -57,8 +57,6 @@ func NewPlugin() ECSPlugin {
 }
 
 func (p *plugin) OnRegister(game engine.Game) {
-	p.renderPipeline.screen = game.Screen()
-	p.renderPipeline.logger = game.Logger()
 	p.AddECSCallbacks(ECSCallbacks{
 		Added:   p.addEntries,
 		Removed: p.removeEntries,

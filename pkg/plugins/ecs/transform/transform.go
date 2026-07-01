@@ -10,6 +10,8 @@ type TransformOption func(*TransformOptions)
 
 type TransformOptions struct {
 	X, Y      float64
+	OriginX   float64
+	OriginY   float64
 	ScaleX    float64
 	ScaleY    float64
 	Rotation  float64
@@ -20,6 +22,7 @@ type TransformOptions struct {
 
 type TransformModel struct {
 	x, y    float64
+	ox, oy  float64
 	sx, sy  float64
 	r       float64
 	isDirty bool
@@ -36,9 +39,18 @@ func defaultTransformOptions() *TransformOptions {
 	return &TransformOptions{
 		X:        0,
 		Y:        0,
+		OriginX:  0,
+		OriginY:  0,
 		ScaleX:   1,
 		ScaleY:   1,
 		Rotation: 0,
+	}
+}
+
+func WithOrigin(originX, originY float64) TransformOption {
+	return func(o *TransformOptions) {
+		o.OriginX = originX
+		o.OriginY = originY
 	}
 }
 
@@ -96,6 +108,8 @@ func AddTransform(entry *donburi.Entry, opts ...TransformOption) *donburi.Entry 
 		sx:      options.ScaleX,
 		sy:      options.ScaleY,
 		r:       options.Rotation,
+		ox:      options.OriginX,
+		oy:      options.OriginY,
 		isDirty: true,
 	})
 
@@ -161,6 +175,7 @@ func GetMatrix(entry *donburi.Entry) ebiten.GeoM {
 
 	if t.isDirty {
 		m.Reset()
+		m.Translate(-t.ox, -t.oy)
 		m.Scale(t.sx, t.sy)
 		m.Rotate(t.r)
 		m.Translate(t.x, t.y)
@@ -179,6 +194,29 @@ func GetIndex(entry *donburi.Entry) uint64 {
 
 func SetIndex(entry *donburi.Entry, index uint64) {
 	donburi.Add(entry, TransformIndex, &index)
+}
+
+func GetOrigin(entry *donburi.Entry) (float64, float64) {
+	if !entry.HasComponent(Transform) {
+		return 0, 0
+	}
+	t := Transform.Get(entry)
+	return t.ox, t.oy
+}
+
+func SetOrigin(entry *donburi.Entry, ox, oy float64) {
+	if !entry.HasComponent(Transform) {
+		return
+	}
+
+	t := Transform.Get(entry)
+	if t.ox == ox && t.oy == oy {
+		return
+	}
+
+	t.ox = ox
+	t.oy = oy
+	t.isDirty = true
 }
 
 func GetPosition(entry *donburi.Entry) (float64, float64) {

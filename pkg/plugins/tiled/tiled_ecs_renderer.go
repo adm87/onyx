@@ -17,8 +17,7 @@ type TiledECSRenderer struct {
 
 	screen engine.Screen
 
-	lastMinTileX, lastMaxTileX int
-	lastMinTileY, lastMaxTileY int
+	lastViewport geom.AABB
 
 	tasks    []*engine.RenderingTask
 	drawOpts *ebiten.DrawImageOptions
@@ -57,13 +56,8 @@ func (r *TiledECSRenderer) PrepareRenderingTasks(
 	minTileY := int(math.Floor(viewport.Min.Y / float64(tmx.TileHeight)))
 	maxTileY := int(math.Floor(viewport.Max.Y / float64(tmx.TileHeight)))
 
-	viewChanged := minTileX != r.lastMinTileX || maxTileX != r.lastMaxTileX ||
-		minTileY != r.lastMinTileY || maxTileY != r.lastMaxTileY
-
-	if viewChanged {
-		r.lastMinTileX, r.lastMaxTileX = minTileX, maxTileX
-		r.lastMinTileY, r.lastMaxTileY = minTileY, maxTileY
-	}
+	viewChanged := !r.lastViewport.Equals(viewport)
+	r.lastViewport = viewport
 
 	screenSize := r.screen.Size()
 	for i := range tilemap.Layers() {
@@ -74,7 +68,7 @@ func (r *TiledECSRenderer) PrepareRenderingTasks(
 		buffer, resized := r.tiledAssets.GetTilemapBuffer(tilemapHandle, int(screenSize.X), int(screenSize.Y), i)
 		if resized || viewChanged {
 			buffer.Clear()
-			buffer.Clear()
+
 			r.drawTilemapLayer(
 				buffer,
 				tilemap, i,

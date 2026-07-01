@@ -33,6 +33,7 @@ type Scene struct {
 	tilemapEntry *donburi.Entry
 	spriteEntry  *donburi.Entry
 	cameraEntry  *donburi.Entry
+	testEntry    *donburi.Entry
 
 	asepritePlugin aseprite.AsepritePlugin
 	ecsPlugin      ecs.ECSPlugin
@@ -96,10 +97,15 @@ func (s *Scene) Enter() error {
 		movement.WithSpeed(100),
 	)
 
+	s.testEntry = transform.NewTransform(s.ecsPlugin.World(),
+		transform.WithPosition(tilemapCenter.X, tilemapCenter.Y),
+		transform.WithBounds(geom.Vec2{X: -16, Y: -16}, geom.Vec2{X: 16, Y: 16}),
+	)
+
 	s.ecsPlugin.Add(
-		s.cameraEntry,
 		s.tilemapEntry,
 		s.spriteEntry,
+		s.testEntry,
 	)
 	return nil
 }
@@ -109,6 +115,8 @@ func (s *Scene) Exit() error {
 }
 
 func (s *Scene) Update(dt float64) (engine.SceneExitCode, error) {
+	camera.RefreshCameraView(s.cameraEntry, s.game.Screen().SafeArea())
+
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		return engine.SceneExitNone, ebiten.Termination
 	}
@@ -174,7 +182,7 @@ func (s *Scene) LateUpdate(dt float64) error {
 		aseprite.SetClip(s.spriteEntry, "Run")
 	}
 
-	viewport := camera.GetViewport(s.cameraEntry, s.game.Screen().SafeArea())
+	viewport, _ := camera.GetView(s.cameraEntry)
 
 	asepriteSystems := s.asepritePlugin.Systems()
 	s.ecsPlugin.QueryAll(viewport, func(entity donburi.Entity) {
