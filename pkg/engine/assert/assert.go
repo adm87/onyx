@@ -29,3 +29,11 @@ func Nil(value any, message string) {
 		panic(message)
 	}
 }
+
+func Type[T any](value any) T {
+	typedValue, ok := value.(T)
+	if !ok {
+		panic("type assertion failed")
+	}
+	return typedValue
+}

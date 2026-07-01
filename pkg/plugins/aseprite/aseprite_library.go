@@ -12,10 +12,9 @@ type AsepriteLibrary struct {
 	animations  map[uint64]*AnimationData
 }
 
-func NewAsepriteLibrary(imageAssets *images.ImageAssets) *AsepriteLibrary {
+func NewAsepriteLibrary() *AsepriteLibrary {
 	return &AsepriteLibrary{
-		imageAssets: imageAssets,
-		animations:  make(map[uint64]*AnimationData),
+		animations: make(map[uint64]*AnimationData),
 	}
 }
 

@@ -3,9 +3,9 @@ package tiled
 import (
 	"math"
 
-	"github.com/adm87/onyx/pkg/ecs/renderer"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/geom"
+	"github.com/adm87/onyx/pkg/plugins/ecs/renderer"
 	imageplugin "github.com/adm87/onyx/pkg/plugins/images"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
@@ -22,26 +22,14 @@ type TiledECSRenderer struct {
 
 	tasks    []*engine.RenderingTask
 	drawOpts *ebiten.DrawImageOptions
-
-	adapterIndex uint64
 }
 
-func NewTiledECSRenderer(
-	screen engine.Screen,
-	imageAssets *imageplugin.ImageAssets,
-	tiledAssets *TiledAssets) *TiledECSRenderer {
+func NewTiledECSRenderer(assets *TiledAssets) *TiledECSRenderer {
 	return &TiledECSRenderer{
-		screen:       screen,
-		imageAssets:  imageAssets,
-		tiledAssets:  tiledAssets,
-		tasks:        make([]*engine.RenderingTask, 0, 10),
-		drawOpts:     &ebiten.DrawImageOptions{},
-		adapterIndex: 0,
+		tiledAssets: assets,
+		tasks:       make([]*engine.RenderingTask, 0, 10),
+		drawOpts:    &ebiten.DrawImageOptions{},
 	}
-}
-
-func (r *TiledECSRenderer) SetAdapterIndex(index uint64) {
-	r.adapterIndex = index
 }
 
 func (r *TiledECSRenderer) PrepareRenderingTasks(

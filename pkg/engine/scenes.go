@@ -13,17 +13,21 @@ type (
 )
 
 type Scenes interface {
-	AddScene(id SceneID, state SceneState, transitions SceneTransitions)
+	AddScene(id SceneID, ctor SceneCtor, transitions SceneTransitions)
 }
 
-type SceneState struct {
-	OnEnter       func() error
-	OnExit        func() error
-	OnUpdate      func(dt float64) (SceneExitCode, error)
-	OnFixedUpdate func(dt float64) error
-	OnLateUpdate  func(dt float64) error
-	OnRender      func(screen *ebiten.Image) error
+type Scene interface {
+	Enter() error
+	Exit() error
+
+	Update(dt float64) (SceneExitCode, error)
+	FixedUpdate(dt float64) error
+	LateUpdate(dt float64) error
+
+	Render(target *ebiten.Image) error
 }
+
+type SceneCtor func() Scene
 
 type scenes struct {
 	logger *logger
@@ -31,8 +35,10 @@ type scenes struct {
 	currentScene SceneID
 	nextScene    SceneID
 
-	scenes      map[SceneID]SceneState
+	scenes      map[SceneID]SceneCtor
 	transitions map[SceneID]SceneTransitions
+
+	sceneInstance Scene
 }
 
 const (
@@ -45,17 +51,17 @@ func newScenes(initialScene SceneID, logger *logger) *scenes {
 		logger:       logger,
 		currentScene: SceneIDNone,
 		nextScene:    initialScene,
-		scenes:       make(map[SceneID]SceneState),
+		scenes:       make(map[SceneID]SceneCtor),
 		transitions:  make(map[SceneID]SceneTransitions),
 	}
 }
 
-func (s *scenes) AddScene(id SceneID, state SceneState, transitions SceneTransitions) {
+func (s *scenes) AddScene(id SceneID, ctor SceneCtor, transitions SceneTransitions) {
 	if _, exists := s.scenes[id]; exists {
 		s.logger.Warn("Scene with ID '%s' is already registered. Overwriting.", id)
 	}
 
-	s.scenes[id] = state
+	s.scenes[id] = ctor
 
 	if _, exists := s.transitions[id]; exists {
 		s.logger.Warn("Transitions for scene ID '%s' are already registered. Overwriting.", id)
@@ -72,22 +78,18 @@ func (s *scenes) update(steps int, deltaTime float64, fixedDeltaTime float64) er
 		return s.transitionToNext()
 	}
 
-	currentState, ok := s.scenes[s.currentScene]
-	if !ok {
-		return fmt.Errorf("scene with ID '%s' not found", s.currentScene)
-	}
-
-	exitCode, err := s.updateCurrent(currentState, deltaTime)
+	exitCode, err := s.updateCurrent(deltaTime)
 	if err != nil {
 		return err
 	}
 	if exitCode != SceneExitNone {
 		return s.setupNextTransition(exitCode)
 	}
-	if err := s.fixedUpdateCurrent(currentState, fixedDeltaTime, steps); err != nil {
+	if err := s.fixedUpdateCurrent(fixedDeltaTime, steps); err != nil {
 		return err
 	}
-	return s.lateUpdateCurrent(currentState, deltaTime)
+
+	return s.lateUpdateCurrent(deltaTime)
 }
 
 func (s *scenes) render(screen *ebiten.Image) error {
@@ -127,13 +129,8 @@ func (s *scenes) exitCurrent() error {
 	if s.currentScene == SceneIDNone {
 		return nil
 	}
-
-	currentState, ok := s.scenes[s.currentScene]
-	if !ok {
-		return fmt.Errorf("scene with ID '%s' not found", s.currentScene)
-	}
-	if currentState.OnExit != nil {
-		return currentState.OnExit()
+	if s.sceneInstance != nil {
+		return s.sceneInstance.Exit()
 	}
 	return nil
 }
@@ -143,33 +140,35 @@ func (s *scenes) enterNext() error {
 		return nil
 	}
 
-	nextState, ok := s.scenes[s.nextScene]
+	nextScene, ok := s.scenes[s.nextScene]
 	if !ok {
 		return fmt.Errorf("scene with ID '%s' not found", s.nextScene)
 	}
-	if nextState.OnEnter != nil {
-		return nextState.OnEnter()
+
+	s.sceneInstance = nextScene()
+	if s.sceneInstance != nil {
+		return s.sceneInstance.Enter()
 	}
 	return nil
 }
 
-func (s *scenes) updateCurrent(currentState SceneState, dt float64) (SceneExitCode, error) {
+func (s *scenes) updateCurrent(dt float64) (SceneExitCode, error) {
 	if s.currentScene == SceneIDNone {
 		return SceneExitNone, nil
 	}
-	if currentState.OnUpdate != nil {
-		return currentState.OnUpdate(dt)
+	if s.sceneInstance != nil {
+		return s.sceneInstance.Update(dt)
 	}
 	return SceneExitNone, nil
 }
 
-func (s *scenes) fixedUpdateCurrent(currentState SceneState, dt float64, steps int) error {
+func (s *scenes) fixedUpdateCurrent(dt float64, steps int) error {
 	if s.currentScene == SceneIDNone {
 		return nil
 	}
 	for range steps {
-		if currentState.OnFixedUpdate != nil {
-			if err := currentState.OnFixedUpdate(dt); err != nil {
+		if s.sceneInstance != nil {
+			if err := s.sceneInstance.FixedUpdate(dt); err != nil {
 				return err
 			}
 		}
@@ -177,12 +176,12 @@ func (s *scenes) fixedUpdateCurrent(currentState SceneState, dt float64, steps i
 	return nil
 }
 
-func (s *scenes) lateUpdateCurrent(currentState SceneState, dt float64) error {
+func (s *scenes) lateUpdateCurrent(dt float64) error {
 	if s.currentScene == SceneIDNone {
 		return nil
 	}
-	if currentState.OnLateUpdate != nil {
-		return currentState.OnLateUpdate(dt)
+	if s.sceneInstance != nil {
+		return s.sceneInstance.LateUpdate(dt)
 	}
 	return nil
 }
@@ -191,13 +190,8 @@ func (s *scenes) renderCurrent(screen *ebiten.Image) error {
 	if s.currentScene == SceneIDNone {
 		return nil
 	}
-
-	currentState, ok := s.scenes[s.currentScene]
-	if !ok {
-		return fmt.Errorf("scene with ID '%s' not found", s.currentScene)
-	}
-	if currentState.OnRender != nil {
-		return currentState.OnRender(screen)
+	if s.sceneInstance != nil {
+		return s.sceneInstance.Render(screen)
 	}
 	return nil
 }

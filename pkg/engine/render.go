@@ -10,7 +10,7 @@ import (
 type Renderer interface {
 	Enable()
 	Disable()
-	UsePipeline(RenderPipeline)
+	SetRenderPipeline(RenderPipeline)
 	SetBackgroundColor(color.RGBA)
 }
 
@@ -74,7 +74,7 @@ func (r *renderer) Disable() {
 	r.enabled = false
 }
 
-func (r *renderer) UsePipeline(p RenderPipeline) {
+func (r *renderer) SetRenderPipeline(p RenderPipeline) {
 	r.pipeline = p
 }
 

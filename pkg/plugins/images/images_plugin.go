@@ -1,34 +1,59 @@
 package images
 
 import (
-	"github.com/adm87/onyx/pkg/ecs/renderer"
-	"github.com/adm87/onyx/pkg/ecs/transform"
+	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/geom"
+	"github.com/adm87/onyx/pkg/plugins/ecs"
+	"github.com/adm87/onyx/pkg/plugins/ecs/renderer"
+	"github.com/adm87/onyx/pkg/plugins/ecs/transform"
 	"github.com/yohamta/donburi"
 )
 
-type ImagePlugin struct {
-	assets   *ImageAssets
-	renderer *ImageECSRenderer
+var pluginID = engine.TypeHash[ImagePlugin]()
+
+func PluginID() uint64 {
+	return pluginID
 }
 
-func NewImagePlugin() *ImagePlugin {
+type ImagePlugin interface {
+	engine.Plugin
+
+	Assets() *ImageAssets
+	CreateImage(world donburi.World, opts ...Option) *donburi.Entry
+}
+
+type plugin struct {
+	assets   *ImageAssets
+	renderer *ImageECSRenderer
+
+	rendererType uint64
+}
+
+func NewPlugin() ImagePlugin {
 	assets := NewImageAssets()
-	return &ImagePlugin{
+	renderer := NewImageECSRenderer(assets)
+	return &plugin{
 		assets:   assets,
-		renderer: NewImageECSRenderer(assets),
+		renderer: renderer,
 	}
 }
 
-func (i *ImagePlugin) Assets() *ImageAssets {
-	return i.assets
+func (p *plugin) OnRegister(game engine.Game) {
+	game.Assets().AddAdapter(p.assets)
+
+	ecsPlugin := engine.GetPlugin[ecs.ECSPlugin](game, ecs.PluginID())
+	p.rendererType = ecsPlugin.RenderPipeline().AddAdapter(p.renderer)
 }
 
-func (i *ImagePlugin) Renderer() *ImageECSRenderer {
-	return i.renderer
+func (p *plugin) ID() uint64 {
+	return PluginID()
 }
 
-func (i *ImagePlugin) CreateImage(world donburi.World, opts ...Option) *donburi.Entry {
+func (p *plugin) Assets() *ImageAssets {
+	return p.assets
+}
+
+func (p *plugin) CreateImage(world donburi.World, opts ...Option) *donburi.Entry {
 	entry := NewImage(world, opts...)
 
 	var bounds geom.AABB
@@ -36,7 +61,7 @@ func (i *ImagePlugin) CreateImage(world donburi.World, opts ...Option) *donburi.
 	imgHandle := GetHandle(entry)
 	frameIdx := GetFrame(entry)
 
-	if img, exists := i.assets.GetFrame(imgHandle, frameIdx); exists {
+	if img, exists := p.assets.GetFrame(imgHandle, frameIdx); exists {
 		anchor := GetAnchor(entry)
 
 		width, height := img.Bounds().Dx(), img.Bounds().Dy()
@@ -55,7 +80,7 @@ func (i *ImagePlugin) CreateImage(world donburi.World, opts ...Option) *donburi.
 	)
 
 	renderer.AddRenderer(entry,
-		renderer.WithRendererType(i.renderer.adapterID),
+		renderer.WithRendererType(p.rendererType),
 	)
 
 	return entry

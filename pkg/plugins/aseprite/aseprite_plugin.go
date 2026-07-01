@@ -1,40 +1,68 @@
 package aseprite
 
 import (
+	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/plugins/images"
 	"github.com/yohamta/donburi"
 )
 
-type AsepritePlugin struct {
-	imagePlugin *images.ImagePlugin
-	library     *AsepriteLibrary
-	systems     *AsepriteSystems
+// pluginID is a unique identifier for the AsepritePlugin type.
+var pluginID = engine.TypeHash[AsepritePlugin]()
+
+func PluginID() uint64 {
+	return pluginID
 }
 
-func NewAsepritePlugin(imagePlugin *images.ImagePlugin) *AsepritePlugin {
-	library := NewAsepriteLibrary(imagePlugin.Assets())
-	return &AsepritePlugin{
-		imagePlugin: imagePlugin,
-		library:     library,
-		systems:     NewAsepriteSystems(library),
+type AsepritePlugin interface {
+	engine.Plugin
+
+	Library() *AsepriteLibrary
+	Systems() *AsepriteSystems
+
+	CreateSprite(ecs donburi.World, opts ...SpriteOption) *donburi.Entry
+}
+
+type plugin struct {
+	library *AsepriteLibrary
+	systems *AsepriteSystems
+
+	imagePlugin images.ImagePlugin
+}
+
+func NewPlugin() AsepritePlugin {
+	library := NewAsepriteLibrary()
+	systems := NewAsepriteSystems(library)
+	return &plugin{
+		library: library,
+		systems: systems,
 	}
 }
 
-func (a *AsepritePlugin) Library() *AsepriteLibrary {
-	return a.library
+func (p *plugin) OnRegister(game engine.Game) {
+	imagePlugin := engine.GetPlugin[images.ImagePlugin](game, images.PluginID())
+	p.imagePlugin = imagePlugin
+	p.library.imageAssets = imagePlugin.Assets()
 }
 
-func (a *AsepritePlugin) Systems() *AsepriteSystems {
-	return a.systems
+func (p *plugin) ID() uint64 {
+	return PluginID()
 }
 
-func (a *AsepritePlugin) CreateSprite(ecs donburi.World, opts ...SpriteOption) *donburi.Entry {
+func (p *plugin) Library() *AsepriteLibrary {
+	return p.library
+}
+
+func (p *plugin) Systems() *AsepriteSystems {
+	return p.systems
+}
+
+func (p *plugin) CreateSprite(ecs donburi.World, opts ...SpriteOption) *donburi.Entry {
 	options := DefaultSpriteOptions()
 	for _, opt := range opts {
 		opt(options)
 	}
 
-	entry := a.imagePlugin.CreateImage(ecs,
+	entry := p.imagePlugin.CreateImage(ecs,
 		images.WithHandle(options.ImageOptions.Handle),
 		images.WithAnchor(options.ImageOptions.Anchor.X, options.ImageOptions.Anchor.Y),
 		images.WithFrame(options.ImageOptions.Frame),

@@ -19,7 +19,7 @@ type Assets interface {
 	Load(fileSystem fs.FS, paths ...file.FilePath) error
 	Unload(paths ...file.FilePath)
 
-	AddAdapters(adapters ...AssetAdapter)
+	AddAdapter(adapter AssetAdapter)
 	GetAdapter(id uint64) (AssetAdapter, bool)
 
 	GetDataHandle(path file.FilePath) (uint64, bool)
@@ -41,7 +41,7 @@ func newAssets(logger *logger) *assets {
 		adaptersByExt: make(map[file.FileExt]uint64),
 		dataAssets:    NewAssetAdapter(),
 	}
-	a.AddAdapters(a.dataAssets)
+	a.AddAdapter(a.dataAssets)
 	return a
 }
 
@@ -107,17 +107,15 @@ func (a *assets) Unload(paths ...file.FilePath) {
 	}
 }
 
-func (a *assets) AddAdapters(adapters ...AssetAdapter) {
-	for _, adapter := range adapters {
-		handle := a.store.Insert(adapter)
+func (a *assets) AddAdapter(adapter AssetAdapter) {
+	handle := a.store.Insert(adapter)
 
-		for _, ext := range adapter.SupportedExtensions() {
-			if _, exists := a.adaptersByExt[ext]; exists {
-				a.logger.Warn("Asset adapter for extension '%s' already exists, skipping", ext)
-				continue
-			}
-			a.adaptersByExt[ext] = handle
+	for _, ext := range adapter.SupportedExtensions() {
+		if _, exists := a.adaptersByExt[ext]; exists {
+			a.logger.Warn("Asset adapter for extension '%s' already exists, skipping", ext)
+			continue
 		}
+		a.adaptersByExt[ext] = handle
 	}
 }
 

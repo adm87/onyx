@@ -3,11 +3,11 @@ package ecs
 import (
 	"slices"
 
-	"github.com/adm87/onyx/pkg/ecs/camera"
-	"github.com/adm87/onyx/pkg/ecs/renderer"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/engine/storage/slotmap"
+	"github.com/adm87/onyx/pkg/plugins/ecs/camera"
+	"github.com/adm87/onyx/pkg/plugins/ecs/renderer"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
@@ -19,7 +19,6 @@ type ECSRenderAdapter interface {
 		pool *engine.RenderingPool,
 		viewport geom.AABB,
 		viewMatrix ebiten.GeoM) []*engine.RenderingTask
-	SetAdapterIndex(id uint64)
 }
 
 type ECSRenderPipeline struct {
@@ -29,7 +28,7 @@ type ECSRenderPipeline struct {
 	logger engine.Logger
 
 	adapters    *slotmap.SlotMap[ECSRenderAdapter]
-	partitioner *ECSPartitioner
+	partitioner *ECSGrid
 	pool        *engine.RenderingPool
 
 	viewport   geom.AABB
@@ -38,27 +37,17 @@ type ECSRenderPipeline struct {
 	tasks []*engine.RenderingTask
 }
 
-func NewECSRenderPipeline(
-	world donburi.World,
-	screen engine.Screen,
-	logger engine.Logger,
-	partitioner *ECSPartitioner) *ECSRenderPipeline {
+func NewECSRenderPipeline(world donburi.World, partitioner *ECSGrid) *ECSRenderPipeline {
 	return &ECSRenderPipeline{
 		world:       world,
-		screen:      screen,
-		logger:      logger,
-		adapters:    slotmap.New[ECSRenderAdapter](0),
 		partitioner: partitioner,
+		adapters:    slotmap.New[ECSRenderAdapter](0),
 		tasks:       make([]*engine.RenderingTask, 0, 100),
 	}
 }
 
-func (r *ECSRenderPipeline) AddAdapters(adapters ...ECSRenderAdapter) *ECSRenderPipeline {
-	for _, adapter := range adapters {
-		index := r.adapters.Insert(adapter)
-		adapter.SetAdapterIndex(index)
-	}
-	return r
+func (r *ECSRenderPipeline) AddAdapter(adapter ECSRenderAdapter) uint64 {
+	return r.adapters.Insert(adapter)
 }
 
 func (r *ECSRenderPipeline) GetRenderingTasks(pool *engine.RenderingPool) []*engine.RenderingTask {

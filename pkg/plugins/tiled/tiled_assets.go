@@ -24,14 +24,13 @@ type TiledAssets struct {
 	imageAssets *images.ImageAssets
 }
 
-func NewTiledAssets(images *images.ImageAssets) *TiledAssets {
+func NewTiledAssets() *TiledAssets {
 	return &TiledAssets{
 		supportedExtensions: []file.FileExt{".tmx", ".tsx"},
 		tmxStore:            file.NewFileStore[*Tmx](0),
 		tsxStore:            file.NewFileStore[*Tsx](0),
 		tilemaps:            make(map[uint64]*Tilemap),
 		tilemapBuffers:      make(map[uint64][]*ebiten.Image),
-		imageAssets:         images,
 	}
 }
 

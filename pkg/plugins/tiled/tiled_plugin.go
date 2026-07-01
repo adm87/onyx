@@ -1,42 +1,72 @@
 package tiled
 
 import (
-	"github.com/adm87/onyx/pkg/ecs/renderer"
-	"github.com/adm87/onyx/pkg/ecs/transform"
 	"github.com/adm87/onyx/pkg/engine"
 	"github.com/adm87/onyx/pkg/engine/geom"
+	"github.com/adm87/onyx/pkg/plugins/ecs"
+	"github.com/adm87/onyx/pkg/plugins/ecs/renderer"
+	"github.com/adm87/onyx/pkg/plugins/ecs/transform"
 	"github.com/adm87/onyx/pkg/plugins/images"
 	"github.com/yohamta/donburi"
 )
 
-type TiledPlugin struct {
-	assets   *TiledAssets
-	renderer *TiledECSRenderer
+var pluginID = engine.TypeHash[TiledPlugin]()
+
+func PluginID() uint64 {
+	return pluginID
 }
 
-func NewTiledPlugin(screen engine.Screen, images *images.ImageAssets) *TiledPlugin {
-	assets := NewTiledAssets(images)
-	return &TiledPlugin{
+type TiledPlugin interface {
+	engine.Plugin
+
+	Assets() *TiledAssets
+	CreateTilemap(world donburi.World, opts ...TilemapOption) *donburi.Entry
+}
+
+type plugin struct {
+	assets   *TiledAssets
+	renderer *TiledECSRenderer
+
+	rendererType uint64
+}
+
+func NewPlugin() TiledPlugin {
+	assets := NewTiledAssets()
+	renderer := NewTiledECSRenderer(assets)
+	return &plugin{
 		assets:   assets,
-		renderer: NewTiledECSRenderer(screen, images, assets),
+		renderer: renderer,
 	}
 }
 
-func (t *TiledPlugin) Assets() *TiledAssets {
-	return t.assets
+func (p *plugin) OnRegister(game engine.Game) {
+	game.Assets().AddAdapter(p.assets)
+
+	ecsPlugin := engine.GetPlugin[ecs.ECSPlugin](game, ecs.PluginID())
+	p.rendererType = ecsPlugin.RenderPipeline().AddAdapter(p.renderer)
+
+	imagePlugin := engine.GetPlugin[images.ImagePlugin](game, images.PluginID())
+	p.assets.imageAssets = imagePlugin.Assets()
+	p.renderer.imageAssets = imagePlugin.Assets()
+
+	p.renderer.screen = game.Screen()
 }
 
-func (t *TiledPlugin) Renderer() *TiledECSRenderer {
-	return t.renderer
+func (p *plugin) ID() uint64 {
+	return PluginID()
 }
 
-func (t *TiledPlugin) CreateTilemap(world donburi.World, opts ...TilemapOption) *donburi.Entry {
+func (p *plugin) Assets() *TiledAssets {
+	return p.assets
+}
+
+func (p *plugin) CreateTilemap(world donburi.World, opts ...TilemapOption) *donburi.Entry {
 	entry := NewTilemap(world, opts...)
 
 	var bounds geom.AABB
 
 	tilemapHandle := GetTilemapHandle(entry)
-	if tilemap, exists := t.assets.GetTilemap(tilemapHandle); exists {
+	if tilemap, exists := p.assets.GetTilemap(tilemapHandle); exists {
 		bounds = tilemap.Bounds()
 	}
 
@@ -45,7 +75,7 @@ func (t *TiledPlugin) CreateTilemap(world donburi.World, opts ...TilemapOption) 
 	)
 
 	renderer.AddRenderer(entry,
-		renderer.WithRendererType(t.renderer.adapterIndex),
+		renderer.WithRendererType(p.rendererType),
 	)
 
 	return entry

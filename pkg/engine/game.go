@@ -17,6 +17,7 @@ type Game interface {
 	Scenes() Scenes
 	Screen() Screen
 	Time() Time
+	Plugins() Plugins
 }
 
 type game struct {
@@ -28,6 +29,8 @@ type game struct {
 	scenes   *scenes
 	screen   *screen
 	time     *time
+
+	plugins *plugins
 }
 
 func setupWindow(title string, width, height int) {
@@ -68,7 +71,9 @@ func NewGame(opts ...Option) Game {
 		cfg.FPS,
 	)
 
-	return &game{
+	p := newPlugins()
+
+	g := &game{
 		ctx:      context.Background(),
 		assets:   assets,
 		logger:   logger,
@@ -76,7 +81,15 @@ func NewGame(opts ...Option) Game {
 		scenes:   scenes,
 		time:     time,
 		renderer: renderer,
+		plugins:  p,
 	}
+
+	for _, plugin := range cfg.Plugins {
+		p.add(plugin)
+	}
+	p.Register(g)
+
+	return g
 }
 
 func (g *game) Assets() Assets {
@@ -101,6 +114,10 @@ func (g *game) Screen() Screen {
 
 func (g *game) Time() Time {
 	return g.time
+}
+
+func (g *game) Plugins() Plugins {
+	return g.plugins
 }
 
 func (g *game) WithContext(ctx context.Context) Game {

@@ -7,18 +7,16 @@ import (
 )
 
 type Options struct {
-	Title string
-
-	Width      int
-	Height     int
-	FPS        int
-	Fullscreen bool
-
+	Title           string
+	Width           int
+	Height          int
+	FPS             int
+	Fullscreen      bool
 	ScreenScale     ScreenScaleMode
 	Filter          ebiten.Filter
 	BackgroundColor color.RGBA
-
-	InitialScene SceneID
+	InitialScene    SceneID
+	Plugins         []Plugin
 }
 
 type Option func(*Options)
@@ -72,6 +70,12 @@ func WithInitialScene(id SceneID) Option {
 	}
 }
 
+func WithPlugins(plugins ...Plugin) Option {
+	return func(c *Options) {
+		c.Plugins = append(c.Plugins, plugins...)
+	}
+}
+
 func defaultConfig() *Options {
 	return &Options{
 		Title:       "Untitled",
@@ -88,6 +92,7 @@ func defaultConfig() *Options {
 			A: 255,
 		},
 		InitialScene: SceneIDNone,
+		Plugins:      []Plugin{},
 	}
 }
 
