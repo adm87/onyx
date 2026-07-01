@@ -11,6 +11,7 @@ import (
 	"github.com/adm87/onyx/pkg/engine/assert"
 	"github.com/adm87/onyx/pkg/plugins/aseprite"
 	"github.com/adm87/onyx/pkg/plugins/collision"
+	"github.com/adm87/onyx/pkg/plugins/debug"
 	"github.com/adm87/onyx/pkg/plugins/ecs"
 	"github.com/adm87/onyx/pkg/plugins/images"
 	"github.com/adm87/onyx/pkg/plugins/tiled"
@@ -39,6 +40,7 @@ func Boot() error {
 		engine.WithPlugins(
 			aseprite.NewPlugin(),
 			collision.NewPlugin(),
+			debug.NewPlugin(),
 			ecs.NewPlugin(),
 			images.NewPlugin(),
 			tiled.NewPlugin(),

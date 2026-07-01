@@ -28,8 +28,8 @@ type ECSPlugin interface {
 	Remove(entries ...*donburi.Entry)
 	Update(entries ...*donburi.Entry)
 
-	QueryAll(area geom.AABB, fn func(entity donburi.Entity))
-	QueryResolution(area geom.AABB, fn func(entity donburi.Entity))
+	QueryAll(area geom.AABB, fn func(entry *donburi.Entry))
+	QueryResolution(area geom.AABB, fn func(entry *donburi.Entry))
 
 	World() donburi.World
 	RenderPipeline() *ECSRenderPipeline
@@ -129,11 +129,17 @@ func (p *plugin) updateEntries(entries []*donburi.Entry) {
 	}
 }
 
-func (p *plugin) QueryAll(area geom.AABB, fn func(entity donburi.Entity)) {
-	p.grid.Query(area, fn)
+func (p *plugin) QueryAll(area geom.AABB, fn func(entry *donburi.Entry)) {
+	p.grid.Query(area, func(entity donburi.Entity) {
+		entry := p.world.Entry(entity)
+		fn(entry)
+	})
 }
 
-func (p *plugin) QueryResolution(area geom.AABB, fn func(entity donburi.Entity)) {
+func (p *plugin) QueryResolution(area geom.AABB, fn func(entry *donburi.Entry)) {
 	partition, _ := p.grid.nearestGrid(area)
-	partition.Query(area, fn)
+	partition.Query(area, func(entity donburi.Entity) {
+		entry := p.world.Entry(entity)
+		fn(entry)
+	})
 }

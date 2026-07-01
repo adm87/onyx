@@ -10,6 +10,7 @@ import (
 	"github.com/adm87/onyx/pkg/engine/file"
 	"github.com/adm87/onyx/pkg/engine/geom"
 	"github.com/adm87/onyx/pkg/plugins/aseprite"
+	"github.com/adm87/onyx/pkg/plugins/debug"
 	"github.com/adm87/onyx/pkg/plugins/ecs"
 	"github.com/adm87/onyx/pkg/plugins/ecs/camera"
 	"github.com/adm87/onyx/pkg/plugins/ecs/renderer"
@@ -33,16 +34,20 @@ type Scene struct {
 	tilemapEntry *donburi.Entry
 	spriteEntry  *donburi.Entry
 	cameraEntry  *donburi.Entry
-	testEntry    *donburi.Entry
 
 	asepritePlugin aseprite.AsepritePlugin
+	debugPlugin    debug.DebugPlugin
 	ecsPlugin      ecs.ECSPlugin
+
+	debugDrawTransformBounds bool
+	debugToggleRendering     bool
 }
 
 func NewScene(game engine.Game) *Scene {
 	return &Scene{
 		game:           game,
 		asepritePlugin: engine.GetPlugin[aseprite.AsepritePlugin](game, aseprite.PluginID()),
+		debugPlugin:    engine.GetPlugin[debug.DebugPlugin](game, debug.PluginID()),
 		ecsPlugin:      engine.GetPlugin[ecs.ECSPlugin](game, ecs.PluginID()),
 	}
 }
@@ -97,15 +102,10 @@ func (s *Scene) Enter() error {
 		movement.WithSpeed(100),
 	)
 
-	s.testEntry = transform.NewTransform(s.ecsPlugin.World(),
-		transform.WithPosition(tilemapCenter.X, tilemapCenter.Y),
-		transform.WithBounds(geom.Vec2{X: -16, Y: -16}, geom.Vec2{X: 16, Y: 16}),
-	)
-
 	s.ecsPlugin.Add(
 		s.tilemapEntry,
 		s.spriteEntry,
-		s.testEntry,
+		s.cameraEntry,
 	)
 	return nil
 }
@@ -123,17 +123,17 @@ func (s *Scene) Update(dt float64) (engine.SceneExitCode, error) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyF) {
 		ebiten.SetFullscreen(!ebiten.IsFullscreen())
 	}
-	// if inpututil.IsKeyJustPressed(ebiten.KeyF4) {
-	// 	debugToggleRendering = !debugToggleRendering
-	// 	if debugToggleRendering {
-	// 		o.game.Renderer().Enable()
-	// 	} else {
-	// 		o.game.Renderer().Disable()
-	// 	}
-	// }
-	// if inpututil.IsKeyJustPressed(ebiten.KeyF1) {
-	// 	debugDrawTransformBounds = !debugDrawTransformBounds
-	// }
+	if inpututil.IsKeyJustPressed(ebiten.KeyF4) {
+		s.debugToggleRendering = !s.debugToggleRendering
+		if s.debugToggleRendering {
+			s.game.Renderer().Disable()
+		} else {
+			s.game.Renderer().Enable()
+		}
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyF1) {
+		s.debugDrawTransformBounds = !s.debugDrawTransformBounds
+	}
 	// if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
 	// 	debugDrawColliders = !debugDrawColliders
 	// }
@@ -185,14 +185,21 @@ func (s *Scene) LateUpdate(dt float64) error {
 	viewport, _ := camera.GetView(s.cameraEntry)
 
 	asepriteSystems := s.asepritePlugin.Systems()
-	s.ecsPlugin.QueryAll(viewport, func(entity donburi.Entity) {
-		entry := s.ecsPlugin.World().Entry(entity)
+	s.ecsPlugin.QueryAll(viewport, func(entry *donburi.Entry) {
 		asepriteSystems.UpdateAnimation(entry, time.Duration(dt*float64(time.Second)))
 	})
 	return nil
 }
 
 func (s *Scene) Render(target *ebiten.Image) error {
+	viewport, viewMatrix := camera.GetView(s.cameraEntry)
+
+	if s.debugDrawTransformBounds {
+		s.debugPlugin.ResetPath()
+		s.debugPlugin.PathTransformBounds(viewport, viewMatrix)
+		s.debugPlugin.DrawPath(target, color.RGBA{R: 255, G: 255, B: 255, A: 255})
+	}
+
 	return nil
 }
 
