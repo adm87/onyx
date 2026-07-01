@@ -95,7 +95,7 @@ func (s *Scene) Enter() error {
 		aseprite.WithClip("Idle"),
 		aseprite.Playing(),
 	)
-	renderer.SetLayer(s.spriteEntry, 1)
+	renderer.SetZIndex(s.spriteEntry, 1.5)
 	transform.SetPosition(s.spriteEntry, tilemapCenter.X, tilemapCenter.Y)
 
 	movement.AddMovement(s.spriteEntry,

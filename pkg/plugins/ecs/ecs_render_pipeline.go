@@ -63,7 +63,12 @@ func (r *ECSRenderPipeline) GetRenderingTasks(pool *engine.RenderingPool) []*eng
 		if i.Layer != j.Layer {
 			return i.Layer - j.Layer
 		}
-		return i.ZIndex - j.ZIndex
+		if i.ZIndex < j.ZIndex {
+			return -1
+		} else if i.ZIndex > j.ZIndex {
+			return 1
+		}
+		return 0
 	})
 
 	return r.tasks

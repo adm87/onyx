@@ -5,7 +5,7 @@ import "github.com/yohamta/donburi"
 type Options struct {
 	RendererType uint64
 	Layer        int
-	ZIndex       int
+	ZIndex       float32
 	Visible      bool
 }
 
@@ -14,7 +14,7 @@ type Option func(*Options)
 type RendererModel struct {
 	Type    uint64
 	Layer   int
-	ZIndex  int
+	ZIndex  float32
 	Visible bool
 }
 
@@ -47,7 +47,7 @@ func WithVisibility(visible bool) Option {
 	}
 }
 
-func WithZIndex(zIndex int) Option {
+func WithZIndex(zIndex float32) Option {
 	return func(opts *Options) {
 		opts.ZIndex = zIndex
 	}
@@ -97,14 +97,14 @@ func SetLayer(entry *donburi.Entry, layer int) {
 	renderer.Layer = layer
 }
 
-func GetZIndex(entry *donburi.Entry) int {
+func GetZIndex(entry *donburi.Entry) float32 {
 	if !entry.HasComponent(Renderer) {
 		return 0
 	}
 	return Renderer.Get(entry).ZIndex
 }
 
-func SetZIndex(entry *donburi.Entry, zIndex int) {
+func SetZIndex(entry *donburi.Entry, zIndex float32) {
 	if !entry.HasComponent(Renderer) {
 		return
 	}

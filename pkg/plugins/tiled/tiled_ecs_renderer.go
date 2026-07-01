@@ -83,7 +83,7 @@ func (r *TiledECSRenderer) PrepareRenderingTasks(
 		task := pool.Get()
 		task.Buffer = buffer
 		task.Layer = renderer.Layer
-		task.ZIndex = renderer.ZIndex + i
+		task.ZIndex = renderer.ZIndex + float32(i)
 		r.tasks = append(r.tasks, task)
 	}
 

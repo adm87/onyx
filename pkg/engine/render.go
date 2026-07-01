@@ -22,7 +22,7 @@ type RenderingTask struct {
 	Buffer  *ebiten.Image
 	Options *ebiten.DrawImageOptions
 	Layer   int
-	ZIndex  int
+	ZIndex  float32
 }
 
 type RenderingPool struct {
